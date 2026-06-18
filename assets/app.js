@@ -218,7 +218,7 @@
 
     try {
       // 1. Insert the round row.
-      const { data: roundRow, error: roundErr } = await supabase
+      const { data: roundRow, error: roundErr } = await supabaseClient
         .from('rounds')
         .insert({
           code,
@@ -235,7 +235,7 @@
       if (roundErr) throw roundErr;
 
       // 2. Insert all players, getting back their real database ids.
-      const { data: playerRows, error: playersErr } = await supabase
+      const { data: playerRows, error: playersErr } = await supabaseClient
         .from('players')
         .insert(validPlayers.map(p => ({
           round_id: roundRow.id,
@@ -252,7 +252,7 @@
       if (matchPlayerAName) matchA = playerRows.find(p => p.name === matchPlayerAName)?.id || null;
       if (matchPlayerBName) matchB = playerRows.find(p => p.name === matchPlayerBName)?.id || null;
 
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await supabaseClient
         .from('rounds')
         .update({ host_player_id: hostId, match_player_a: matchA, match_player_b: matchB })
         .eq('id', roundRow.id);
@@ -279,7 +279,7 @@
   // ---------------------------------------------------------// Loading a round's full state from Supabase
   // ---------------------------------------------------------
   async function loadRound(roundId) {
-    const { data: roundRow, error: roundErr } = await supabase
+    const { data: roundRow, error: roundErr } = await supabaseClient
       .from('rounds')
       .select('*')
       .eq('id', roundId)
@@ -290,7 +290,7 @@
       return null;
     }
 
-    const { data: playerRows, error: playersErr } = await supabase
+    const { data: playerRows, error: playersErr } = await supabaseClient
       .from('players')
       .select('*')
       .eq('round_id', roundId)
@@ -303,7 +303,7 @@
     const playerIds = playerRows.map(p => p.id);
     let scoreRows = [];
     if (playerIds.length > 0) {
-      const { data: sRows, error: scoresErr } = await supabase
+      const { data: sRows, error: scoresErr } = await supabaseClient
         .from('scores')
         .select('*')
         .in('player_id', playerIds);
@@ -349,11 +349,11 @@
   // ---------------------------------------------------------
   function subscribeToRound(roundId) {
     if (state.realtimeChannel) {
-      supabase.removeChannel(state.realtimeChannel);
+      supabaseClient.removeChannel(state.realtimeChannel);
       state.realtimeChannel = null;
     }
 
-    const channel = supabase
+    const channel = supabaseClient
       .channel('round-' + roundId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds', filter: `id=eq.${roundId}` },
         () => onRoundChanged(roundId))
@@ -434,7 +434,7 @@
     const hcpRaw = prompt('Handicap? (just the number, e.g. 12)');
     const handicap = Number(hcpRaw) || 0;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('players')
       .insert({ round_id: roundId, name: name.trim(), handicap })
       .select()
@@ -456,7 +456,7 @@
     if (!code) return;
 
     try {
-      const { data: roundRow, error } = await supabase
+      const { data: roundRow, error } = await supabaseClient
         .from('rounds')
         .select('*')
         .eq('code', code)
@@ -637,7 +637,7 @@
     player.scores[String(h)] = next;
     renderScorecardTab();
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('scores')
       .upsert({ player_id: player.id, hole: h, strokes: next }, { onConflict: 'player_id,hole' });
 
@@ -653,7 +653,7 @@
     const newPars = [...state.round.pars];
     newPars[h - 1] = val;
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('rounds')
       .update({ pars: newPars })
       .eq('id', state.round.id);
@@ -805,7 +805,7 @@
   // ---------------------------------------------------------
   function goHome() {
     if (state.realtimeChannel) {
-      supabase.removeChannel(state.realtimeChannel);
+      supabaseClient.removeChannel(state.realtimeChannel);
       state.realtimeChannel = null;
     }
     state.roundId = null;
@@ -871,7 +871,7 @@
         showScreen('screen-identify');
         return;
       }
-      const { error } = await supabase.from('rounds').update({ started: true }).eq('id', state.roundId);
+      const { error } = await supabaseClient.from('rounds').update({ started: true }).eq('id', state.roundId);
       if (error) {
         showToast('Could not start round — check your connection');
         return;
@@ -932,7 +932,7 @@
 
   async function resumeSession(session) {
     try {
-      const { data: roundRow, error } = await supabase
+      const { data: roundRow, error } = await supabaseClient
         .from('rounds')
         .select('*')
         .eq('code', session.roundCode)
