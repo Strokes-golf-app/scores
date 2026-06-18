@@ -88,6 +88,14 @@
     return escapeHtml(str).replace(/"/g, '&quot;');
   }
 
+  // Parse a handicap string, allowing one decimal place (e.g. 10.2).
+  // Returns a number rounded to 1 decimal place, clamped 0–54.
+  function parseHandicap(val) {
+    const n = parseFloat(val);
+    if (isNaN(n)) return 0;
+    return Math.min(54, Math.max(0, Math.round(n * 10) / 10));
+  }
+
   // ---------------------------------------------------------
   // Setup screen: player + par + mode builders
   // ---------------------------------------------------------
@@ -115,7 +123,7 @@
       row.innerHTML = `
         <input type="text" value="${escapeAttr(p.name)}" placeholder="Player name" data-id="${p.id}" class="setup-name-input">
         <span class="hcp-label">HCP</span>
-        <input type="number" value="${p.handicap}" data-id="${p.id}" class="hcp-input setup-hcp-input" inputmode="numeric" min="0" max="54">
+        <input type="number" value="${p.handicap}" data-id="${p.id}" class="hcp-input setup-hcp-input" inputmode="decimal" min="0" max="54" step="0.1" placeholder="0">
         <button class="player-row-remove" data-id="${p.id}" aria-label="Remove player">×</button>
       `;
       wrap.appendChild(row);
@@ -131,7 +139,7 @@
     wrap.querySelectorAll('.setup-hcp-input').forEach(inp => {
       inp.addEventListener('input', e => {
         const p = state.setupPlayers.find(x => x.id === e.target.dataset.id);
-        if (p) p.handicap = Number(e.target.value) || 0;
+        if (p) p.handicap = parseHandicap(e.target.value);
       });
     });
     wrap.querySelectorAll('.player-row-remove').forEach(btn => {
@@ -276,7 +284,8 @@
     }
   }
 
-  // ---------------------------------------------------------// Loading a round's full state from Supabase
+  // ---------------------------------------------------------
+  // Loading a round's full state from Supabase
   // ---------------------------------------------------------
   async function loadRound(roundId) {
     const { data: roundRow, error: roundErr } = await supabaseClient
@@ -340,12 +349,7 @@
   }
 
   // ---------------------------------------------------------
-  // Realtime subscription — the Supabase equivalent of Firebase's
-  // .on('value', ...) listener. We subscribe to changes on the
-  // three tables filtered to this round, and just reload the
-  // round's full state whenever anything relevant changes. This
-  // is simpler than patching individual fields and is plenty fast
-  // for a golf-group-sized round.
+  // Realtime subscription
   // ---------------------------------------------------------
   function subscribeToRound(roundId) {
     if (state.realtimeChannel) {
@@ -359,8 +363,6 @@
         () => onRoundChanged(roundId))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `round_id=eq.${roundId}` },
         () => onRoundChanged(roundId))
-      // Scores don't carry round_id directly, so we can't filter server-side on it;
-      // we just reload on any score change and it's cheap enough at this scale.
       .on('postgres_changes', { event: '*', schema: 'public', table: 'scores' },
         () => onRoundChanged(roundId))
       .subscribe();
@@ -370,8 +372,6 @@
 
   let reloadTimer = null;
   function onRoundChanged(roundId) {
-    // Debounce — multiple rapid changes (e.g. several players entering
-    // scores at once) shouldn't trigger a reload per row.
     clearTimeout(reloadTimer);
     reloadTimer = setTimeout(async () => {
       await loadRound(roundId);
@@ -431,8 +431,8 @@
   async function addPlayerToRound(roundId) {
     const name = prompt('Player name?');
     if (!name || !name.trim()) return null;
-    const hcpRaw = prompt('Handicap? (just the number, e.g. 12)');
-    const handicap = Number(hcpRaw) || 0;
+    const hcpRaw = prompt('Handicap? (e.g. 10.2)');
+    const handicap = parseHandicap(hcpRaw);
 
     const { data, error } = await supabaseClient
       .from('players')
@@ -507,7 +507,8 @@
     }
   }
 
-  // ---------------------------------------------------------// Entering the round proper
+  // ---------------------------------------------------------
+  // Entering the round proper
   // ---------------------------------------------------------
   function enterRound() {
     saveSession();
@@ -632,8 +633,6 @@
     let next = current == null ? par : current + delta;
     next = Math.max(1, Math.min(15, next));
 
-    // Optimistic local update so the tap feels instant, before the
-    // database round-trip and realtime echo confirm it.
     player.scores[String(h)] = next;
     renderScorecardTab();
 
@@ -800,7 +799,9 @@
         <p class="match-thru">thru ${m.thru} of ${r.holeCount}</p>
       </div>
     `;
-  }// ---------------------------------------------------------
+  }
+
+  // ---------------------------------------------------------
   // Navigation / leaving
   // ---------------------------------------------------------
   function goHome() {
