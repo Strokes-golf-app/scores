@@ -17,15 +17,17 @@
   // State
   // ---------------------------------------------------------
   const state = {
-    roundId: null,        // internal uuid
-    roundCode: null,       // human-facing short code
-    round: null,            // { ...round row, players: [{...player row, scores: {hole: strokes}}] }
+    roundId: null,
+    roundCode: null,
+    round: null,
     myPlayerId: null,
     currentHole: 1,
     activeTab: 'card',
     activeModeTab: null,
     setupPlayers: [],
     realtimeChannel: null,
+    authMode: 'login',     // 'login' or 'signup'
+    pendingJoinCode: null, // round code from a ?code= deep link, applied after auth
   };
 
   const LS_KEY = 'fairwaylive_session';
@@ -141,6 +143,21 @@
         const p = state.setupPlayers.find(x => x.id === e.target.dataset.id);
         if (p) p.handicap = parseHandicap(e.target.value);
       });
+      inp.addEventListener('blur', async e => {
+        const isHostRow = state.setupPlayers[0] && state.setupPlayers[0].id === e.target.dataset.id;
+        if (!isHostRow) return;
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return;
+
+        const p = state.setupPlayers.find(x => x.id === e.target.dataset.id);
+        if (!p) return;
+
+        await supabaseClient
+          .from('user_profiles')
+          .update({ default_handicap: p.handicap })
+          .eq('id', user.id);
+      });
     });
     wrap.querySelectorAll('.player-row-remove').forEach(btn => {
       btn.addEventListener('click', e => {
@@ -165,7 +182,7 @@
     if (state.setupPlayers.length > 1) p2.selectedIndex = 1;
   }
 
-  function resetSetupScreen() {
+  async function resetSetupScreen() {
     document.getElementById('course-name').value = '';
     document.getElementById('hole-count').value = '18';
     document.querySelectorAll('#mode-grid input[name="mode"]').forEach(cb => {
@@ -173,7 +190,23 @@
       cb.closest('.mode-card').classList.toggle('checked', cb.checked);
     });
     document.getElementById('match-players-field').hidden = true;
-    state.setupPlayers = [{ id: uid('p'), name: '', handicap: 0 }];
+
+    let hostName = '';
+    let hostHandicap = 0;
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabaseClient
+        .from('user_profiles')
+        .select('display_name, default_handicap')
+        .eq('id', user.id)
+        .single();
+      if (profile) {
+        hostName = profile.display_name;
+        hostHandicap = profile.default_handicap;
+      }
+    }
+
+    state.setupPlayers = [{ id: uid('p'), name: hostName, handicap: hostHandicap }];
     renderParGrid();
     renderSetupPlayerList();
   }
@@ -429,10 +462,34 @@
   }
 
   async function addPlayerToRound(roundId) {
-    const name = prompt('Player name?');
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    let defaultName = '';
+    let defaultHandicap = 0;
+    if (user) {
+      const { data: profile } = await supabaseClient
+        .from('user_profiles')
+        .select('display_name, default_handicap')
+        .eq('id', user.id)
+        .single();
+      if (profile) {
+        defaultName = profile.display_name;
+        defaultHandicap = profile.default_handicap;
+      }
+    }
+
+    const name = prompt('Your name?', defaultName);
     if (!name || !name.trim()) return null;
-    const hcpRaw = prompt('Handicap? (e.g. 10.2)');
+
+    const hcpRaw = prompt('Handicap? (e.g. 10.2) — edit if it has changed', defaultHandicap);
     const handicap = parseHandicap(hcpRaw);
+
+    if (user && handicap !== defaultHandicap) {
+      await supabaseClient
+        .from('user_profiles')
+        .update({ default_handicap: handicap })
+        .eq('id', user.id);
+    }
 
     const { data, error } = await supabaseClient
       .from('players')
@@ -816,13 +873,97 @@
     clearSession();
     showScreen('screen-home');
   }
+   // ---------------------------------------------------------
+  // Auth
+  // ---------------------------------------------------------
+  function setAuthMode(mode) {
+    state.authMode = mode;
+    document.getElementById('auth-tab-login').classList.toggle('active', mode === 'login');
+    document.getElementById('auth-tab-signup').classList.toggle('active', mode === 'signup');
+    document.getElementById('auth-name-field').hidden = mode !== 'signup';
+    document.getElementById('btn-auth-submit').querySelector('.btn-label').textContent =
+      mode === 'signup' ? 'Create account' : 'Log in';
+    document.getElementById('auth-error').hidden = true;
+  }
+
+  async function handleAuthSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errorEl = document.getElementById('auth-error');
+    errorEl.hidden = true;
+
+    if (state.authMode === 'signup') {
+      const name = document.getElementById('auth-name-field').value.trim();
+      if (!name) {
+        errorEl.textContent = 'Please enter your name.';
+        errorEl.hidden = false;
+        return;
+      }
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) {
+        errorEl.textContent = error.message;
+        errorEl.hidden = false;
+        return;
+      }
+      if (data.user) {
+        await supabaseClient.from('user_profiles').insert({
+          id: data.user.id,
+          display_name: name,
+        });
+      }
+      await afterAuthSuccess();
+    } else {
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorEl.textContent = error.message;
+        errorEl.hidden = false;
+        return;
+      }
+      await afterAuthSuccess();
+    }
+  }
+
+  async function afterAuthSuccess() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    document.getElementById('auth-user-email').textContent = user ? user.email : '';
+    document.getElementById('form-auth').reset();
+
+    if (state.pendingJoinCode) {
+      const code = state.pendingJoinCode;
+      state.pendingJoinCode = null;
+      showScreen('screen-home');
+      joinRound(code);
+      return;
+    }
+
+    await resetSetupScreen();
+    showScreen('screen-home');
+  }
+
+  async function handleLogout() {
+    await supabaseClient.auth.signOut();
+    goHome();
+    showScreen('screen-auth');
+  }
+
+  async function checkAuthOnLoad() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && session.user) {
+      document.getElementById('auth-user-email').textContent = session.user.email;
+      return true;
+    }
+    return false;
+  }
 
   // ---------------------------------------------------------
   // Wire up DOM events
   // ---------------------------------------------------------
   function init() {
-    document.getElementById('btn-new-round').addEventListener('click', () => {
-      resetSetupScreen();
+    setAuthMode('login');
+
+    document.getElementById('btn-new-round').addEventListener('click', async () => {
+      await resetSetupScreen();
       showScreen('screen-setup');
     });
 
@@ -921,14 +1062,36 @@
     document.getElementById('btn-stroke-minus').addEventListener('click', () => setStroke(-1));
     document.getElementById('btn-stroke-plus').addEventListener('click', () => setStroke(1));
 
-    // Try to resume a previous session.
-    const session = loadSession();
-    if (session && session.roundCode) {
-      resumeSession(session);
-    } else {
-      resetSetupScreen();
-      showScreen('screen-home');
-    }
+    document.getElementById('auth-tab-login').addEventListener('click', () => setAuthMode('login'));
+    document.getElementById('auth-tab-signup').addEventListener('click', () => setAuthMode('signup'));
+    document.getElementById('form-auth').addEventListener('submit', handleAuthSubmit);
+    document.getElementById('btn-logout').addEventListener('click', handleLogout);
+
+    // Pull a round code out of a deep link like ?code=AB3K7, if present.
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeFromUrl = urlParams.get('code');
+
+    checkAuthOnLoad().then(async isLoggedIn => {
+      if (!isLoggedIn) {
+        if (codeFromUrl) state.pendingJoinCode = codeFromUrl.toUpperCase();
+        showScreen('screen-auth');
+        return;
+      }
+
+      if (codeFromUrl) {
+        showScreen('screen-home');
+        joinRound(codeFromUrl);
+        return;
+      }
+
+      const session = loadSession();
+      if (session && session.roundCode) {
+        resumeSession(session);
+      } else {
+        await resetSetupScreen();
+        showScreen('screen-home');
+      }
+    });
   }
 
   async function resumeSession(session) {
