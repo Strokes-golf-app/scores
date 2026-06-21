@@ -148,7 +148,39 @@ h1, h2, h3 {
   font-size: 13px;
   margin: 0;
 }
-
+/* ---------- Auth screen ---------- */
+.auth-tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--sand-light);
+  border-radius: var(--radius-md);
+  padding: 0.25rem;
+}
+.auth-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0.6rem 0.5rem;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-faint);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.auth-tab.active {
+  background: var(--white);
+  color: var(--fairway-dark);
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.auth-error {
+  color: var(--flag);
+  font-size: 13px;
+  margin: -0.4rem 0 0;
+}
 /* ---------- Buttons ---------- */
 .btn {
   border: none;
