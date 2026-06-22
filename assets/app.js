@@ -28,6 +28,7 @@
     realtimeChannel: null,
     authMode: 'login',     // 'login' or 'signup'
     pendingJoinCode: null, // round code from a ?code= deep link, applied after auth
+    pendingVerifyEmail: null, // email awaiting verification, for the resend button
   };
 
   const LS_KEY = 'fairwaylive_session';
@@ -900,7 +901,7 @@
         errorEl.hidden = false;
         return;
       }
-      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+     const { data, error } = await supabaseClient.auth.signUp({ email, password });
       if (error) {
         errorEl.textContent = error.message;
         errorEl.hidden = false;
@@ -912,10 +913,20 @@
           display_name: name,
         });
       }
-      await afterAuthSuccess();
+      // Email confirmation is on, so there's no active session yet.
+      document.getElementById('verify-email-display').textContent = email;
+      state.pendingVerifyEmail = email;
+      document.getElementById('form-auth').reset();
+      showScreen('screen-verify');
     } else {
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) {
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          document.getElementById('verify-email-display').textContent = email;
+          state.pendingVerifyEmail = email;
+          showScreen('screen-verify');
+          return;
+        }
         errorEl.textContent = error.message;
         errorEl.hidden = false;
         return;
@@ -954,6 +965,57 @@
       return true;
     }
     return false;
+  }
+   async function handleResendVerify() {
+    if (!state.pendingVerifyEmail) return;
+    const { error } = await supabaseClient.auth.resend({
+      type: 'signup',
+      email: state.pendingVerifyEmail,
+    });
+    if (error) {
+      showToast('Could not resend — try again shortly');
+    } else {
+      showToast('Verification email resent');
+    }
+  }
+
+  async function handleForgotSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    const errorEl = document.getElementById('forgot-error');
+    errorEl.hidden = true;
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+
+    if (error) {
+      errorEl.textContent = error.message;
+      errorEl.hidden = false;
+      return;
+    }
+    document.getElementById('form-forgot').reset();
+    showToast('Reset link sent — check your email');
+    showScreen('screen-auth');
+  }
+
+  async function handleResetPasswordSubmit(e) {
+    e.preventDefault();
+    const newPassword = document.getElementById('reset-password-new').value;
+    const errorEl = document.getElementById('reset-password-error');
+    errorEl.hidden = true;
+
+    const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      errorEl.textContent = error.message;
+      errorEl.hidden = false;
+      return;
+    }
+    document.getElementById('form-reset-password').reset();
+    showToast('Password updated — you can log in now');
+    await supabaseClient.auth.signOut();
+    showScreen('screen-auth');
   }
 
   // ---------------------------------------------------------
@@ -1066,6 +1128,23 @@
     document.getElementById('auth-tab-signup').addEventListener('click', () => setAuthMode('signup'));
     document.getElementById('form-auth').addEventListener('submit', handleAuthSubmit);
     document.getElementById('btn-logout').addEventListener('click', handleLogout);
+
+    document.getElementById('btn-resend-verify').addEventListener('click', handleResendVerify);
+    document.getElementById('btn-verify-back').addEventListener('click', () => showScreen('screen-auth'));
+
+    document.getElementById('btn-forgot-password').addEventListener('click', () => showScreen('screen-forgot'));
+    document.getElementById('btn-forgot-back').addEventListener('click', () => showScreen('screen-auth'));
+    document.getElementById('form-forgot').addEventListener('submit', handleForgotSubmit);
+
+    document.getElementById('form-reset-password').addEventListener('submit', handleResetPasswordSubmit);
+
+    // If this load is from a password-reset email link, Supabase fires this
+    // event once the recovery token in the URL has been processed.
+    supabaseClient.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        showScreen('screen-reset-password');
+      }
+    });
 
     // Pull a round code out of a deep link like ?code=AB3K7, if present.
     const urlParams = new URLSearchParams(window.location.search);
