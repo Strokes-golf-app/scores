@@ -13,6 +13,21 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<!-- ============ SCREEN: VERIFY EMAIL ============ -->
+<section id="screen-verify" class="screen">
+  <div class="home-wrap">
+    <div class="brand">
+      <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="brand-logo">
+    </div>
+    <h2 class="auth-heading">Check your email</h2>
+    <p class="auth-subtext">We sent a verification link to <strong id="verify-email-display"></strong>. Click it, then come back here and log in.</p>
+    <button class="btn btn-secondary btn-block" id="btn-resend-verify">Resend email</button>
+    <button class="link-btn link-btn-center" id="btn-verify-back">Back to login</button>
+  </div>
+</section>
+
+<!-- ============ SCREEN: HOME ============ -->
+<section id="screen-home" class="screen">
 <!-- ============ SCREEN: AUTH ============ -->
 <section id="screen-auth" class="screen active">
   <div class="home-wrap">
@@ -43,6 +58,45 @@
       <button type="submit" class="btn btn-primary btn-lg btn-block" id="btn-auth-submit">
         <span class="btn-label">Log in</span>
       </button>
+      <button type="button" class="link-btn link-btn-center" id="btn-forgot-password">Forgot password?</button>
+    </form>
+  </div>
+</section>
+
+<!-- ============ SCREEN: RESET PASSWORD (request) ============ -->
+<section id="screen-forgot" class="screen">
+  <div class="home-wrap">
+    <div class="brand">
+      <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="brand-logo">
+    </div>
+    <h2 class="auth-heading">Reset your password</h2>
+    <p class="auth-subtext">Enter your email and we'll send you a link to set a new password.</p>
+    <form id="form-forgot" class="auth-form">
+      <div class="field">
+        <label class="field-label" for="forgot-email">Email</label>
+        <input type="email" id="forgot-email" placeholder="you@example.com" autocomplete="email" required>
+      </div>
+      <p class="auth-error" id="forgot-error" hidden></p>
+      <button type="submit" class="btn btn-primary btn-lg btn-block">Send reset link</button>
+      <button type="button" class="link-btn link-btn-center" id="btn-forgot-back">Back to login</button>
+    </form>
+  </div>
+</section>
+
+<!-- ============ SCREEN: RESET PASSWORD (set new) ============ -->
+<section id="screen-reset-password" class="screen">
+  <div class="home-wrap">
+    <div class="brand">
+      <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="brand-logo">
+    </div>
+    <h2 class="auth-heading">Set a new password</h2>
+    <form id="form-reset-password" class="auth-form">
+      <div class="field">
+        <label class="field-label" for="reset-password-new">New password</label>
+        <input type="password" id="reset-password-new" placeholder="••••••••" autocomplete="new-password" required minlength="6">
+      </div>
+      <p class="auth-error" id="reset-password-error" hidden></p>
+      <button type="submit" class="btn btn-primary btn-lg btn-block">Set password</button>
     </form>
   </div>
 </section>
