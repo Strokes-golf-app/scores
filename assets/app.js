@@ -29,6 +29,7 @@
     authMode: 'login',     // 'login' or 'signup'
     pendingJoinCode: null, // round code from a ?code= deep link, applied after auth
     pendingVerifyEmail: null, // email awaiting verification, for the resend button
+    pendingSignupName: null,  // name captured at signup, written to profile on first real login
   };
 
   const LS_KEY = 'fairwaylive_session';
@@ -907,13 +908,9 @@
         errorEl.hidden = false;
         return;
       }
-      if (data.user) {
-        await supabaseClient.from('user_profiles').insert({
-          id: data.user.id,
-          display_name: name,
-        });
-      }
-      // Email confirmation is on, so there's no active session yet.
+      // Stash the name so we can create the profile row after they verify
+      // and log in for the first time (no session exists yet to do it now).
+      state.pendingSignupName = name;
       document.getElementById('verify-email-display').textContent = email;
       state.pendingVerifyEmail = email;
       document.getElementById('form-auth').reset();
@@ -939,6 +936,22 @@
     const { data: { user } } = await supabaseClient.auth.getUser();
     document.getElementById('auth-user-email').textContent = user ? user.email : '';
     document.getElementById('form-auth').reset();
+
+    if (user) {
+      const { data: existingProfile } = await supabaseClient
+        .from('user_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (!existingProfile) {
+        await supabaseClient.from('user_profiles').insert({
+          id: user.id,
+          display_name: state.pendingSignupName || user.email,
+        });
+      }
+      state.pendingSignupName = null;
+    }
 
     if (state.pendingJoinCode) {
       const code = state.pendingJoinCode;
