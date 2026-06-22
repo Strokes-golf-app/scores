@@ -181,6 +181,18 @@ h1, h2, h3 {
   font-size: 13px;
   margin: -0.4rem 0 0;
 }
+.auth-heading {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0.5rem 0 0;
+}
+.auth-subtext {
+  font-size: 14px;
+  color: var(--ink-faint);
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
 /* ---------- Buttons ---------- */
 .btn {
   border: none;
