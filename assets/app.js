@@ -1163,7 +1163,16 @@
     const urlParams = new URLSearchParams(window.location.search);
     const codeFromUrl = urlParams.get('code');
 
+    // If this is a password-recovery link, the URL hash will contain
+    // "type=recovery". Catch this BEFORE normal login routing runs, so
+    // it always wins over the home/resume logic below.
+    const isRecoveryLink = window.location.hash.includes('type=recovery');
+
     checkAuthOnLoad().then(async isLoggedIn => {
+      if (isRecoveryLink) {
+        showScreen('screen-reset-password');
+        return;
+      }
       if (!isLoggedIn) {
         if (codeFromUrl) state.pendingJoinCode = codeFromUrl.toUpperCase();
         showScreen('screen-auth');
