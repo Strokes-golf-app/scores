@@ -11,20 +11,40 @@ Vercel from scratch.
 
 ## How it works
 
-- Plain HTML/CSS/JS — no build tools, nothing to compile.
-- Hosted for free on **Vercel**, deployed straight from this **GitHub**
-  repo.
-- Live sync powered by **Supabase** (a Postgres database with built-in
-  realtime updates) — see `supabase_schema.sql` for the data structure.
+- Plain HTML/CSS/JS — no build tools, no bundling.
+- Hosted on **Vercel** and backed by **Supabase** for Postgres storage and
+  realtime updates.
+- The app stores player handicaps as decimal values with one-place
+  precision, so inputs like `10.2` are preserved and used consistently in
+  scoring and UI display.
+- `assets/golf.js` contains the scoring math, while the rest of the app
+  handles screens, data syncing, and user interaction.
 
-## Files
+## Code structure
 
-- `index.html` — page structure
-- `assets/styles.css` — all visual design
-- `assets/golf.js` — scoring math (gross, net, Stableford, skins, match
-  play), kept separate from everything else
-- `assets/app.js` — screen logic and Supabase calls
-- `assets/supabase-config.js` — your project's connection details (see
-  SETUP.md)
-- `supabase_schema.sql` — run once in Supabase to create the database
-  tables
+- `index.html` — application shell, screens, and markup.
+- `assets/styles.css` — layout, responsive design, and visual styling.
+- `assets/supabase-config.js` — Supabase client setup and project keys.
+- `assets/core.js` — shared helpers, state management, and utility functions.
+- `assets/auth.js` — login/signup flow, account creation, and profile handling.
+- `assets/setup.js` — new round creation, player setup, pars, and game modes.
+- `assets/lobby.js` — join rounds, add players, and show the pre-round lobby.
+- `assets/round.js` — round state loading, realtime subscriptions, scorecard
+  entry, and leaderboard rendering.
+- `assets/golf.js` — pure golf scoring logic: handicap strokes, net scores,
+  Stableford points, rankings, and summaries.
+- `supabase_schema.sql` — defines the database tables, realtime publication,
+  and row-level security for Supabase.
+
+## Key details
+
+- Player handicap values are parsed with `parseHandicap()` to one decimal
+  place and clamped to the valid range `0–54`.
+- `players.handicap` is stored as `numeric(4,1)` in the database to retain
+  decimal precision.
+- The app uses Supabase realtime events on `rounds`, `players`, and
+  `scores` so leaderboard updates propagate without page refreshes.
+- Each hole score is stored as its own row in `scores`, which keeps
+  updates lightweight and conflict-free.
+- On signup, user profile data is saved to `user_profiles`, including a
+  default handicap for future rounds.
