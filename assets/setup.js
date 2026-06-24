@@ -107,7 +107,7 @@ async function resetSetupScreen() {
       .single();
     if (profile) {
       hostName = profile.display_name;
-      hostHandicap = profile.default_handicap;
+      hostHandicap = Number(profile.default_handicap) || 0;
     }
   }
 

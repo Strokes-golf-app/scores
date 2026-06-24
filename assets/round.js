@@ -62,7 +62,7 @@ async function loadRound(roundId) {
     scoreRows.filter(s => s.player_id === p.id).forEach(s => {
       scores[String(s.hole)] = s.strokes;
     });
-    return { ...p, scores };
+    return { ...p, handicap: Number(p.handicap) || 0, scores };
   });
 
   state.round = {

@@ -50,7 +50,7 @@ async function addPlayerToRound(roundId) {
       .single();
     if (profile) {
       defaultName = profile.display_name;
-      defaultHandicap = profile.default_handicap;
+      defaultHandicap = Number(profile.default_handicap) || 0;
     }
   }
 

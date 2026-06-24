@@ -32,7 +32,7 @@ create table if not exists players (
   id uuid primary key default gen_random_uuid(),
   round_id uuid not null references rounds(id) on delete cascade,
   name text not null,
-  handicap int not null default 0,
+  handicap numeric(4,1) not null default 0,
   created_at timestamptz not null default now()
 );
 
