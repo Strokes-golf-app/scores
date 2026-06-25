@@ -22,61 +22,33 @@
 // Loading a round's full state from Supabase
 // ---------------------------------------------------------
 async function loadRound(roundId) {
-  const { data: roundRow, error: roundErr } = await supabaseClient
-    .from('rounds')
-    .select('*')
-    .eq('id', roundId)
-    .single();
-  if (roundErr || !roundRow) {
+  const { data, error } = await supabaseClient.rpc('get_round_state', { p_round_id: roundId });
+  if (error || !data || !data.round) {
     showToast('This round no longer exists');
     goHome();
     return null;
   }
 
-  const { data: playerRows, error: playersErr } = await supabaseClient
-    .from('players')
-    .select('*')
-    .eq('round_id', roundId)
-    .order('created_at', { ascending: true });
-  if (playersErr) {
-    showToast('Could not load players');
-    return null;
-  }
-
-  const playerIds = playerRows.map(p => p.id);
-  let scoreRows = [];
-  if (playerIds.length > 0) {
-    const { data: sRows, error: scoresErr } = await supabaseClient
-      .from('scores')
-      .select('*')
-      .in('player_id', playerIds);
-    if (scoresErr) {
-      showToast('Could not load scores');
-      return null;
-    }
-    scoreRows = sRows;
-  }
-
-  const players = playerRows.map(p => {
+  const players = data.players.map(p => {
     const scores = {};
-    scoreRows.filter(s => s.player_id === p.id).forEach(s => {
+    data.scores.filter(s => s.player_id === p.id).forEach(s => {
       scores[String(s.hole)] = s.strokes;
     });
     return { ...p, handicap: Number(p.handicap) || 0, scores };
   });
 
+  const r = data.round;
   state.round = {
-    id: roundRow.id,
-    code: roundRow.code,
-    courseName: roundRow.course_name,
-    holeCount: roundRow.hole_count,
-    pars: roundRow.pars,
-    modes: roundRow.modes,
-    matchPlayers: (roundRow.match_player_a && roundRow.match_player_b)
-      ? [roundRow.match_player_a, roundRow.match_player_b] : null,
-    hostId: roundRow.host_player_id,
-    started: roundRow.started,
-    ended: roundRow.ended,
+    id: r.id,
+    code: r.code,
+    courseName: r.course_name,
+    holeCount: r.hole_count,
+    pars: r.pars,
+    modes: r.modes,
+    matchPlayers: (r.match_player_a && r.match_player_b) ? [r.match_player_a, r.match_player_b] : null,
+    hostId: r.host_player_id,
+    started: r.started,
+    ended: r.ended,
     players,
   };
   return state.round;
