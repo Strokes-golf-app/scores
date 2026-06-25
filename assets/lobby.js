@@ -128,7 +128,23 @@ function renderIdentifyList(round) {
   });
 }
 
-function selectIdentity(playerId) {
+async function selectIdentity(playerId) {
+  const player = state.round.players.find(p => p.id === playerId);
+
+  if (player && !player.user_id) {
+    const { error } = await supabaseClient
+      .from('players')
+      .update({ user_id: (await supabaseClient.auth.getUser()).data.user.id })
+      .eq('id', playerId);
+
+    if (error) {
+      showToast('Someone else just claimed that name — pick another or add yourself');
+      await loadRound(state.roundId);
+      renderIdentifyList(state.round);
+      return;
+    }
+  }
+
   state.myPlayerId = playerId;
   saveSession();
   if (state.round && state.round.started) {
