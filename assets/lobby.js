@@ -132,12 +132,13 @@ async function selectIdentity(playerId) {
   const player = state.round.players.find(p => p.id === playerId);
 
   if (player && !player.user_id) {
-    const { error } = await supabaseClient
+    const { data: updatedRows, error } = await supabaseClient
       .from('players')
       .update({ user_id: (await supabaseClient.auth.getUser()).data.user.id })
-      .eq('id', playerId);
+      .eq('id', playerId)
+      .select();
 
-    if (error) {
+    if (error || !updatedRows || updatedRows.length === 0) {
       showToast('Someone else just claimed that name — pick another or add yourself');
       await loadRound(state.roundId);
       renderIdentifyList(state.round);
