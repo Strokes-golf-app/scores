@@ -89,11 +89,8 @@ async function joinRound(code) {
   if (!code) return;
 
   try {
-    const { data: roundRow, error } = await supabaseClient
-      .from('rounds')
-      .select('*')
-      .eq('code', code)
-      .single();
+    const { data: roundRows, error } = await supabaseClient.rpc('find_round_by_code', { p_code: code });
+    const roundRow = roundRows && roundRows[0];
 
     if (error || !roundRow) {
       showToast('No round found with that code');
