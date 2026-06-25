@@ -163,12 +163,18 @@ async function createRound() {
   const code = makeRoundCode();
 
   try {
-    // 1. Insert the round row.
     const { data: { user: currentUser } } = await supabaseClient.auth.getUser();
+    if (!currentUser) throw new Error('No signed-in user found');
 
-    const { data: roundRow, error: roundErr } = await supabaseClient
+    const roundId = crypto.randomUUID();
+
+    // 1. Insert the round row with a client-generated id — we can't read
+    // it back with .select() here, since nobody's a member yet (that
+    // happens in the next step).
+    const { error: roundErr } = await supabaseClient
       .from('rounds')
       .insert({
+        id: roundId,
         code,
         course_name: courseName,
         hole_count: holeCount,
@@ -177,26 +183,27 @@ async function createRound() {
         started: false,
         ended: false,
         host_user_id: currentUser.id,
-      })
-      .select()
-      .single();
+      });
 
     if (roundErr) throw roundErr;
 
-    // 2. Insert all players, getting back their real database ids.
-    const { data: playerRows, error: playersErr } = await supabaseClient
+    // 2. Insert all players, also with client-generated ids, for the
+    // same reason — no need to read them back.
+    const playerRows = validPlayers.map((p, i) => ({
+      id: crypto.randomUUID(),
+      round_id: roundId,
+      name: p.name.trim(),
+      handicap: p.handicap || 0,
+      user_id: i === 0 ? currentUser.id : null,
+    }));
+
+    const { error: playersErr } = await supabaseClient
       .from('players')
-      .insert(validPlayers.map((p, i) => ({
-        round_id: roundRow.id,
-        name: p.name.trim(),
-        handicap: p.handicap || 0,
-        user_id: i === 0 ? currentUser.id : null,
-      })))
-      .select();
+      .insert(playerRows);
 
     if (playersErr) throw playersErr;
 
-    // 3. Now that players have real ids, fill in host + match player ids and save.
+    // 3. Now that players have ids, fill in host + match player ids and save.
     const hostId = playerRows[0].id;
     let matchA = null, matchB = null;
     if (matchPlayerAName) matchA = playerRows.find(p => p.name === matchPlayerAName)?.id || null;
@@ -205,17 +212,17 @@ async function createRound() {
     const { error: updateErr } = await supabaseClient
       .from('rounds')
       .update({ host_player_id: hostId, match_player_a: matchA, match_player_b: matchB })
-      .eq('id', roundRow.id);
+      .eq('id', roundId);
 
     if (updateErr) throw updateErr;
 
-    state.roundId = roundRow.id;
+    state.roundId = roundId;
     state.roundCode = code;
     state.myPlayerId = hostId;
     saveSession();
 
-    await loadRound(roundRow.id);
-    subscribeToRound(roundRow.id);
+    await loadRound(roundId);
+    subscribeToRound(roundId);
     document.getElementById('lobby-code').textContent = code;
     document.getElementById('lobby-course-name').textContent = courseName;
     showScreen('screen-lobby');
