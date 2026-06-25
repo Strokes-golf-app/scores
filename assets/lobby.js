@@ -67,9 +67,11 @@ async function addPlayerToRound(roundId) {
       .eq('id', user.id);
   }
 
+  const { data: { user: currentUser } } = await supabaseClient.auth.getUser();
+
   const { data, error } = await supabaseClient
     .from('players')
-    .insert({ round_id: roundId, name: name.trim(), handicap })
+    .insert({ round_id: roundId, name: name.trim(), handicap, user_id: currentUser?.id || null })
     .select()
     .single();
 
