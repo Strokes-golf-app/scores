@@ -164,6 +164,8 @@ async function createRound() {
 
   try {
     // 1. Insert the round row.
+    const { data: { user: currentUser } } = await supabaseClient.auth.getUser();
+
     const { data: roundRow, error: roundErr } = await supabaseClient
       .from('rounds')
       .insert({
@@ -174,6 +176,7 @@ async function createRound() {
         modes,
         started: false,
         ended: false,
+        host_user_id: currentUser.id,
       })
       .select()
       .single();
@@ -183,10 +186,11 @@ async function createRound() {
     // 2. Insert all players, getting back their real database ids.
     const { data: playerRows, error: playersErr } = await supabaseClient
       .from('players')
-      .insert(validPlayers.map(p => ({
+      .insert(validPlayers.map((p, i) => ({
         round_id: roundRow.id,
         name: p.name.trim(),
         handicap: p.handicap || 0,
+        user_id: i === 0 ? currentUser.id : null,
       })))
       .select();
 
