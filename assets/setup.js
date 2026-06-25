@@ -168,9 +168,6 @@ async function createRound() {
 
     const roundId = crypto.randomUUID();
 
-    // 1. Insert the round row with a client-generated id — we can't read
-    // it back with .select() here, since nobody's a member yet (that
-    // happens in the next step).
     const { error: roundErr } = await supabaseClient
       .from('rounds')
       .insert({
@@ -187,24 +184,37 @@ async function createRound() {
 
     if (roundErr) throw roundErr;
 
-    // 2. Insert all players, also with client-generated ids, for the
-    // same reason — no need to read them back.
-    const playerRows = validPlayers.map((p, i) => ({
+    // Insert the host's own row FIRST, on its own — this one doesn't
+    // depend on the round being readable yet, just on user_id matching.
+    const hostRow = {
+      id: crypto.randomUUID(),
+      round_id: roundId,
+      name: validPlayers[0].name.trim(),
+      handicap: validPlayers[0].handicap || 0,
+      user_id: currentUser.id,
+    };
+
+    const { error: hostErr } = await supabaseClient.from('players').insert(hostRow);
+    if (hostErr) throw hostErr;
+
+    // Now insert any other players typed in at setup, as a SEPARATE
+    // step — by now the host's row above is committed, so the
+    // "host can pre-add a placeholder" check can actually see it.
+    const otherPlayers = validPlayers.slice(1).map(p => ({
       id: crypto.randomUUID(),
       round_id: roundId,
       name: p.name.trim(),
       handicap: p.handicap || 0,
-      user_id: i === 0 ? currentUser.id : null,
+      user_id: null,
     }));
 
-    const { error: playersErr } = await supabaseClient
-      .from('players')
-      .insert(playerRows);
+    if (otherPlayers.length > 0) {
+      const { error: othersErr } = await supabaseClient.from('players').insert(otherPlayers);
+      if (othersErr) throw othersErr;
+    }
 
-    if (playersErr) throw playersErr;
-
-    // 3. Now that players have ids, fill in host + match player ids and save.
-    const hostId = playerRows[0].id;
+    const playerRows = [hostRow, ...otherPlayers];
+    const hostId = hostRow.id;
     let matchA = null, matchB = null;
     if (matchPlayerAName) matchA = playerRows.find(p => p.name === matchPlayerAName)?.id || null;
     if (matchPlayerBName) matchB = playerRows.find(p => p.name === matchPlayerBName)?.id || null;
