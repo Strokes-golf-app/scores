@@ -1,6 +1,5 @@
-const { describe, it, expect } = require('vitest');
-const Golf = require('../assets/golf.js');
-
+import { describe, it, expect } from 'vitest';
+import Golf from '../assets/golf.js';
 describe('allocateStrokes', () => {
   it('gives one stroke to the hardest N holes for a standard handicap', () => {
     const strokes = Golf.allocateStrokes(10, 18);
