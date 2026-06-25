@@ -151,7 +151,17 @@ function init() {
       return;
     }
     if (!isLoggedIn) {
-      if (codeFromUrl) state.pendingJoinCode = codeFromUrl.toUpperCase();
+      if (codeFromUrl) {
+        const { error } = await supabaseClient.auth.signInAnonymously();
+        if (error) {
+          showToast('Could not start a guest session — check your connection');
+          showScreen('screen-auth');
+          return;
+        }
+        showScreen('screen-home');
+        joinRound(codeFromUrl);
+        return;
+      }
       showScreen('screen-auth');
       return;
     }
