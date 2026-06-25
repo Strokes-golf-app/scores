@@ -118,23 +118,34 @@ function renderIdentifyList(round) {
   list.innerHTML = '';
   round.players.forEach(p => {
     const row = document.createElement('div');
+    const claimed = !!p.user_id;
     row.className = 'player-row';
     row.innerHTML = `
       <span class="player-chip-name">${escapeHtml(p.name)}</span>
-      <span class="player-chip-hcp">HCP ${p.handicap}</span>
+      <span class="player-chip-hcp">${claimed ? 'Already joined' : 'HCP ' + p.handicap}</span>
     `;
-    row.addEventListener('click', () => selectIdentity(p.id));
+    if (!claimed) {
+      row.addEventListener('click', () => selectIdentity(p.id));
+    }
     list.appendChild(row);
   });
 }
 
 async function selectIdentity(playerId) {
   const player = state.round.players.find(p => p.id === playerId);
+  if (!player) return;
 
-  if (player && !player.user_id) {
+  const { data: { user: currentUser } } = await supabaseClient.auth.getUser();
+
+  if (player.user_id && player.user_id !== currentUser.id) {
+    showToast('That name is already taken — pick another or add yourself');
+    return;
+  }
+
+  if (!player.user_id) {
     const { data: updatedRows, error } = await supabaseClient
       .from('players')
-      .update({ user_id: (await supabaseClient.auth.getUser()).data.user.id })
+      .update({ user_id: currentUser.id })
       .eq('id', playerId)
       .select();
 
@@ -148,6 +159,7 @@ async function selectIdentity(playerId) {
 
   state.myPlayerId = playerId;
   saveSession();
+  await loadRound(state.roundId);
   if (state.round && state.round.started) {
     enterRound();
   } else {
