@@ -219,6 +219,18 @@ function scoringPlayer() {
   return state.round.players.find(p => p.id === id);
 }
 
+// The hole right after the last one this player has a score for —
+// used so switching the scoring dropdown lands you where they left
+// off instead of always jumping back to hole 1.
+function nextUnplayedHole(player, holeCount) {
+  if (!player || !player.scores) return 1;
+  let lastPlayed = 0;
+  for (let h = 1; h <= holeCount; h++) {
+    if (player.scores[String(h)] != null) lastPlayed = h;
+  }
+  return Math.min(holeCount, lastPlayed + 1);
+}
+
 function renderScorecardTab() {
   const r = state.round;
   const player = scoringPlayer();
