@@ -21,6 +21,7 @@ const state = {
   setupPlayers: [],
   myCourses: [],                    // saved course library, loaded when the setup screen opens
   selectedCourseStrokeIndex: null,  // handicap-ranking array from a selected saved course, or null for manual/hole-order default
+  editingCourseId: null,            // set while the upload screen is editing an existing course, instead of creating a new one
   realtimeChannel: null,
   authMode: 'login',     // 'login' or 'signup'
   pendingJoinCode: null, // round code from a ?code= deep link, applied after auth
