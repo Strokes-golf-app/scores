@@ -26,6 +26,17 @@ function init() {
   document.getElementById('btn-course-upload-back').addEventListener('click', () => showScreen('screen-home'));
   document.getElementById('course-hole-count').addEventListener('change', renderCourseHoleGrid);
   document.getElementById('btn-save-course').addEventListener('click', saveCourse);
+  document.getElementById('btn-save-course-start-round').addEventListener('click', saveCourseAndStartRound);
+
+  document.getElementById('btn-manage-courses').addEventListener('click', async () => {
+    await renderCourseManageList();
+    showScreen('screen-course-manage');
+  });
+  document.getElementById('btn-course-manage-back').addEventListener('click', () => showScreen('screen-home'));
+  document.getElementById('btn-manage-add-course').addEventListener('click', async () => {
+    await resetCourseUploadScreen();
+    showScreen('screen-course-upload');
+  });
 
   document.getElementById('course-select').addEventListener('change', e => {
     applySelectedCourse(e.target.value);
