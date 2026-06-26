@@ -102,3 +102,10 @@ function parseHandicap(val) {
   if (isNaN(n)) return 0;
   return Math.min(54, Math.max(0, Math.round(n * 10) / 10));
 }
+
+// True if the currently-identified player is this round's host.
+// Used to hide host-only controls (start round, edit par, and
+// eventually editing other players' scores) from everyone else.
+function isHost() {
+  return !!(state.round && state.myPlayerId && state.myPlayerId === state.round.hostId);
+}
