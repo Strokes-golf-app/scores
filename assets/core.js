@@ -14,6 +14,7 @@ const state = {
   roundCode: null,
   round: null,
   myPlayerId: null,
+  scoringPlayerId: null, // who the scorecard tab is entering for — yourself, unless the host switched it
   currentHole: 1,
   activeTab: 'card',
   activeModeTab: null,
