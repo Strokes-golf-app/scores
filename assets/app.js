@@ -113,6 +113,13 @@ function init() {
   });
   document.getElementById('btn-par-save').addEventListener('click', savePar);
 
+  document.getElementById('scoring-for-select').addEventListener('change', e => {
+    state.scoringPlayerId = e.target.value;
+    state.currentHole = 1;
+    document.getElementById('par-editor').hidden = true;
+    renderScorecardTab();
+  });
+
   document.getElementById('btn-stroke-minus').addEventListener('click', () => setStroke(-1));
   document.getElementById('btn-stroke-plus').addEventListener('click', () => setStroke(1));
 
