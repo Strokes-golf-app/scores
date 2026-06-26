@@ -632,6 +632,43 @@ input::placeholder {
   border-radius: 999px;
   padding: 0.15rem 0.55rem;
 }
+.match-assign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.match-assign-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.75rem;
+}
+.match-assign-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+.match-assign-select {
+  width: auto;
+  flex: none;
+}
+.match-handicap-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.match-handicap-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--fairway);
+}
 
 /* ---------- Lobby code card ---------- */
 .code-card {

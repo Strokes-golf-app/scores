@@ -40,7 +40,8 @@ async function loadRound(roundId) {
     state.round = {
       id: r.id, code: r.code, courseName: r.course_name, holeCount: r.hole_count,
       pars: r.pars, modes: r.modes, strokeIndex: r.stroke_index || null,
-      matchPlayers: (r.match_player_a && r.match_player_b) ? [r.match_player_a, r.match_player_b] : null,
+      matchTeamA: r.match_team_a || null, matchTeamB: r.match_team_b || null,
+      matchUseHandicap: r.match_use_handicap !== false,
       hostId: r.host_player_id, started: r.started, ended: r.ended, players,
     };
     return state.round;
@@ -77,7 +78,8 @@ async function loadRound(roundId) {
   state.round = {
     id: roundRow.id, code: roundRow.code, courseName: roundRow.course_name, holeCount: roundRow.hole_count,
     pars: roundRow.pars, modes: roundRow.modes, strokeIndex: roundRow.stroke_index || null,
-    matchPlayers: (roundRow.match_player_a && roundRow.match_player_b) ? [roundRow.match_player_a, roundRow.match_player_b] : null,
+    matchTeamA: roundRow.match_team_a || null, matchTeamB: roundRow.match_team_b || null,
+    matchUseHandicap: roundRow.match_use_handicap !== false,
     hostId: roundRow.host_player_id, started: roundRow.started, ended: roundRow.ended, players,
   };
   return state.round;
@@ -440,18 +442,23 @@ function renderMatchBoard(summaries, r) {
   const metaEl = document.getElementById('board-meta');
   const boardEl = document.getElementById('leaderboard');
 
-  if (!r.matchPlayers || r.matchPlayers.length !== 2) {
+  if (!r.matchTeamA || !r.matchTeamB || r.matchTeamA.length === 0 || r.matchTeamB.length === 0) {
     metaEl.textContent = '';
-    boardEl.innerHTML = '<div class="lb-empty">Match play needs exactly two players selected at setup.</div>';
+    boardEl.innerHTML = '<div class="lb-empty">Match play needs teams selected at setup.</div>';
     return;
   }
 
-  const sA = summaries.find(s => s.playerId === r.matchPlayers[0]);
-  const sB = summaries.find(s => s.playerId === r.matchPlayers[1]);
-  if (!sA || !sB) return;
+  const teamASummaries = r.matchTeamA.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  const teamBSummaries = r.matchTeamB.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  if (teamASummaries.length === 0 || teamBSummaries.length === 0) return;
 
-  const m = Golf.computeMatchPlay(sA, sB, r.holeCount);
-  metaEl.textContent = 'Head-to-head, net score per hole.';
+  const m = Golf.computeMatchPlay(teamASummaries, teamBSummaries, r.holeCount, r.matchUseHandicap);
+  const teamAName = teamASummaries.map(s => s.name).join(' & ');
+  const teamBName = teamBSummaries.map(s => s.name).join(' & ');
+
+  metaEl.textContent = r.matchUseHandicap
+    ? 'Head-to-head, best-ball net score per hole.'
+    : 'Head-to-head, best-ball gross score per hole.';
 
   let statusText;
   if (m.thru === 0) {
@@ -459,7 +466,7 @@ function renderMatchBoard(summaries, r) {
   } else if (m.diff === 0) {
     statusText = 'All square';
   } else {
-    const leaderName = m.diff > 0 ? sA.name : sB.name;
+    const leaderName = m.diff > 0 ? teamAName : teamBName;
     statusText = m.decided && m.thru < r.holeCount
       ? `${leaderName} wins ${m.margin}&${m.remaining}`
       : `${leaderName} ${m.margin} up`;
@@ -467,7 +474,7 @@ function renderMatchBoard(summaries, r) {
 
   boardEl.innerHTML = `
     <div class="match-card">
-      <p class="match-vs">${escapeHtml(sA.name)} vs ${escapeHtml(sB.name)}</p>
+      <p class="match-vs">${escapeHtml(teamAName)} vs ${escapeHtml(teamBName)}</p>
       <p class="match-status">${statusText}</p>
       <p class="match-thru">thru ${m.thru} of ${r.holeCount}</p>
     </div>
