@@ -143,13 +143,9 @@ async function selectIdentity(playerId) {
   }
 
   if (!player.user_id) {
-    const { data: updatedRows, error } = await supabaseClient
-      .from('players')
-      .update({ user_id: currentUser.id })
-      .eq('id', playerId)
-      .select();
+    const { data: claimedRows, error } = await supabaseClient.rpc('claim_player', { p_player_id: playerId });
 
-    if (error || !updatedRows || updatedRows.length === 0) {
+    if (error || !claimedRows || claimedRows.length === 0) {
       showToast('Someone else just claimed that name — pick another or add yourself');
       await loadRound(state.roundId);
       renderIdentifyList(state.round);
@@ -167,7 +163,6 @@ async function selectIdentity(playerId) {
     renderLobby();
   }
 }
-
 // ---------------------------------------------------------
 // Navigation / leaving
 // ---------------------------------------------------------
