@@ -276,6 +276,28 @@ h1, h2, h3 {
 .icon-btn:active {
   background: var(--sand-light);
 }
+.icon-btn.icon-btn-labeled {
+  width: auto;
+  height: 44px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  border-radius: var(--radius-sm);
+  padding: 0 0.5rem;
+}
+.icon-btn-labeled .icon-btn-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.icon-btn-labeled .icon-btn-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--cream);
+}
 
 /* ---------- Topbar ---------- */
 .topbar {
@@ -591,7 +613,7 @@ input::placeholder {
   display: flex;
   background: var(--fairway-dark);
   position: sticky;
-  top: 64px;
+  top: 72px;
   z-index: 9;
 }
 .tab {
