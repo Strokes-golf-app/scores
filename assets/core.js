@@ -19,6 +19,8 @@ const state = {
   activeTab: 'card',
   activeModeTab: null,
   setupPlayers: [],
+  myCourses: [],                    // saved course library, loaded when the setup screen opens
+  selectedCourseStrokeIndex: null,  // handicap-ranking array from a selected saved course, or null for manual/hole-order default
   realtimeChannel: null,
   authMode: 'login',     // 'login' or 'signup'
   pendingJoinCode: null, // round code from a ?code= deep link, applied after auth
