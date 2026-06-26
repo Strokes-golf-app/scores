@@ -261,22 +261,24 @@
 
 <!-- ============ SCREEN: ROUND ============ -->
 <section id="screen-round" class="screen">
-  <header class="topbar">
-    <button class="icon-btn" id="btn-round-leave" aria-label="Leave round">←</button>
-    <div class="topbar-title-wrap">
-      <h2 class="topbar-title" id="round-course-name">Round</h2>
-      <p class="topbar-sub" id="round-meta">—</p>
-    </div>
-    <button class="icon-btn icon-btn-labeled" id="btn-round-share" aria-label="Share round">
-      <span class="icon-btn-icon">📋</span>
-      <span class="icon-btn-label">Share round</span>
-    </button>
-  </header>
+  <div class="round-sticky-header">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-round-leave" aria-label="Leave round">←</button>
+      <div class="topbar-title-wrap">
+        <h2 class="topbar-title" id="round-course-name">Round</h2>
+        <p class="topbar-sub" id="round-meta">—</p>
+      </div>
+      <button class="icon-btn icon-btn-labeled" id="btn-round-share" aria-label="Share round">
+        <span class="icon-btn-icon">📋</span>
+        <span class="icon-btn-label">Share round</span>
+      </button>
+    </header>
 
-  <nav class="tabbar" id="round-tabbar">
-    <button class="tab active" data-tab="card">Scorecard</button>
-    <button class="tab" data-tab="board">Leaderboard</button>
-  </nav>
+    <nav class="tabbar" id="round-tabbar">
+      <button class="tab active" data-tab="card">Scorecard</button>
+      <button class="tab" data-tab="board">Leaderboard</button>
+    </nav>
+  </div>
 
   <!-- SCORECARD TAB -->
   <div class="tabpanel active" id="tab-card">
