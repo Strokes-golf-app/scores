@@ -34,6 +34,8 @@ function renderLobby() {
   document.getElementById('lobby-modes').innerHTML =
     (r.modes || ['gross']).map(m => `<span class="chip">${modeNames[m] || m}</span>`).join('');
 
+  document.getElementById('btn-start-round').hidden = !isHost();
+
   if (r.started) enterRound();
 }
 
