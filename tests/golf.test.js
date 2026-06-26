@@ -174,6 +174,50 @@ describe('computeMatchPlay', () => {
   });
 });
 
+describe('computeMatchPlay — teams and best ball', () => {
+  const pars = [4, 4, 4, 4];
+
+  it('uses best-ball net score per hole for a 2v2 match', () => {
+    const alice = Golf.summarizePlayer({ id: 'alice', name: 'Alice', handicap: 0 }, { 1: 3, 2: 3, 3: 5, 4: 5 }, pars, null, 4);
+    const andy = Golf.summarizePlayer({ id: 'andy', name: 'Andy', handicap: 0 }, { 1: 5, 2: 5, 3: 3, 4: 3 }, pars, null, 4);
+    const beth = Golf.summarizePlayer({ id: 'beth', name: 'Beth', handicap: 0 }, { 1: 4, 2: 4, 3: 4, 4: 4 }, pars, null, 4);
+    const bob = Golf.summarizePlayer({ id: 'bob', name: 'Bob', handicap: 0 }, { 1: 4, 2: 4, 3: 4, 4: 4 }, pars, null, 4);
+
+    // Team A's best ball is a 3 every hole (someone always beats par);
+    // Team B is always 4. Team A should win comfortably.
+    const result = Golf.computeMatchPlay([alice, andy], [beth, bob], 4);
+
+    expect(result.thru).toBe(3);
+    expect(result.decided).toBe(true);
+    expect(result.winner).toBe('A');
+    expect(result.margin).toBe(3);
+    expect(result.remaining).toBe(1); // "3 and 1"
+  });
+
+  it('supports a 1v2 match (one player against a two-player team)', () => {
+    const carl = Golf.summarizePlayer({ id: 'carl', name: 'Carl', handicap: 0 }, { 1: 4, 2: 4, 3: 4, 4: 4 }, pars, null, 4);
+    const dana = Golf.summarizePlayer({ id: 'dana', name: 'Dana', handicap: 0 }, { 1: 5, 2: 5, 3: 5, 4: 5 }, pars, null, 4);
+    const eli = Golf.summarizePlayer({ id: 'eli', name: 'Eli', handicap: 0 }, { 1: 5, 2: 3, 3: 5, 4: 5 }, pars, null, 4);
+
+    const result = Golf.computeMatchPlay([carl], [dana, eli], 4);
+
+    expect(result.thru).toBe(4);
+    expect(result.diff).toBe(2); // Carl wins holes 1,3,4; the team wins hole 2 via Eli's birdie
+    expect(result.winner).toBe('A');
+  });
+
+  it('compares gross instead of net when useHandicap is false', () => {
+    const big = Golf.summarizePlayer({ id: 'big', name: 'Big', handicap: 10 }, { 1: 6 }, [4], [1], 1);
+    const small = Golf.summarizePlayer({ id: 'small', name: 'Small', handicap: 0 }, { 1: 5 }, [4], [1], 1);
+
+    const netResult = Golf.computeMatchPlay([big], [small], 1, true);
+    expect(netResult.log[0].result).toBe('A'); // Big's handicap strokes bring his net to 4, beating Small's net of 5
+
+    const grossResult = Golf.computeMatchPlay([big], [small], 1, false);
+    expect(grossResult.log[0].result).toBe('B'); // On raw strokes, Small's 5 beats Big's 6
+  });
+});
+
 describe('formatToPar', () => {
   it('formats even, over, and under par correctly', () => {
     expect(Golf.formatToPar(0)).toBe('E');
