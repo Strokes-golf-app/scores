@@ -199,6 +199,9 @@ function renderScorecardTab() {
   document.getElementById('hole-par').textContent = `Par ${par}`;
   document.getElementById('par-editor-input').value = par;
 
+  document.getElementById('btn-par-toggle').hidden = !isHost();
+  if (!isHost()) document.getElementById('par-editor').hidden = true;
+
   const gross = player.scores && player.scores[String(h)] != null ? Number(player.scores[String(h)]) : null;
   document.getElementById('stroke-number').textContent = gross != null ? gross : '—';
   document.getElementById('stroke-caption').textContent = r.ended
