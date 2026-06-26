@@ -90,6 +90,7 @@ function refreshMatchPlayerSelects() {
 async function resetSetupScreen() {
   document.getElementById('course-name').value = '';
   document.getElementById('hole-count').value = '18';
+  document.getElementById('course-select').value = '';
   document.querySelectorAll('#mode-grid input[name="mode"]').forEach(cb => {
     if (cb.value !== 'gross') cb.checked = false;
     cb.closest('.mode-card').classList.toggle('checked', cb.checked);
@@ -111,9 +112,38 @@ async function resetSetupScreen() {
     }
   }
 
+  state.selectedCourseStrokeIndex = null;
+  await renderCourseSelectOptions();
+
   state.setupPlayers = [{ id: uid('p'), name: hostName, handicap: hostHandicap }];
   renderParGrid();
   renderSetupPlayerList();
+}
+
+async function renderCourseSelectOptions() {
+  const select = document.getElementById('course-select');
+  const courses = await loadMyCourses();
+  state.myCourses = courses;
+  select.innerHTML = '<option value="">Manual entry</option>' +
+    courses.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.hole_count} holes)</option>`).join('');
+}
+
+function applySelectedCourse(courseId) {
+  const course = (state.myCourses || []).find(c => c.id === courseId);
+  if (!course) {
+    state.selectedCourseStrokeIndex = null;
+    return;
+  }
+
+  document.getElementById('course-name').value = course.name;
+  document.getElementById('hole-count').value = String(course.hole_count);
+  renderParGrid();
+  document.querySelectorAll('.par-input').forEach(inp => {
+    const h = Number(inp.dataset.hole) - 1;
+    inp.value = course.pars[h];
+  });
+
+  state.selectedCourseStrokeIndex = course.stroke_index;
 }
 
 function collectPars() {
@@ -180,6 +210,7 @@ async function createRound() {
         started: false,
         ended: false,
         host_user_id: currentUser.id,
+        stroke_index: state.selectedCourseStrokeIndex || null,
       });
 
     if (roundErr) throw roundErr;
