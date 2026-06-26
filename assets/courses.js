@@ -20,9 +20,28 @@ function renderCourseHoleGrid() {
     `;
     grid.appendChild(cell);
   }
+  grid.querySelectorAll('.course-par-input, .course-hcp-input').forEach(inp => {
+    inp.addEventListener('input', updateStartRoundButtonState);
+  });
+  updateStartRoundButtonState();
+}
+
+// Enables "Save & start a round" only once every hole has both a par
+// and a handicap ranking entered. Name, location, range, and duplicate
+// checks still happen on click — same as the regular Save button.
+function updateStartRoundButtonState() {
+  const pars = document.querySelectorAll('.course-par-input');
+  const hcps = document.querySelectorAll('.course-hcp-input');
+  const allFilled = pars.length > 0 &&
+    Array.from(pars).every(inp => inp.value !== '') &&
+    Array.from(hcps).every(inp => inp.value !== '');
+  document.getElementById('btn-save-course-start-round').disabled = !allFilled;
 }
 
 async function resetCourseUploadScreen() {
+  state.editingCourseId = null;
+  document.getElementById('course-upload-heading').textContent = 'Upload a course';
+  document.getElementById('btn-save-course').textContent = 'Save course';
   document.getElementById('course-upload-name').value = '';
   document.getElementById('course-upload-location').value = '';
   document.getElementById('course-hole-count').value = '18';
@@ -30,6 +49,35 @@ async function resetCourseUploadScreen() {
   // Load the current course list now so saveCourse() can check for
   // duplicates locally without an extra round-trip at save time.
   state.myCourses = await loadMyCourses();
+}
+
+// Pre-fills the upload screen with an existing course's data and
+// switches it into "edit" mode, so saveCourse() updates that row
+// instead of inserting a new one.
+async function startEditingCourse(courseId) {
+  state.myCourses = await loadMyCourses();
+  const course = state.myCourses.find(c => c.id === courseId);
+  if (!course) {
+    showToast('Could not find that course');
+    return;
+  }
+
+  state.editingCourseId = course.id;
+  document.getElementById('course-upload-heading').textContent = 'Edit course';
+  document.getElementById('btn-save-course').textContent = 'Save changes';
+  document.getElementById('course-upload-name').value = course.name;
+  document.getElementById('course-upload-location').value = course.location;
+  document.getElementById('course-hole-count').value = String(course.hole_count);
+  renderCourseHoleGrid();
+  document.querySelectorAll('.course-par-input').forEach(inp => {
+    const h = Number(inp.dataset.hole) - 1;
+    inp.value = course.pars[h];
+  });
+  document.querySelectorAll('.course-hcp-input').forEach(inp => {
+    const h = Number(inp.dataset.hole) - 1;
+    inp.value = course.stroke_index[h];
+  });
+  updateStartRoundButtonState();
 }
 
 function collectCourseHoles() {
@@ -63,67 +111,151 @@ function validateCourseHoles(holeCount, pars, strokeIndex) {
   return null;
 }
 
-function isDuplicateCourse(name, location) {
+function isDuplicateCourse(name, location, excludeId) {
   const normalize = s => s.trim().toLowerCase();
   return (state.myCourses || []).some(c =>
+    c.id !== excludeId &&
     normalize(c.name) === normalize(name) && normalize(c.location) === normalize(location)
   );
 }
 
-async function saveCourse() {
+// Shared by both save buttons. Returns the saved course row on success
+// (so callers know its id), or null if validation/save failed — the
+// relevant toast has already been shown in that case.
+async function saveCourseCore() {
   const name = document.getElementById('course-upload-name').value.trim();
   const location = document.getElementById('course-upload-location').value.trim();
 
   if (!name) {
     showToast('Give the course a name first');
-    return;
+    return null;
   }
   if (!location) {
     showToast('Location is required');
-    return;
+    return null;
   }
-  if (isDuplicateCourse(name, location)) {
+  if (isDuplicateCourse(name, location, state.editingCourseId)) {
     showToast('That course already exists — check the course list');
-    return;
+    return null;
   }
 
   const { holeCount, pars, strokeIndex } = collectCourseHoles();
   const errorMsg = validateCourseHoles(holeCount, pars, strokeIndex);
   if (errorMsg) {
     showToast(errorMsg);
-    return;
+    return null;
   }
 
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) {
     showToast('You need to be logged in to save a course');
-    return;
+    return null;
   }
 
-  const { error } = await supabaseClient.from('courses').insert({
-    user_id: user.id,
-    name,
-    location,
-    hole_count: holeCount,
-    pars,
-    stroke_index: strokeIndex,
-  });
+  const payload = { name, location, hole_count: holeCount, pars, stroke_index: strokeIndex };
+  const query = state.editingCourseId
+    ? supabaseClient.from('courses').update(payload).eq('id', state.editingCourseId)
+    : supabaseClient.from('courses').insert({ ...payload, user_id: user.id });
+
+  const { data, error } = await query.select().single();
 
   if (error) {
     // 23505 = unique constraint violation — catches the rare case where
     // someone else saved the same name+location between our check above
-    // and this insert actually landing.
+    // and this save actually landing.
     if (error.code === '23505') {
       showToast('That course already exists — check the course list');
     } else {
       console.error(error);
       showToast('Could not save course — check your connection');
     }
+    return null;
+  }
+
+  return data;
+}
+
+async function saveCourse() {
+  const wasEditing = !!state.editingCourseId;
+  const saved = await saveCourseCore();
+  if (!saved) return;
+
+  showToast(`${saved.name} saved`);
+  showScreen(wasEditing ? 'screen-course-manage' : 'screen-home');
+  if (wasEditing) await renderCourseManageList();
+}
+
+async function saveCourseAndStartRound() {
+  const saved = await saveCourseCore();
+  if (!saved) return;
+
+  showToast(`${saved.name} saved`);
+  await resetSetupScreen();
+  document.getElementById('course-select').value = saved.id;
+  applySelectedCourse(saved.id);
+  showScreen('screen-setup');
+}
+
+// ---------------------------------------------------------
+// Manage (edit/delete) saved courses
+// ---------------------------------------------------------
+async function renderCourseManageList() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  const courses = await loadMyCourses();
+  state.myCourses = courses;
+
+  const list = document.getElementById('course-manage-list');
+  list.innerHTML = '';
+
+  if (courses.length === 0) {
+    list.innerHTML = '<div class="course-manage-empty">No saved courses yet.</div>';
     return;
   }
 
-  showToast(`${name} saved`);
-  showScreen('screen-home');
+  courses.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'course-manage-row';
+    const isOwner = user && c.user_id === user.id;
+    row.innerHTML = `
+      <div class="course-manage-info">
+        <span class="course-manage-name">${escapeHtml(c.name)} - ${escapeHtml(c.location)}</span>
+        <span class="course-manage-meta">${c.hole_count} holes</span>
+      </div>
+      <div class="course-manage-actions">
+        ${isOwner ? `
+          <button class="icon-btn" data-action="edit" data-id="${c.id}" aria-label="Edit course">✏️</button>
+          <button class="icon-btn" data-action="delete" data-id="${c.id}" aria-label="Delete course">🗑️</button>
+        ` : ''}
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('[data-action="edit"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await startEditingCourse(btn.dataset.id);
+      showScreen('screen-course-upload');
+    });
+  });
+  list.querySelectorAll('[data-action="delete"]').forEach(btn => {
+    btn.addEventListener('click', () => deleteCourse(btn.dataset.id));
+  });
+}
+
+async function deleteCourse(courseId) {
+  const course = (state.myCourses || []).find(c => c.id === courseId);
+  const label = course ? `${course.name} - ${course.location}` : 'this course';
+  if (!confirm(`Delete ${label}? This can't be undone.`)) return;
+
+  const { error } = await supabaseClient.from('courses').delete().eq('id', courseId);
+  if (error) {
+    console.error(error);
+    showToast('Could not delete — check your connection');
+    return;
+  }
+
+  showToast('Course deleted');
+  await renderCourseManageList();
 }
 
 async function loadMyCourses() {
