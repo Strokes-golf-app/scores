@@ -227,17 +227,6 @@ const Golf = (() => {
       log,
     };
   }
-    }
-
-    return {
-      thru, diff,
-      decided: thru === holeCount && diff !== 0,
-      winner: diff > 0 ? 'A' : (diff < 0 ? 'B' : null),
-      margin: Math.abs(diff),
-      remaining: holeCount - thru,
-      log,
-    };
-  }
 
   function formatToPar(n) {
     if (n === 0) return 'E';
