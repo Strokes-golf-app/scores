@@ -39,7 +39,7 @@ async function loadRound(roundId) {
     const r = data.round;
     state.round = {
       id: r.id, code: r.code, courseName: r.course_name, holeCount: r.hole_count,
-      pars: r.pars, modes: r.modes,
+      pars: r.pars, modes: r.modes, strokeIndex: r.stroke_index || null,
       matchPlayers: (r.match_player_a && r.match_player_b) ? [r.match_player_a, r.match_player_b] : null,
       hostId: r.host_player_id, started: r.started, ended: r.ended, players,
     };
@@ -76,7 +76,7 @@ async function loadRound(roundId) {
 
   state.round = {
     id: roundRow.id, code: roundRow.code, courseName: roundRow.course_name, holeCount: roundRow.hole_count,
-    pars: roundRow.pars, modes: roundRow.modes,
+    pars: roundRow.pars, modes: roundRow.modes, strokeIndex: roundRow.stroke_index || null,
     matchPlayers: (roundRow.match_player_a && roundRow.match_player_b) ? [roundRow.match_player_a, roundRow.match_player_b] : null,
     hostId: roundRow.host_player_id, started: roundRow.started, ended: roundRow.ended, players,
   };
@@ -346,7 +346,7 @@ async function savePar() {
 function buildSummaries() {
   const r = state.round;
   return r.players.map(p =>
-    Golf.summarizePlayer(p, p.scores || {}, r.pars, null, r.holeCount)
+    Golf.summarizePlayer(p, p.scores || {}, r.pars, r.strokeIndex, r.holeCount)
   );
 }
 
