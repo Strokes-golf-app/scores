@@ -19,6 +19,18 @@ function init() {
     showScreen('screen-setup');
   });
 
+  document.getElementById('btn-upload-course').addEventListener('click', () => {
+    resetCourseUploadScreen();
+    showScreen('screen-course-upload');
+  });
+  document.getElementById('btn-course-upload-back').addEventListener('click', () => showScreen('screen-home'));
+  document.getElementById('course-hole-count').addEventListener('change', renderCourseHoleGrid);
+  document.getElementById('btn-save-course').addEventListener('click', saveCourse);
+
+  document.getElementById('course-select').addEventListener('change', e => {
+    applySelectedCourse(e.target.value);
+  });
+
   document.getElementById('form-join').addEventListener('submit', e => {
     e.preventDefault();
     joinRound(document.getElementById('join-code').value);
@@ -26,7 +38,11 @@ function init() {
 
   document.getElementById('btn-setup-back').addEventListener('click', () => showScreen('screen-home'));
 
-  document.getElementById('hole-count').addEventListener('change', renderParGrid);
+  document.getElementById('hole-count').addEventListener('change', () => {
+    renderParGrid();
+    state.selectedCourseStrokeIndex = null;
+    document.getElementById('course-select').value = '';
+  });
 
   document.getElementById('btn-add-player').addEventListener('click', () => {
     state.setupPlayers.push({ id: uid('p'), name: '', handicap: 0 });

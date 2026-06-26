@@ -125,7 +125,42 @@
       </form>
     </div>
 
+    <button class="link-btn link-btn-center" id="btn-upload-course">+ Upload a course</button>
     <button class="link-btn link-btn-center" id="btn-logout">Log out (<span id="auth-user-email"></span>)</button>
+  </div>
+</section>
+
+<!-- ============ SCREEN: COURSE UPLOAD ============ -->
+<section id="screen-course-upload" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-course-upload-back" aria-label="Back">←</button>
+    <h2 class="topbar-title">Upload a course</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
+  <div class="screen-body">
+    <div class="field">
+      <label class="field-label" for="course-upload-name">Course name</label>
+      <input type="text" id="course-upload-name" placeholder="e.g. Bobby Jones Golf Course">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="course-hole-count">Holes</label>
+        <select id="course-hole-count">
+          <option value="18">18 holes</option>
+          <option value="9">9 holes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Par &amp; handicap per hole</label>
+      <p class="field-hint">"Handicap" is the hole's difficulty ranking (1 = hardest) — the same number printed on most scorecards. Each ranking should be used exactly once.</p>
+      <div id="course-hole-grid" class="course-hole-grid"></div>
+    </div>
+
+    <button class="btn btn-primary btn-lg btn-block" id="btn-save-course">Save course</button>
   </div>
 </section>
 
@@ -138,6 +173,14 @@
   </header>
 
   <div class="screen-body">
+    <div class="field">
+      <label class="field-label" for="course-select">Course</label>
+      <select id="course-select">
+        <option value="">Manual entry</option>
+      </select>
+      <p class="field-hint">Pick a saved course to auto-fill pars and handicaps, or leave on manual entry.</p>
+    </div>
+
     <div class="field">
       <label class="field-label" for="course-name">Course name</label>
       <input type="text" id="course-name" placeholder="e.g. Bobby Jones Golf Course">
@@ -334,6 +377,7 @@
 <script src="assets/supabase-config.js"></script>
 <script src="assets/golf.js"></script>
 <script src="assets/core.js"></script>
+<script src="assets/courses.js"></script>
 <script src="assets/auth.js"></script>
 <script src="assets/setup.js"></script>
 <script src="assets/lobby.js"></script>

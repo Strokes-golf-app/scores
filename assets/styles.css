@@ -423,6 +423,35 @@ input::placeholder {
   font-weight: 700;
 }
 
+/* ---------- Course hole grid (course upload screen) ---------- */
+.course-hole-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+.course-hole-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.4rem;
+}
+.course-hole-label {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+.course-hole-cell input {
+  text-align: center;
+  padding: 0.4rem 0.25rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+}
+
 /* ---------- Mode cards ---------- */
 .mode-grid {
   display: grid;
