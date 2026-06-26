@@ -170,23 +170,41 @@ const Golf = (() => {
     return { skinsByPlayer, log };
   }
 
+  // Best-ball score for one team on one hole: the lowest individual
+  // score among that team's members. Returns null if anyone on the
+  // team hasn't entered a score for this hole yet — until they do,
+  // the team score for that hole isn't determined.
+  function bestBallHoleScore(teamSummaries, holeIndex, useHandicap) {
+    const field = useHandicap ? 'net' : 'gross';
+    const values = teamSummaries.map(s => s.holes[holeIndex][field]);
+    if (values.some(v => v == null)) return null;
+    return Math.min(...values);
+  }
+
   /**
-   * Match play between exactly two players, hole-by-hole net score.
+   * Match play between two teams of 1-3 players each (1v1, 1v2, 1v3,
+   * 2v2, etc). Each team's score per hole is its best individual score
+   * that hole ("best ball"). Pass a single summary object (not an
+   * array) for a solo player — it gets wrapped automatically.
+   * Set useHandicap=false to compare gross scores instead of net.
    */
-  function computeMatchPlay(summaryA, summaryB, holeCount) {
+  function computeMatchPlay(teamA, teamB, holeCount, useHandicap = true) {
+    const aTeam = Array.isArray(teamA) ? teamA : [teamA];
+    const bTeam = Array.isArray(teamB) ? teamB : [teamB];
+
     let diff = 0;
     let thru = 0;
     const log = [];
 
     for (let h = 0; h < holeCount; h++) {
-      const a = summaryA.holes[h];
-      const b = summaryB.holes[h];
-      if (a.gross == null || b.gross == null) break;
+      const aScore = bestBallHoleScore(aTeam, h, useHandicap);
+      const bScore = bestBallHoleScore(bTeam, h, useHandicap);
+      if (aScore == null || bScore == null) break;
       thru = h + 1;
 
-      if (a.net < b.net) diff += 1;
-      else if (b.net < a.net) diff -= 1;
-      log.push({ hole: h + 1, result: a.net === b.net ? 'halved' : (a.net < b.net ? 'A' : 'B') });
+      if (aScore < bScore) diff += 1;
+      else if (bScore < aScore) diff -= 1;
+      log.push({ hole: h + 1, result: aScore === bScore ? 'halved' : (aScore < bScore ? 'A' : 'B') });
 
       const holesRemaining = holeCount - thru;
       if (Math.abs(diff) > holesRemaining) {
@@ -198,6 +216,17 @@ const Golf = (() => {
           log,
         };
       }
+    }
+
+    return {
+      thru, diff,
+      decided: thru === holeCount && diff !== 0,
+      winner: diff > 0 ? 'A' : (diff < 0 ? 'B' : null),
+      margin: Math.abs(diff),
+      remaining: holeCount - thru,
+      log,
+    };
+  }
     }
 
     return {
