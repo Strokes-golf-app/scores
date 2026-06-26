@@ -44,9 +44,10 @@ function init() {
 
   document.getElementById('btn-lobby-leave').addEventListener('click', goHome);
   document.getElementById('btn-copy-code').addEventListener('click', async () => {
+    const link = makeJoinLink(state.roundCode);
     try {
-      await navigator.clipboard.writeText(state.roundCode);
-      showToast('Code copied');
+      await navigator.clipboard.writeText(link);
+      showToast('Join link copied');
     } catch (e) {
       showToast(`Your code: ${state.roundCode}`);
     }
@@ -82,9 +83,10 @@ function init() {
 
   document.getElementById('btn-round-leave').addEventListener('click', goHome);
   document.getElementById('btn-round-share').addEventListener('click', async () => {
+    const link = makeJoinLink(state.roundCode);
     try {
-      await navigator.clipboard.writeText(state.roundCode);
-      showToast('Round code copied: ' + state.roundCode);
+      await navigator.clipboard.writeText(link);
+      showToast('Join link copied');
     } catch (e) {
       showToast('Round code: ' + state.roundCode);
     }
