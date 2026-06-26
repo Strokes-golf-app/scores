@@ -612,9 +612,12 @@ input::placeholder {
 .tabbar {
   display: flex;
   background: var(--fairway-dark);
+}
+
+.round-sticky-header {
   position: sticky;
-  top: 72px;
-  z-index: 9;
+  top: 0;
+  z-index: 10;
 }
 .tab {
   flex: 1;
