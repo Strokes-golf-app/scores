@@ -115,7 +115,7 @@ function init() {
 
   document.getElementById('scoring-for-select').addEventListener('change', e => {
     state.scoringPlayerId = e.target.value;
-    state.currentHole = 1;
+    state.currentHole = nextUnplayedHole(scoringPlayer(), state.round.holeCount);
     document.getElementById('par-editor').hidden = true;
     renderScorecardTab();
   });
