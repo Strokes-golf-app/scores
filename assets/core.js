@@ -41,6 +41,16 @@ function makeRoundCode() {
   return code;
 }
 
+// Builds a shareable ?code= link from the current page URL, stripping
+// any other query params or hash (e.g. leftover ?code= from a deep
+// link, or a password-recovery hash) so the link is always clean.
+function makeJoinLink(code) {
+  const url = new URL(window.location.href);
+  url.search = '?code=' + code;
+  url.hash = '';
+  return url.toString();
+}
+
 function showToast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;
