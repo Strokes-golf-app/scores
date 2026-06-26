@@ -104,7 +104,6 @@ async function loadMyCourses() {
   const { data, error } = await supabaseClient
     .from('courses')
     .select('*')
-    .eq('user_id', user.id)
     .order('name', { ascending: true });
 
   if (error) {
