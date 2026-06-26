@@ -177,6 +177,7 @@ function goHome() {
   state.roundCode = null;
   state.round = null;
   state.myPlayerId = null;
+  state.scoringPlayerId = null;
   clearSession();
   showScreen('screen-home');
 }
