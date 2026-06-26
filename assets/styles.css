@@ -1003,3 +1003,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid var(--fairway-light);
   outline-offset: 2px;
 }
+
+/* ---------- Hidden utility override ---------- */
+/* Some elements (e.g. .btn-lg, .field) set their own `display`
+   value, which otherwise out-ranks the browser's default [hidden]
+   behavior. This makes `el.hidden = true` always win, no matter
+   what other classes are on the element. */
+[hidden] {
+  display: none !important;
+}
