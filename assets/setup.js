@@ -40,7 +40,7 @@ function renderSetupPlayerList() {
     inp.addEventListener('input', e => {
       const p = state.setupPlayers.find(x => x.id === e.target.dataset.id);
       if (p) p.name = e.target.value;
-      refreshMatchPlayerSelects();
+      renderMatchAssignList();
     });
   });
   wrap.querySelectorAll('.setup-hcp-input').forEach(inp => {
@@ -68,23 +68,58 @@ function renderSetupPlayerList() {
     btn.addEventListener('click', e => {
       state.setupPlayers = state.setupPlayers.filter(x => x.id !== e.target.dataset.id);
       renderSetupPlayerList();
-      refreshMatchPlayerSelects();
+      renderMatchAssignList();
     });
   });
 
-  refreshMatchPlayerSelects();
+  renderMatchAssignList();
 }
 
-function refreshMatchPlayerSelects() {
-  const p1 = document.getElementById('match-p1');
-  const p2 = document.getElementById('match-p2');
-  [p1, p2].forEach(sel => sel.innerHTML = '');
+// Builds the team-assignment list shown when "Match play" is checked.
+// Each player gets a select: not in match / Team A / Team B. Re-renders
+// preserve existing picks (matched by player id) so editing a name or
+// adding another player doesn't wipe out assignments already made.
+function renderMatchAssignList() {
+  const wrap = document.getElementById('match-assign-list');
+  if (!wrap) return;
+
+  const previous = {};
+  wrap.querySelectorAll('.match-assign-select').forEach(sel => {
+    previous[sel.dataset.id] = sel.value;
+  });
+
+  wrap.innerHTML = '';
   state.setupPlayers.forEach(p => {
     const label = p.name || 'Unnamed player';
-    p1.innerHTML += `<option value="${p.id}">${escapeHtml(label)}</option>`;
-    p2.innerHTML += `<option value="${p.id}">${escapeHtml(label)}</option>`;
+    const row = document.createElement('div');
+    row.className = 'match-assign-row';
+    row.innerHTML = `
+      <span class="match-assign-name">${escapeHtml(label)}</span>
+      <select class="match-assign-select" data-id="${p.id}">
+        <option value="">Not in match</option>
+        <option value="A">Team A</option>
+        <option value="B">Team B</option>
+      </select>
+    `;
+    wrap.appendChild(row);
   });
-  if (state.setupPlayers.length > 1) p2.selectedIndex = 1;
+
+  wrap.querySelectorAll('.match-assign-select').forEach(sel => {
+    if (previous[sel.dataset.id]) sel.value = previous[sel.dataset.id];
+  });
+}
+
+// Reads the team selects into { teamA: [ids], teamB: [ids] }, only
+// counting players who currently have a name entered.
+function collectMatchAssignments() {
+  const validIds = new Set(state.setupPlayers.filter(p => p.name.trim()).map(p => p.id));
+  const teamA = [], teamB = [];
+  document.querySelectorAll('.match-assign-select').forEach(sel => {
+    if (!validIds.has(sel.dataset.id)) return;
+    if (sel.value === 'A') teamA.push(sel.dataset.id);
+    else if (sel.value === 'B') teamB.push(sel.dataset.id);
+  });
+  return { teamA, teamB };
 }
 
 async function resetSetupScreen() {
@@ -96,6 +131,7 @@ async function resetSetupScreen() {
     cb.closest('.mode-card').classList.toggle('checked', cb.checked);
   });
   document.getElementById('match-players-field').hidden = true;
+  document.getElementById('match-use-handicap').checked = true;
 
   let hostName = '';
   let hostHandicap = 0;
@@ -178,16 +214,20 @@ async function createRound() {
     return;
   }
 
-  let matchPlayerAName = null, matchPlayerBName = null;
+  let matchTeamATempIds = [], matchTeamBTempIds = [], matchUseHandicap = true;
   if (modes.includes('match')) {
-    const p1 = document.getElementById('match-p1').value;
-    const p2 = document.getElementById('match-p2').value;
-    if (!p1 || !p2 || p1 === p2) {
-      showToast('Pick two different players for match play');
+    const { teamA, teamB } = collectMatchAssignments();
+    if (teamA.length === 0 || teamB.length === 0) {
+      showToast('Assign at least one player to each match play team');
       return;
     }
-    matchPlayerAName = state.setupPlayers.find(p => p.id === p1)?.name;
-    matchPlayerBName = state.setupPlayers.find(p => p.id === p2)?.name;
+    if (teamA.length > 3 || teamB.length > 3) {
+      showToast('Match play teams can have at most 3 players each');
+      return;
+    }
+    matchTeamATempIds = teamA;
+    matchTeamBTempIds = teamB;
+    matchUseHandicap = document.getElementById('match-use-handicap').checked;
   }
 
   const code = makeRoundCode();
@@ -225,34 +265,46 @@ async function createRound() {
       user_id: currentUser.id,
     };
 
+    // Maps each setup-screen player to their real database row id, so
+    // match play team picks (collected by temp id) can be translated
+    // to real player ids below.
+    const tempIdToDbId = { [validPlayers[0].id]: hostRow.id };
+
     const { error: hostErr } = await supabaseClient.from('players').insert(hostRow);
     if (hostErr) throw hostErr;
 
     // Now insert any other players typed in at setup, as a SEPARATE
     // step — by now the host's row above is committed, so the
     // "host can pre-add a placeholder" check can actually see it.
-    const otherPlayers = validPlayers.slice(1).map(p => ({
-      id: crypto.randomUUID(),
-      round_id: roundId,
-      name: p.name.trim(),
-      handicap: p.handicap || 0,
-      user_id: null,
-    }));
+    const otherPlayers = validPlayers.slice(1).map(p => {
+      const dbId = crypto.randomUUID();
+      tempIdToDbId[p.id] = dbId;
+      return {
+        id: dbId,
+        round_id: roundId,
+        name: p.name.trim(),
+        handicap: p.handicap || 0,
+        user_id: null,
+      };
+    });
 
     if (otherPlayers.length > 0) {
       const { error: othersErr } = await supabaseClient.from('players').insert(otherPlayers);
       if (othersErr) throw othersErr;
     }
 
-    const playerRows = [hostRow, ...otherPlayers];
     const hostId = hostRow.id;
-    let matchA = null, matchB = null;
-    if (matchPlayerAName) matchA = playerRows.find(p => p.name === matchPlayerAName)?.id || null;
-    if (matchPlayerBName) matchB = playerRows.find(p => p.name === matchPlayerBName)?.id || null;
+    const matchTeamA = matchTeamATempIds.map(id => tempIdToDbId[id]).filter(Boolean);
+    const matchTeamB = matchTeamBTempIds.map(id => tempIdToDbId[id]).filter(Boolean);
 
     const { error: updateErr } = await supabaseClient
       .from('rounds')
-      .update({ host_player_id: hostId, match_player_a: matchA, match_player_b: matchB })
+      .update({
+        host_player_id: hostId,
+        match_team_a: matchTeamA.length ? matchTeamA : null,
+        match_team_b: matchTeamB.length ? matchTeamB : null,
+        match_use_handicap: matchUseHandicap,
+      })
       .eq('id', roundId);
 
     if (updateErr) throw updateErr;
