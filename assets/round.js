@@ -123,6 +123,7 @@ function onRoundUpdate() {
       // Host started it elsewhere, or we're still waiting — re-check.
     }
     renderRoundHeader();
+    renderScoringSelector();
     renderScorecardTab();
     renderLeaderboardTab();
   }
@@ -136,8 +137,8 @@ function onRoundUpdate() {
 // ---------------------------------------------------------
 function enterRound() {
   saveSession();
-  const me = state.round.players.find(p => p.id === state.myPlayerId);
-  document.getElementById('scoring-for-label').textContent = me ? `Entering for ${me.name}` : 'Entering for you';
+  state.scoringPlayerId = state.myPlayerId;
+  renderScoringSelector();
   populateModeTabs();
   state.currentHole = 1;
   showScreen('screen-round');
@@ -145,6 +146,28 @@ function enterRound() {
   renderRoundHeader();
   renderScorecardTab();
   renderLeaderboardTab();
+}
+
+// Lets the host pick any player from a dropdown and enter scores on
+// their behalf. Everyone else just sees a static "Entering for you"
+// label, same as before.
+function renderScoringSelector() {
+  const label = document.getElementById('scoring-for-label');
+  const select = document.getElementById('scoring-for-select');
+
+  if (!isHost()) {
+    const me = myPlayer();
+    label.textContent = me ? `Entering for ${me.name}` : 'Entering for you';
+    label.hidden = false;
+    select.hidden = true;
+    return;
+  }
+
+  label.textContent = 'Scoring for';
+  select.hidden = false;
+  select.innerHTML = state.round.players.map(p =>
+    `<option value="${p.id}" ${p.id === state.scoringPlayerId ? 'selected' : ''}>${escapeHtml(p.name)}${p.id === state.myPlayerId ? ' (you)' : ''}</option>`
+  ).join('');
 }
 
 function populateModeTabs() {
@@ -188,9 +211,17 @@ function myPlayer() {
   return state.round.players.find(p => p.id === state.myPlayerId);
 }
 
+// The player whose scorecard is currently being entered — normally
+// yourself, but the host can switch this via the dropdown to enter
+// scores on behalf of someone else (e.g. their phone died mid-round).
+function scoringPlayer() {
+  const id = state.scoringPlayerId || state.myPlayerId;
+  return state.round.players.find(p => p.id === id);
+}
+
 function renderScorecardTab() {
   const r = state.round;
-  const player = myPlayer();
+  const player = scoringPlayer();
   if (!player) return;
 
   const h = state.currentHole;
@@ -252,7 +283,7 @@ async function setStroke(delta) {
     showToast('This round has ended');
     return;
   }
-  const player = myPlayer();
+  const player = scoringPlayer();
   if (!player) return;
   const h = state.currentHole;
   const par = r.pars[h - 1] || 4;
@@ -263,9 +294,12 @@ async function setStroke(delta) {
   player.scores[String(h)] = next;
   renderScorecardTab();
 
-  const { error } = await supabaseClient
-    .from('scores')
-    .upsert({ player_id: player.id, hole: h, strokes: next }, { onConflict: 'player_id,hole' });
+  const editingSelf = player.id === state.myPlayerId;
+  const { error } = editingSelf
+    ? await supabaseClient
+        .from('scores')
+        .upsert({ player_id: player.id, hole: h, strokes: next }, { onConflict: 'player_id,hole' })
+    : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: next });
 
   if (error) {
     console.error(error);
