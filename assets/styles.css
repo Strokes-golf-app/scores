@@ -219,6 +219,13 @@ h1, h2, h3 {
   color: var(--fairway);
   border: 1.5px solid var(--fairway);
 }
+.btn-dark {
+  background: var(--ink-soft);
+  color: var(--cream);
+}
+.btn-dark:hover {
+  background: var(--ink);
+}
 .btn-block {
   width: 100%;
 }
