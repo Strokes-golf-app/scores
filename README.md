@@ -1,4 +1,4 @@
-# Stokes Golf
+# Strokes Golf
 
 A live scorecard and leaderboard for golf rounds with friends. Each
 player enters their own scores on their phone as they play; everyone

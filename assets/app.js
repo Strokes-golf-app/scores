@@ -19,8 +19,8 @@ function init() {
     showScreen('screen-setup');
   });
 
-  document.getElementById('btn-upload-course').addEventListener('click', () => {
-    resetCourseUploadScreen();
+  document.getElementById('btn-upload-course').addEventListener('click', async () => {
+    await resetCourseUploadScreen();
     showScreen('screen-course-upload');
   });
   document.getElementById('btn-course-upload-back').addEventListener('click', () => showScreen('screen-home'));
@@ -42,6 +42,7 @@ function init() {
     renderParGrid();
     state.selectedCourseStrokeIndex = null;
     document.getElementById('course-select').value = '';
+    document.getElementById('course-name').value = '';
   });
 
   document.getElementById('btn-add-player').addEventListener('click', () => {

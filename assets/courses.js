@@ -22,10 +22,14 @@ function renderCourseHoleGrid() {
   }
 }
 
-function resetCourseUploadScreen() {
+async function resetCourseUploadScreen() {
   document.getElementById('course-upload-name').value = '';
+  document.getElementById('course-upload-location').value = '';
   document.getElementById('course-hole-count').value = '18';
   renderCourseHoleGrid();
+  // Load the current course list now so saveCourse() can check for
+  // duplicates locally without an extra round-trip at save time.
+  state.myCourses = await loadMyCourses();
 }
 
 function collectCourseHoles() {
@@ -59,10 +63,27 @@ function validateCourseHoles(holeCount, pars, strokeIndex) {
   return null;
 }
 
+function isDuplicateCourse(name, location) {
+  const normalize = s => s.trim().toLowerCase();
+  return (state.myCourses || []).some(c =>
+    normalize(c.name) === normalize(name) && normalize(c.location) === normalize(location)
+  );
+}
+
 async function saveCourse() {
   const name = document.getElementById('course-upload-name').value.trim();
+  const location = document.getElementById('course-upload-location').value.trim();
+
   if (!name) {
     showToast('Give the course a name first');
+    return;
+  }
+  if (!location) {
+    showToast('Location is required');
+    return;
+  }
+  if (isDuplicateCourse(name, location)) {
+    showToast('That course already exists — check the course list');
     return;
   }
 
@@ -82,14 +103,22 @@ async function saveCourse() {
   const { error } = await supabaseClient.from('courses').insert({
     user_id: user.id,
     name,
+    location,
     hole_count: holeCount,
     pars,
     stroke_index: strokeIndex,
   });
 
   if (error) {
-    console.error(error);
-    showToast('Could not save course — check your connection');
+    // 23505 = unique constraint violation — catches the rare case where
+    // someone else saved the same name+location between our check above
+    // and this insert actually landing.
+    if (error.code === '23505') {
+      showToast('That course already exists — check the course list');
+    } else {
+      console.error(error);
+      showToast('Could not save course — check your connection');
+    }
     return;
   }
 

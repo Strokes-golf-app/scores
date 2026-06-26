@@ -125,7 +125,9 @@
       </form>
     </div>
 
-    <button class="link-btn link-btn-center" id="btn-upload-course">+ Upload a course</button>
+    <button class="btn btn-dark btn-lg" id="btn-upload-course">
+      <span class="btn-label">+ Upload a course</span>
+    </button>
     <button class="link-btn link-btn-center" id="btn-logout">Log out (<span id="auth-user-email"></span>)</button>
   </div>
 </section>
@@ -139,9 +141,14 @@
   </header>
 
   <div class="screen-body">
-    <div class="field">
+   <div class="field">
       <label class="field-label" for="course-upload-name">Course name</label>
       <input type="text" id="course-upload-name" placeholder="e.g. Bobby Jones Golf Course">
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="course-upload-location">Location</label>
+      <input type="text" id="course-upload-location" placeholder="e.g. Clemson, SC">
     </div>
 
     <div class="field-row">

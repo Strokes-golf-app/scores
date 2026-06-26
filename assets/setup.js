@@ -125,7 +125,7 @@ async function renderCourseSelectOptions() {
   const courses = await loadMyCourses();
   state.myCourses = courses;
   select.innerHTML = '<option value="">Manual entry</option>' +
-    courses.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.hole_count} holes)</option>`).join('');
+    courses.map(c => `<option value="${c.id}">${escapeHtml(c.name)} - ${escapeHtml(c.location)}</option>`).join('');
 }
 
 function applySelectedCourse(courseId) {
