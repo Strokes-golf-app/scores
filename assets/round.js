@@ -143,6 +143,8 @@ function enterRound() {
   renderScoringSelector();
   populateModeTabs();
   state.currentHole = 1;
+  state.hasShownHole15Reminder = false;
+  hideFifteenthHoleReminder();
   showScreen('screen-round');
   setTab('card');
   renderRoundHeader();
@@ -233,6 +235,19 @@ function nextUnplayedHole(player, holeCount) {
   return Math.min(holeCount, lastPlayed + 1);
 }
 
+function hideFifteenthHoleReminder() {
+  const modal = document.getElementById('hole15-modal');
+  if (modal) modal.hidden = true;
+}
+
+function showFifteenthHoleReminder() {
+  if (!state.round || state.round.holeCount < 15 || state.hasShownHole15Reminder) return;
+  const modal = document.getElementById('hole15-modal');
+  if (!modal) return;
+  modal.hidden = false;
+  state.hasShownHole15Reminder = true;
+}
+
 function renderScorecardTab() {
   const r = state.round;
   const player = scoringPlayer();
@@ -255,6 +270,10 @@ function renderScorecardTab() {
 
   document.getElementById('btn-stroke-minus').disabled = !!r.ended;
   document.getElementById('btn-stroke-plus').disabled = !!r.ended;
+
+  if (h === 15) {
+    showFifteenthHoleReminder();
+  }
 
   renderMiniHoles(player, r);
 }

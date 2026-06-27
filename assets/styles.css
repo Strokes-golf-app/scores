@@ -148,6 +148,37 @@ h1, h2, h3 {
   font-size: 13px;
   margin: 0;
 }
+
+.hole15-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 20, 16, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1100;
+}
+
+.hole15-modal-card {
+  width: min(100%, 320px);
+  background: var(--cream);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
+  padding: 1.25rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.hole15-modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fairway-dark);
+}
+
 /* ---------- Auth screen ---------- */
 .auth-tabs {
   display: flex;

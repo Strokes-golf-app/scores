@@ -134,6 +134,7 @@ function init() {
     document.getElementById('par-editor').hidden = true;
     renderScorecardTab();
   });
+  document.getElementById('btn-close-hole15-reminder').addEventListener('click', hideFifteenthHoleReminder);
 
   document.getElementById('btn-par-toggle').addEventListener('click', () => {
     const el = document.getElementById('par-editor');
