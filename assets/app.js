@@ -151,6 +151,7 @@ function init() {
 
   document.getElementById('btn-stroke-minus').addEventListener('click', () => setStroke(-1));
   document.getElementById('btn-stroke-plus').addEventListener('click', () => setStroke(1));
+  document.getElementById('btn-end-round').addEventListener('click', endRound);
 
   document.getElementById('auth-tab-login').addEventListener('click', () => setAuthMode('login'));
   document.getElementById('auth-tab-signup').addEventListener('click', () => setAuthMode('signup'));
