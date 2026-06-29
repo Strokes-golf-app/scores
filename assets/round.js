@@ -93,12 +93,6 @@ function subscribeToRound(roundId) {
     state.realtimeChannel = null;
   }
 
-  function subscribeToRound(roundId) {
-  if (state.realtimeChannel) {
-    supabaseClient.removeChannel(state.realtimeChannel);
-    state.realtimeChannel = null;
-  }
-
   const channel = supabaseClient
     .channel('round-' + roundId)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rounds', filter: `id=eq.${roundId}` },
