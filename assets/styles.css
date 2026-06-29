@@ -909,6 +909,10 @@ input::placeholder {
   margin-top: 0.3rem;
 }
 
+.end-round-wrap {
+  padding: 0.25rem 0 0.5rem;
+}
+
 .my-progress {
   display: flex;
   flex-direction: column;

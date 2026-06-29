@@ -24,6 +24,7 @@ const state = {
   selectedCourseStrokeIndex: null,  // handicap-ranking array from a selected saved course, or null for manual/hole-order default
   editingCourseId: null,            // set while the upload screen is editing an existing course, instead of creating a new one
   realtimeChannel: null,
+  endingRound: false, // guards against double-tapping "End Round" while the RPC calls are in flight
   authMode: 'login',     // 'login' or 'signup'
   pendingJoinCode: null, // round code from a ?code= deep link, applied after auth
   pendingVerifyEmail: null, // email awaiting verification, for the resend button
