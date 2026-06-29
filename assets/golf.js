@@ -233,6 +233,30 @@ const Golf = (() => {
     return n > 0 ? `+${n}` : `${n}`;
   }
 
+  /**
+   * Checks whether every player has a score for every hole. Used to
+   * gate ending a round — returns an array of { name, missingHoles }
+   * for any player who isn't fully scored yet; an empty array means
+   * everyone's done.
+   * @param {object[]} players - each with { name, scores }
+   * @param {number} holeCount
+   */
+  function findMissingScores(players, holeCount) {
+    const result = [];
+    players.forEach(player => {
+      const missingHoles = [];
+      for (let h = 1; h <= holeCount; h++) {
+        if (!player.scores || player.scores[String(h)] == null) {
+          missingHoles.push(h);
+        }
+      }
+      if (missingHoles.length > 0) {
+        result.push({ name: player.name, missingHoles });
+      }
+    });
+    return result;
+  }
+
   return {
     allocateStrokes,
     netHoleScore,
@@ -242,6 +266,7 @@ const Golf = (() => {
     computeSkins,
     computeMatchPlay,
     formatToPar,
+    findMissingScores,
   };
 })();
 
