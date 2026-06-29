@@ -246,9 +246,9 @@ describe('findMissingScores', () => {
 
   it('reports every incomplete player, not just the first one found', () => {
     const players = [
-      { name: 'Alice', scores: { 1: 4 } },
-      { name: 'Bob', scores: { 1: 5, 2: 4 } },
-      { name: 'Cara', scores: { 1: 4, 2: 4 } },
+      { name: 'Alice', scores: { 1: 4 } },        // missing hole 2
+      { name: 'Bob', scores: { 1: 5 } },          // missing hole 2
+      { name: 'Cara', scores: { 1: 4, 2: 4 } },   // complete
     ];
     const missing = Golf.findMissingScores(players, 2);
     expect(missing.map(m => m.name)).toEqual(['Alice', 'Bob']);
