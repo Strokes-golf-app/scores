@@ -93,9 +93,26 @@ function subscribeToRound(roundId) {
     state.realtimeChannel = null;
   }
 
+  function subscribeToRound(roundId) {
+  if (state.realtimeChannel) {
+    supabaseClient.removeChannel(state.realtimeChannel);
+    state.realtimeChannel = null;
+  }
+
   const channel = supabaseClient
     .channel('round-' + roundId)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds', filter: `id=eq.${roundId}` },
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rounds', filter: `id=eq.${roundId}` },
+      (payload) => {
+        // Caught the moment the host ends the round — jump straight to
+        // the final leaderboard instead of doing a normal reload, since
+        // the round is about to be archived and deleted out from under us.
+        if (payload.new && payload.new.ended === true && state.round && !state.round.ended) {
+          enterFinalLeaderboard();
+        } else {
+          onRoundChanged(roundId);
+        }
+      })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rounds', filter: `id=eq.${roundId}` },
       () => onRoundChanged(roundId))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `round_id=eq.${roundId}` },
       () => onRoundChanged(roundId))
@@ -194,7 +211,66 @@ function populateModeTabs() {
 function renderRoundHeader() {
   const r = state.round;
   document.getElementById('round-course-name').textContent = r.courseName;
-  document.getElementById('round-meta').textContent = `${r.holeCount} holes · code ${r.code}`;
+  document.getElementById('round-meta').textContent = r.ended
+    ? `${r.holeCount} holes · Final results`
+    : `${r.holeCount} holes · code ${r.code}`;
+}
+
+// ---------------------------------------------------------
+// Ending the round
+// ---------------------------------------------------------
+
+// Called on every client the moment rounds.ended flips to true —
+// either right after the host's own end_round call, or via the
+// realtime UPDATE everyone else receives. Switches to the leaderboard
+// tab and stops listening for further changes, since the round is
+// about to be archived and deleted.
+function enterFinalLeaderboard() {
+  if (state.realtimeChannel) {
+    supabaseClient.removeChannel(state.realtimeChannel);
+    state.realtimeChannel = null;
+  }
+  state.round.ended = true;
+  setTab('board');
+  renderRoundHeader();
+  renderScorecardTab();
+  renderLeaderboardTab();
+}
+
+// Host-only: validates every player has a score for every hole, then
+// ends the round. end_round() flips rounds.ended to true (which
+// broadcasts to everyone over realtime) and archive_round() — called
+// a couple seconds later, giving that broadcast time to land on every
+// device — snapshots the round and deletes the live row.
+async function endRound() {
+  if (state.endingRound) return;
+  const r = state.round;
+
+  const missing = Golf.findMissingScores(r.players, r.holeCount);
+  if (missing.length > 0) {
+    const detail = missing
+      .map(m => `${m.name} (hole${m.missingHoles.length > 1 ? 's' : ''} ${m.missingHoles.join(', ')})`)
+      .join('; ');
+    showToast(`Still missing scores — ${detail}`);
+    return;
+  }
+
+  state.endingRound = true;
+  const { error } = await supabaseClient.rpc('end_round', { p_round_id: r.id });
+  if (error) {
+    console.error(error);
+    showToast('Could not end the round — check your connection');
+    state.endingRound = false;
+    return;
+  }
+
+  enterFinalLeaderboard();
+
+  setTimeout(async () => {
+    const { error: archiveErr } = await supabaseClient.rpc('archive_round', { p_round_id: r.id });
+    if (archiveErr) console.error(archiveErr);
+    state.endingRound = false;
+  }, 2000);
 }
 
 // ---------------------------------------------------------
@@ -270,6 +346,8 @@ function renderScorecardTab() {
 
   document.getElementById('btn-stroke-minus').disabled = !!r.ended;
   document.getElementById('btn-stroke-plus').disabled = !!r.ended;
+
+  document.getElementById('end-round-wrap').hidden = !(isHost() && !r.ended && h === r.holeCount);
 
   if (h === 15) {
     showFifteenthHoleReminder();
