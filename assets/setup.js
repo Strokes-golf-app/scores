@@ -166,20 +166,69 @@ async function renderCourseSelectOptions() {
 
 function applySelectedCourse(courseId) {
   const course = (state.myCourses || []).find(c => c.id === courseId);
+  const nineField = document.getElementById('nine-select-field');
+
+  state.selectedFullCourse = course || null;
+  state.selectedCourseNine = null;
+  nineField.hidden = true;
+  document.querySelectorAll('.nine-btn').forEach(b => b.classList.remove('selected'));
+
   if (!course) {
     state.selectedCourseStrokeIndex = null;
     return;
   }
 
   document.getElementById('course-name').value = course.name;
+
+  const roundHoleCount = Number(document.getElementById('hole-count').value);
+
+  // A 9-hole round against an 18-hole saved course needs the player to
+  // pick which nine before we know which pars/stroke index to use.
+  if (roundHoleCount === 9 && course.hole_count === 18) {
+    nineField.hidden = false;
+    document.getElementById('par-grid').innerHTML = '';
+    state.selectedCourseStrokeIndex = null;
+    return;
+  }
+
   document.getElementById('hole-count').value = String(course.hole_count);
+  applyCourseToGrid(course, null);
+}
+
+// Fills the par grid (and stroke index) from a saved course. `nine` is
+// null for a full course, or 'front'/'back' when a 9-hole round is
+// using one half of an 18-hole course.
+function applyCourseToGrid(course, nine) {
   renderParGrid();
+
+  let pars = course.pars;
+  let strokeIndex = course.stroke_index;
+
+  if (nine === 'front') {
+    pars = course.pars.slice(0, 9);
+    strokeIndex = strokeIndex ? strokeIndex.slice(0, 9) : null;
+  } else if (nine === 'back') {
+    pars = course.pars.slice(9, 18);
+    strokeIndex = strokeIndex ? strokeIndex.slice(9, 18) : null;
+  }
+
   document.querySelectorAll('.par-input').forEach(inp => {
     const h = Number(inp.dataset.hole) - 1;
-    inp.value = course.pars[h];
+    inp.value = pars[h];
   });
 
-  state.selectedCourseStrokeIndex = course.stroke_index;
+  state.selectedCourseStrokeIndex = strokeIndex ? Golf.toRelativeStrokeIndex(strokeIndex) : null;
+}
+
+function selectCourseNine(nine) {
+  if (!state.selectedFullCourse) return;
+  state.selectedCourseNine = nine;
+  document.querySelectorAll('.nine-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.nine === nine);
+  });
+  const label = nine === 'front' ? 'Front 9' : 'Back 9';
+  document.getElementById('course-name').value = `${state.selectedFullCourse.name} — ${label}`;
+  applyCourseToGrid(state.selectedFullCourse, nine);
 }
 
 function collectPars() {
