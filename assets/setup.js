@@ -149,8 +149,11 @@ async function resetSetupScreen() {
   }
 
   state.selectedCourseStrokeIndex = null;
+  state.selectedFullCourse = null;
+  state.selectedCourseNine = null;
+  document.getElementById('nine-select-field').hidden = true;
+  document.querySelectorAll('.nine-btn').forEach(b => b.classList.remove('selected'));
   await renderCourseSelectOptions();
-
   state.setupPlayers = [{ id: uid('p'), name: hostName, handicap: hostHandicap }];
   renderParGrid();
   renderSetupPlayerList();
