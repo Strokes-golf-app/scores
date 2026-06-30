@@ -272,6 +272,7 @@ const Golf = (() => {
 
   return {
     allocateStrokes,
+   toRelativeStrokeIndex,
     netHoleScore,
     stablefordPoints,
     summarizePlayer,
