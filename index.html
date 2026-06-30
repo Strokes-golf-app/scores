@@ -195,13 +195,21 @@
     <span class="topbar-spacer"></span>
   </header>
 
-  <div class="screen-body">
-    <div class="field">
+  <div class="field">
       <label class="field-label" for="course-select">Course</label>
       <select id="course-select">
         <option value="">Manual entry</option>
       </select>
       <p class="field-hint">Pick a saved course to auto-fill pars and handicaps, or leave on manual entry.</p>
+    </div>
+
+    <div class="field" id="nine-select-field" hidden>
+      <span class="field-label">Which nine?</span>
+      <p class="field-hint">This course has 18 holes — pick which nine you're playing.</p>
+      <div class="nine-toggle">
+        <button type="button" class="btn btn-secondary nine-btn" id="btn-nine-front" data-nine="front">Front 9 (1–9)</button>
+        <button type="button" class="btn btn-secondary nine-btn" id="btn-nine-back" data-nine="back">Back 9 (10–18)</button>
+      </div>
     </div>
 
     <div class="field">

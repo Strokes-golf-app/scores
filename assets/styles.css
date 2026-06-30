@@ -520,6 +520,20 @@ input::placeholder {
   font-weight: 700;
 }
 
+/* ---------- Nine selector (round setup) ---------- */
+.nine-toggle {
+  display: flex;
+  gap: 8px;
+}
+.nine-toggle .nine-btn {
+  flex: 1;
+}
+.nine-btn.selected {
+  background: var(--fairway);
+  color: var(--cream);
+  border-color: transparent;
+}
+
 /* ---------- Course hole grid (course upload screen) ---------- */
 .course-hole-grid {
   display: grid;

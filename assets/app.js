@@ -50,7 +50,16 @@ function init() {
   document.getElementById('btn-setup-back').addEventListener('click', () => showScreen('screen-home'));
 
   document.getElementById('hole-count').addEventListener('change', () => {
-    renderParGrid();
+    const courseId = document.getElementById('course-select').value;
+    if (courseId) {
+      applySelectedCourse(courseId);
+    } else {
+      renderParGrid();
+    }
+  });
+
+  document.getElementById('btn-nine-front').addEventListener('click', () => selectCourseNine('front'));
+  document.getElementById('btn-nine-back').addEventListener('click', () => selectCourseNine('back'));
     state.selectedCourseStrokeIndex = null;
     document.getElementById('course-select').value = '';
     document.getElementById('course-name').value = '';

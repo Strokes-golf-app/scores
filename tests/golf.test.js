@@ -9,6 +9,17 @@ describe('allocateStrokes', () => {
     expect(strokes.reduce((a, b) => a + b, 0)).toBe(10);
   });
 
+  describe('toRelativeStrokeIndex', () => {
+  it('re-ranks a 9-hole subset of an 18-hole stroke index to 1-9', () => {
+    const backNine = [2, 14, 6, 18, 4, 16, 8, 12, 10];
+    expect(Golf.toRelativeStrokeIndex(backNine)).toEqual([1, 7, 3, 9, 2, 8, 4, 6, 5]);
+  });
+
+  it('leaves an already-dense 1-9 ranking unchanged', () => {
+    expect(Golf.toRelativeStrokeIndex([3, 1, 2, 5, 4, 9, 7, 8, 6])).toEqual([3, 1, 2, 5, 4, 9, 7, 8, 6]);
+  });
+});
+
   it('gives a second stroke on the hardest holes once handicap exceeds hole count', () => {
     const strokes = Golf.allocateStrokes(20, 18);
     expect(strokes[0]).toBe(2);
