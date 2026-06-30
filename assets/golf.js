@@ -29,6 +29,19 @@ const Golf = (() => {
     return result;
   }
 
+  /**
+   * Converts a subset of stroke-index values (e.g. just the back nine
+   * of an 18-hole course, which might be ranks like [2,14,6,18,...])
+   * into a dense 1..N ranking based on relative difficulty. This keeps
+   * allocateStrokes() correct when a round only plays half a course —
+   * without it, a 9-hole round's hardest hole might carry an original
+   * rank like 14, and a 5-handicap player would barely get any strokes.
+   */
+  function toRelativeStrokeIndex(values) {
+    const sorted = [...values].sort((a, b) => a - b);
+    return values.map(v => sorted.indexOf(v) + 1);
+  }
+
   function netHoleScore(grossStrokes, strokesReceived) {
     if (grossStrokes == null) return null;
     return grossStrokes - strokesReceived;
