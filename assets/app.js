@@ -60,10 +60,6 @@ function init() {
 
   document.getElementById('btn-nine-front').addEventListener('click', () => selectCourseNine('front'));
   document.getElementById('btn-nine-back').addEventListener('click', () => selectCourseNine('back'));
-    state.selectedCourseStrokeIndex = null;
-    document.getElementById('course-select').value = '';
-    document.getElementById('course-name').value = '';
-  });
 
   document.getElementById('btn-add-player').addEventListener('click', () => {
     state.setupPlayers.push({ id: uid('p'), name: '', handicap: 0 });
