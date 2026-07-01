@@ -325,16 +325,30 @@ function renderScorecardTab() {
   const player = scoringPlayer();
   if (!player) return;
 
-  const h = state.currentHole;
+  cconst h = state.currentHole;
   const par = r.pars[h - 1] || 4;
+  const si = r.strokeIndex && r.strokeIndex[h - 1] != null ? r.strokeIndex[h - 1] : null;
+  const gross = player.scores && player.scores[String(h)] != null ? Number(player.scores[String(h)]) : null;
+
   document.getElementById('hole-number').textContent = h + (r.holeOffset || 0);
   document.getElementById('hole-par').textContent = `Par ${par}`;
   document.getElementById('par-editor-input').value = par;
 
+  // Hole readout under the number: handicap shows whenever the round has
+  // stroke-index data; par shows until a score is entered, then gives way
+  // to the entered score.
+  const hcpEl = document.getElementById('hole-handicap');
+  hcpEl.textContent = `Hcp ${si}`;
+  hcpEl.hidden = si == null;
+
+  const scoreEl = document.getElementById('hole-score');
+  scoreEl.textContent = `Score ${gross}`;
+  document.getElementById('hole-par').hidden = gross != null;
+  scoreEl.hidden = gross == null;
+
   document.getElementById('btn-par-toggle').hidden = !isHost();
   if (!isHost()) document.getElementById('par-editor').hidden = true;
 
-  const gross = player.scores && player.scores[String(h)] != null ? Number(player.scores[String(h)]) : null;
   document.getElementById('stroke-number').textContent = gross != null ? gross : '—';
   document.getElementById('stroke-caption').textContent = r.ended
     ? 'This round has ended — scores are locked'

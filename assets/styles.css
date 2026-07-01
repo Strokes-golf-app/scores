@@ -855,7 +855,7 @@ input::placeholder {
 }
 .hole-nav-center {
   text-align: center;
-  min-width: 110px;
+  min-width: 130px;
 }
 .hole-nav-label {
   margin: 0;
@@ -871,11 +871,21 @@ input::placeholder {
   color: var(--fairway);
   line-height: 1.1;
 }
-.hole-nav-par {
+.hole-nav-meta {
+  margin: 0.15rem 0 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.55rem;
+}
+.hole-nav-stat {
   margin: 0;
   font-size: 13px;
-  color: var(--ink-soft);
   font-weight: 600;
+  color: var(--ink-soft);
+}
+#hole-score {
+  color: var(--fairway);
 }
 
 .par-editor {
