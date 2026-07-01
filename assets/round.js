@@ -42,7 +42,8 @@ async function loadRound(roundId) {
       pars: r.pars, modes: r.modes, strokeIndex: r.stroke_index || null,
       matchTeamA: r.match_team_a || null, matchTeamB: r.match_team_b || null,
       matchUseHandicap: r.match_use_handicap !== false,
-      hostId: r.host_player_id, started: r.started, ended: r.ended, players,
+      hostId: r.host_player_id, started: r.started, ended: r.ended,
+      holeOffset: r.hole_offset || 0, players,
     };
     return state.round;
   }
@@ -80,7 +81,8 @@ async function loadRound(roundId) {
     pars: roundRow.pars, modes: roundRow.modes, strokeIndex: roundRow.stroke_index || null,
     matchTeamA: roundRow.match_team_a || null, matchTeamB: roundRow.match_team_b || null,
     matchUseHandicap: roundRow.match_use_handicap !== false,
-    hostId: roundRow.host_player_id, started: roundRow.started, ended: roundRow.ended, players,
+    hostId: roundRow.host_player_id, started: roundRow.started, ended: roundRow.ended,
+    holeOffset: roundRow.hole_offset || 0, players,
   };
   return state.round;
 }
