@@ -325,7 +325,7 @@ function renderScorecardTab() {
   const player = scoringPlayer();
   if (!player) return;
 
-  cconst h = state.currentHole;
+  const h = state.currentHole;
   const par = r.pars[h - 1] || 4;
   const si = r.strokeIndex && r.strokeIndex[h - 1] != null ? r.strokeIndex[h - 1] : null;
   const gross = player.scores && player.scores[String(h)] != null ? Number(player.scores[String(h)]) : null;
