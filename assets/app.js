@@ -220,6 +220,17 @@ function init() {
       return;
     }
 
+    // Returning from email verification after signing up via an invite:
+    // the round code was stashed before the email round-trip. Consume it
+    // and drop them straight into that round.
+    const pendingJoin = loadPendingJoin();
+    if (pendingJoin) {
+      clearPendingJoin();
+      showScreen('screen-home');
+      joinRound(pendingJoin);
+      return;
+    }
+
     const session = loadSession();
     if (session && session.roundCode) {
       resumeSession(session);
