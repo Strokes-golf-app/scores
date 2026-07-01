@@ -307,6 +307,7 @@ async function createRound() {
         ended: false,
         host_user_id: currentUser.id,
         stroke_index: state.selectedCourseStrokeIndex || null,
+        hole_offset: state.selectedCourseNine === 'back' ? 9 : 0,
       });
 
     if (roundErr) throw roundErr;
