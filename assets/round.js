@@ -381,7 +381,9 @@ function renderMiniHoles(player, r) {
   wrap.innerHTML = '';
   for (let h = 1; h <= r.holeCount; h++) {
     const par = r.pars[h - 1] || 4;
+    const si = r.strokeIndex && r.strokeIndex[h - 1] != null ? r.strokeIndex[h - 1] : null;
     const gross = player.scores && player.scores[String(h)] != null ? Number(player.scores[String(h)]) : null;
+
     const cell = document.createElement('div');
     let cls = 'mini-hole';
     if (gross != null) {
@@ -392,12 +394,31 @@ function renderMiniHoles(player, r) {
     }
     if (h === state.currentHole) cls += ' current';
     cell.className = cls;
-    cell.textContent = gross != null ? gross : (h + (r.holeOffset || 0));
+
+    const num = document.createElement('span');
+    num.className = 'mini-hole-num';
+    num.textContent = h + (r.holeOffset || 0);
+
+    const score = document.createElement('span');
+    score.className = 'mini-hole-score';
+    score.textContent = gross != null ? gross : '—';
+
+    const sub = document.createElement('div');
+    sub.className = 'mini-hole-sub';
+    const parLine = document.createElement('span');
+    parLine.textContent = `Par ${par}`;
+    sub.appendChild(parLine);
+    if (si != null) {
+      const hcpLine = document.createElement('span');
+      hcpLine.textContent = `Hcp ${si}`;
+      sub.appendChild(hcpLine);
+    }
+
+    cell.append(num, score, sub);
     cell.addEventListener('click', () => { state.currentHole = h; renderScorecardTab(); });
     wrap.appendChild(cell);
   }
 }
-
 async function setStroke(delta) {
   const r = state.round;
   if (r.ended) {
