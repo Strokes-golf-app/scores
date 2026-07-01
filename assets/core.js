@@ -32,6 +32,7 @@ const state = {
 };
 
 const LS_KEY = 'fairwaylive_session';
+const PENDING_JOIN_KEY = 'fairwaylive_pending_join';
 
 // ---------------------------------------------------------
 // Utilities
@@ -90,6 +91,19 @@ function loadSession() {
 
 function clearSession() {
   try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ }
+}
+
+// A round code the user intended to join, stashed before an email
+// round-trip (e.g. signing up from an invite link) so we can drop
+// them back into that round once they return and log in.
+function savePendingJoin(code) {
+  try { localStorage.setItem(PENDING_JOIN_KEY, code); } catch (e) { /* ignore */ }
+}
+function loadPendingJoin() {
+  try { return localStorage.getItem(PENDING_JOIN_KEY); } catch (e) { return null; }
+}
+function clearPendingJoin() {
+  try { localStorage.removeItem(PENDING_JOIN_KEY); } catch (e) { /* ignore */ }
 }
 
 function escapeHtml(str) {
