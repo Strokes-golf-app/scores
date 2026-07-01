@@ -94,6 +94,20 @@ async function afterAuthSuccess() {
   showScreen('screen-home');
 }
 
+async function playAsGuest() {
+  if (!state.pendingJoinCode) return;
+  const code = state.pendingJoinCode;
+  state.pendingJoinCode = null;
+  const { error } = await supabaseClient.auth.signInAnonymously();
+  if (error) {
+    showToast('Could not start a guest session — check your connection');
+    state.pendingJoinCode = code; // restore so they can try again
+    return;
+  }
+  showScreen('screen-home');
+  joinRound(code);
+}
+
 async function handleLogout() {
   await supabaseClient.auth.signOut();
   goHome();
