@@ -327,7 +327,7 @@ function renderScorecardTab() {
 
   const h = state.currentHole;
   const par = r.pars[h - 1] || 4;
-  document.getElementById('hole-number').textContent = h;
+  document.getElementById('hole-number').textContent = h + (r.holeOffset || 0);
   document.getElementById('hole-par').textContent = `Par ${par}`;
   document.getElementById('par-editor-input').value = par;
 
@@ -378,7 +378,7 @@ function renderMiniHoles(player, r) {
     }
     if (h === state.currentHole) cls += ' current';
     cell.className = cls;
-    cell.textContent = gross != null ? gross : h;
+    cell.textContent = gross != null ? gross : (h + (r.holeOffset || 0));
     cell.addEventListener('click', () => { state.currentHole = h; renderScorecardTab(); });
     wrap.appendChild(cell);
   }
@@ -432,7 +432,7 @@ async function savePar() {
   state.round.pars = newPars;
   document.getElementById('par-editor').hidden = true;
   renderScorecardTab();
-  showToast(`Hole ${h} par set to ${val}`);
+  showToast(`Hole ${h + (state.round.holeOffset || 0)} par set to ${val}`);
 }
 
 // ---------------------------------------------------------
