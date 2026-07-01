@@ -10,11 +10,15 @@ function renderParGrid() {
   const holeCount = Number(document.getElementById('hole-count').value);
   const grid = document.getElementById('par-grid');
   grid.innerHTML = '';
+  // Back nine of an 18-hole course: holes are still stored as positions
+  // 1..9 internally (data-hole, which the scoring logic depends on), but
+  // we label them 10..18 so the grid matches the scorecard on the course.
+  const labelOffset = state.selectedCourseNine === 'back' ? 9 : 0;
   for (let h = 1; h <= holeCount; h++) {
     const cell = document.createElement('div');
     cell.className = 'par-cell';
     cell.innerHTML = `
-      <span class="par-cell-label">${h}</span>
+      <span class="par-cell-label">${h + labelOffset}</span>
       <input type="number" class="par-input" data-hole="${h}" min="2" max="6" placeholder="4" inputmode="numeric">
     `;
     grid.appendChild(cell);
