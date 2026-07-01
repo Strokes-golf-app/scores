@@ -527,6 +527,12 @@ input::placeholder {
 }
 .nine-toggle .nine-btn {
   flex: 1;
+  min-width: 0;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  font-size: 14px;
+  white-space: normal;
+  line-height: 1.25;
 }
 .nine-btn.selected {
   background: var(--fairway);
