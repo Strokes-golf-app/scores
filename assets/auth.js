@@ -40,6 +40,9 @@ async function handleAuthSubmit(e) {
     // Stash the name so we can create the profile row after they verify
     // and log in for the first time (no session exists yet to do it now).
     state.pendingSignupName = name;
+    // If they're signing up from a round invite, remember the code across
+    // the email verification round-trip so we can rejoin them afterward.
+    if (state.pendingJoinCode) savePendingJoin(state.pendingJoinCode);
     document.getElementById('verify-email-display').textContent = email;
     state.pendingVerifyEmail = email;
     document.getElementById('form-auth').reset();
