@@ -170,6 +170,16 @@ function init() {
   document.getElementById('btn-forgot-back').addEventListener('click', () => showScreen('screen-auth'));
   document.getElementById('form-forgot').addEventListener('submit', handleForgotSubmit);
 
+  document.getElementById('btn-join-signup').addEventListener('click', () => {
+    setAuthMode('signup');
+    showScreen('screen-auth');
+  });
+  document.getElementById('btn-join-login').addEventListener('click', () => {
+    setAuthMode('login');
+    showScreen('screen-auth');
+  });
+  document.getElementById('btn-join-guest').addEventListener('click', playAsGuest);
+
   document.getElementById('form-reset-password').addEventListener('submit', handleResetPasswordSubmit);
 
   // If this load is from a password-reset email link, Supabase fires this
@@ -196,14 +206,8 @@ function init() {
     }
     if (!isLoggedIn) {
       if (codeFromUrl) {
-        const { error } = await supabaseClient.auth.signInAnonymously();
-        if (error) {
-          showToast('Could not start a guest session — check your connection');
-          showScreen('screen-auth');
-          return;
-        }
-        showScreen('screen-home');
-        joinRound(codeFromUrl);
+        state.pendingJoinCode = codeFromUrl.toUpperCase();
+        showScreen('screen-join-options');
         return;
       }
       showScreen('screen-auth');
