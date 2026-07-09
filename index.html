@@ -310,11 +310,15 @@
   </header>
  <div class="screen-body">
     <div class="field">
-      <label class="field-label" for="course-select">Course</label>
+      <label class="field-label" for="setup-course-search">Course</label>
+      <div class="course-search-wrapper">
+        <input type="text" id="setup-course-search" placeholder="Search saved or API courses" autocomplete="off">
+        <div id="setup-course-search-results" class="search-results-dropdown" hidden></div>
+      </div>
       <select id="course-select">
         <option value="">Manual entry</option>
       </select>
-      <p class="field-hint">Pick a saved course to auto-fill pars and handicaps, or leave on manual entry.</p>
+      <p class="field-hint">Search by name or location to use the API, pick a saved course to auto-fill pars and handicaps, or leave on manual entry.</p>
     </div>
     <div class="field" id="nine-select-field" hidden>
       <span class="field-label">Which nine?</span>
