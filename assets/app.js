@@ -163,6 +163,31 @@ function init() {
   document.getElementById('form-auth').addEventListener('submit', handleAuthSubmit);
   document.getElementById('btn-logout').addEventListener('click', handleLogout);
 
+  // ----- Home sidebar drawer -----
+  const appDrawer = document.getElementById('app-drawer');
+  const drawerOverlay = document.getElementById('drawer-overlay');
+  function openDrawer() {
+    appDrawer.classList.add('open');
+    drawerOverlay.classList.add('open');
+    appDrawer.setAttribute('aria-hidden', 'false');
+  }
+  function closeDrawer() {
+    appDrawer.classList.remove('open');
+    drawerOverlay.classList.remove('open');
+    appDrawer.setAttribute('aria-hidden', 'true');
+  }
+  document.getElementById('btn-open-drawer').addEventListener('click', openDrawer);
+  drawerOverlay.addEventListener('click', closeDrawer);
+  // Any drawer item closes the drawer; its own handler still fires.
+  appDrawer.addEventListener('click', (e) => {
+    if (e.target.closest('.drawer-item')) closeDrawer();
+  });
+
+  // Stage 2 replaces this stub with the real history view.
+  document.getElementById('btn-round-history').addEventListener('click', () => {
+    showToast('Round history is coming next');
+  });
+
   document.getElementById('btn-resend-verify').addEventListener('click', handleResendVerify);
   document.getElementById('btn-verify-back').addEventListener('click', () => showScreen('screen-auth'));
 
