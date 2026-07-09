@@ -600,6 +600,63 @@ h1, h2, h3 {
 .history-card-topar.neg { color: var(--fairway-light); }
 .history-card-topar.pos { color: var(--flag); }
 
+/* Tappable history cards */
+.history-card {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.history-card:active { background: var(--sand-light); }
+.history-card-main { flex: 1; }
+.history-card-chevron {
+  flex: none;
+  color: var(--ink-faint);
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Round detail screen */
+.history-detail-header { margin-bottom: 1rem; }
+.history-detail-course {
+  display: block;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--ink);
+}
+.history-detail-meta {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.history-match-result {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.history-match-teams {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  font-size: 15px;
+}
+.history-match-vs {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.history-match-outcome {
+  margin-top: 0.85rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--fairway);
+}
+
 /* ---------- Fields ---------- */
 .field {
   display: flex;
