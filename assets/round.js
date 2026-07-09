@@ -19,6 +19,43 @@
 =========================================================== */
 
 // ---------------------------------------------------------
+// Mapping raw Supabase rows into the in-memory round shape
+// ---------------------------------------------------------
+
+// Builds the per-hole { "1": strokes, ... } object for one player.
+function mapPlayerScores(scoreRows, playerId) {
+  const scores = {};
+  scoreRows
+    .filter(s => s.player_id === playerId)
+    .forEach(s => { scores[String(s.hole)] = s.strokes; });
+  return scores;
+}
+
+// Turns raw player rows + score rows into the player objects the app
+// uses (handicap coerced to a number, scores keyed by hole).
+function mapPlayers(playerRows, scoreRows) {
+  return playerRows.map(p => ({
+    ...p,
+    handicap: Number(p.handicap) || 0,
+    scores: mapPlayerScores(scoreRows, p.id),
+  }));
+}
+
+// Turns a raw round row + already-mapped players into state.round.
+// Both the RPC path and the direct-read path funnel through here, so
+// this is the single place to touch when a round column is added.
+function mapRoundRow(row, players) {
+  return {
+    id: row.id, code: row.code, courseName: row.course_name, holeCount: row.hole_count,
+    pars: row.pars, modes: row.modes, strokeIndex: row.stroke_index || null,
+    matchTeamA: row.match_team_a || null, matchTeamB: row.match_team_b || null,
+    matchUseHandicap: row.match_use_handicap !== false,
+    hostId: row.host_player_id, started: row.started, ended: row.ended,
+    holeOffset: row.hole_offset || 0, players,
+  };
+}
+
+// ---------------------------------------------------------
 // Loading a round's full state from Supabase
 // ---------------------------------------------------------
 async function loadRound(roundId) {
@@ -31,20 +68,8 @@ async function loadRound(roundId) {
       goHome();
       return null;
     }
-    const players = data.players.map(p => {
-      const scores = {};
-      data.scores.filter(s => s.player_id === p.id).forEach(s => { scores[String(s.hole)] = s.strokes; });
-      return { ...p, handicap: Number(p.handicap) || 0, scores };
-    });
-    const r = data.round;
-    state.round = {
-      id: r.id, code: r.code, courseName: r.course_name, holeCount: r.hole_count,
-      pars: r.pars, modes: r.modes, strokeIndex: r.stroke_index || null,
-      matchTeamA: r.match_team_a || null, matchTeamB: r.match_team_b || null,
-      matchUseHandicap: r.match_use_handicap !== false,
-      hostId: r.host_player_id, started: r.started, ended: r.ended,
-      holeOffset: r.hole_offset || 0, players,
-    };
+    const players = mapPlayers(data.players, data.scores);
+    state.round = mapRoundRow(data.round, players);
     return state.round;
   }
 
@@ -70,20 +95,8 @@ async function loadRound(roundId) {
     scoreRows = sRows;
   }
 
-  const players = playerRows.map(p => {
-    const scores = {};
-    scoreRows.filter(s => s.player_id === p.id).forEach(s => { scores[String(s.hole)] = s.strokes; });
-    return { ...p, handicap: Number(p.handicap) || 0, scores };
-  });
-
-  state.round = {
-    id: roundRow.id, code: roundRow.code, courseName: roundRow.course_name, holeCount: roundRow.hole_count,
-    pars: roundRow.pars, modes: roundRow.modes, strokeIndex: roundRow.stroke_index || null,
-    matchTeamA: roundRow.match_team_a || null, matchTeamB: roundRow.match_team_b || null,
-    matchUseHandicap: roundRow.match_use_handicap !== false,
-    hostId: roundRow.host_player_id, started: roundRow.started, ended: roundRow.ended,
-    holeOffset: roundRow.hole_offset || 0, players,
-  };
+  const players = mapPlayers(playerRows, scoreRows);
+  state.round = mapRoundRow(roundRow, players);
   return state.round;
 }
 // ---------------------------------------------------------
