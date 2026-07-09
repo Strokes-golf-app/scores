@@ -34,6 +34,11 @@ const state = {
 const LS_KEY = 'fairwaylive_session';
 const PENDING_JOIN_KEY = 'fairwaylive_pending_join';
 
+// Display labels for each game mode, keyed by the value stored in
+// rounds.modes. Shared by the lobby chips and the leaderboard mode
+// tabs so the labels only need updating in one place.
+const MODE_NAMES = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play' };
+
 // ---------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------
