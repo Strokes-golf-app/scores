@@ -183,10 +183,8 @@ function init() {
     if (e.target.closest('.drawer-item')) closeDrawer();
   });
 
-  // Stage 2 replaces this stub with the real history view.
-  document.getElementById('btn-round-history').addEventListener('click', () => {
-    showToast('Round history is coming next');
-  });
+  document.getElementById('btn-round-history').addEventListener('click', openRoundHistory);
+  document.getElementById('btn-history-back').addEventListener('click', () => showScreen('screen-home'));
 
   document.getElementById('btn-resend-verify').addEventListener('click', handleResendVerify);
   document.getElementById('btn-verify-back').addEventListener('click', () => showScreen('screen-auth'));
