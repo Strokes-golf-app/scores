@@ -146,6 +146,12 @@
 
 <!-- ============ SCREEN: HOME ============ -->
 <section id="screen-home" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-open-drawer" aria-label="Open menu">☰</button>
+    <h2 class="topbar-title">Strokes Golf</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
   <div class="home-wrap">
     <div class="brand">
       <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="brand-logo">
@@ -169,12 +175,31 @@
       </form>
     </div>
 
-    <button class="btn btn-dark btn-lg" id="btn-upload-course">
-      <span class="btn-label">+ Upload a course</span>
-    </button>
-    <button class="link-btn link-btn-center" id="btn-manage-courses">Manage saved courses</button>
-    <button class="link-btn link-btn-center" id="btn-logout">Log out (<span id="auth-user-email"></span>)</button>
-  </div>
+    </div>
+
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+
+  <aside class="drawer" id="app-drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="drawer-logo">
+    </div>
+    <nav class="drawer-nav">
+      <button class="drawer-item" id="btn-round-history" type="button">
+        <span class="drawer-item-icon">🏌️</span> Round history
+      </button>
+      <button class="drawer-item" id="btn-upload-course" type="button">
+        <span class="drawer-item-icon">＋</span> Upload a course
+      </button>
+      <button class="drawer-item" id="btn-manage-courses" type="button">
+        <span class="drawer-item-icon">⛳</span> Manage courses
+      </button>
+    </nav>
+    <div class="drawer-footer">
+      <button class="drawer-item drawer-item-muted" id="btn-logout" type="button">
+        <span class="drawer-item-icon">⏻</span> Log out (<span id="auth-user-email"></span>)
+      </button>
+    </div>
+  </aside>
 </section>
 
 <!-- ============ SCREEN: COURSE UPLOAD ============ -->
