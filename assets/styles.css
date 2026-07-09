@@ -439,6 +439,85 @@ h1, h2, h3 {
   width: 36px;
 }
 
+/* ---------- Home sidebar drawer ---------- */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 40;
+}
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 78%;
+  max-width: 300px;
+  background: var(--cream);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.25);
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+.drawer.open {
+  transform: translateX(0);
+}
+.drawer-header {
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.drawer-logo {
+  width: 160px;
+  height: auto;
+  display: block;
+}
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 0.5rem 0;
+}
+.drawer-footer {
+  border-top: 1px solid var(--line);
+  padding: 0.5rem 0;
+}
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.9rem 1.25rem;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.drawer-item:active {
+  background: var(--sand-light);
+}
+.drawer-item-icon {
+  font-size: 18px;
+  width: 22px;
+  text-align: center;
+}
+.drawer-item-muted {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
 /* ---------- Fields ---------- */
 .field {
   display: flex;
