@@ -1,7 +1,7 @@
 // Supabase Edge Function: get-golf-course
 // Deploy this as a Supabase Edge Function named `get-golf-course`.
 // It expects a JSON body containing:
-//   { "courseId": 123, "userId": "<uuid>" }
+//   { "courseId": 123 }
 //
 // It uses the secret:
 //   GOLF_COURSE_API_KEY
@@ -10,6 +10,19 @@
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
 
+// --- API usage tracking constants ---------------------------------------
+// Kept inline (rather than imported from a shared module) so this function
+// can be deployed as a single file with no bundling of relative imports.
+// If you ever need to change these, update them here AND in
+// search-golf-course/index.ts to keep both functions in sync.
+const DAILY_API_CALL_LIMIT = 50;
+const API_USAGE_SCOPE_KEY = "app-wide";
+
+function shouldLimitApiUsage(callCount: number) {
+  return callCount >= DAILY_API_CALL_LIMIT;
+}
+// --------------------------------------------------------------------------
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -17,15 +30,10 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle the CORS preflight request.
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Wrap the whole handler so any thrown error still returns CORS headers.
-  // Without this, an uncaught throw (e.g. from the api_usage helpers) produces
-  // a bare 500 with no CORS headers, which shows up in the browser as a
-  // misleading "CORS error" even though the real problem is elsewhere.
   try {
     const apiKey = Deno.env.get("GOLF_COURSE_API_KEY");
     const apiBaseUrl = Deno.env.get("GOLF_COURSE_API_BASE_URL") ?? "https://golf-api.com";
@@ -48,20 +56,15 @@ Deno.serve(async (req) => {
     }
 
     const courseId = body.courseId;
-    const userId = typeof body.userId === "string" ? body.userId.trim() : "";
 
     if (!courseId) {
       return jsonResponse({ error: "A valid courseId is required" }, 400);
     }
 
-    if (!userId) {
-      return jsonResponse({ error: "A valid userId is required" }, 400);
-    }
-
     const today = new Date().toISOString().slice(0, 10);
-    const usage = await getApiUsageRow(supabaseUrl, serviceRoleKey, userId, today);
+    const usage = await getApiUsageRow(supabaseUrl, serviceRoleKey, today);
 
-    if (usage.call_count >= 50) {
+    if (shouldLimitApiUsage(usage.call_count)) {
       return jsonResponse({
         error: "Daily API limit reached",
         limited: true,
@@ -88,18 +91,12 @@ Deno.serve(async (req) => {
     }
 
     const remoteData = await remoteResponse.json();
-    const teeGroups = remoteData?.tees && typeof remoteData.tees === "object"
-      ? Object.values(remoteData.tees as Record<string, unknown>)
-      : [];
 
-    let holeData: Array<Record<string, unknown>> = [];
-    for (const teeGroup of teeGroups) {
-      const firstSet = Array.isArray(teeGroup) ? teeGroup[0] : null;
-      if (firstSet && Array.isArray(firstSet.holes) && firstSet.holes.length > 0) {
-        holeData = firstSet.holes as Array<Record<string, unknown>>;
-        break;
-      }
-    }
+    const course = (remoteData && typeof remoteData === "object" && remoteData.course && typeof remoteData.course === "object")
+      ? remoteData.course as Record<string, unknown>
+      : (remoteData ?? {}) as Record<string, unknown>;
+
+    const holeData = extractHoles(course.tees);
 
     if (holeData.length === 0) {
       return jsonResponse({
@@ -108,16 +105,21 @@ Deno.serve(async (req) => {
       }, 422);
     }
 
-    await incrementApiUsage(supabaseUrl, serviceRoleKey, userId, today);
+    await incrementApiUsage(supabaseUrl, serviceRoleKey, today, usage.call_count);
+
+    const holes = holeData.map((hole, index) => ({
+      hole_number: index + 1,
+      par: Number(hole.par ?? 0),
+      handicap: Number(hole.handicap ?? hole.stroke_index ?? 0)
+    }));
 
     return jsonResponse({
-      id: remoteData.id ?? courseId,
-      club_name: remoteData.club_name ?? remoteData.clubName ?? null,
-      course_name: remoteData.course_name ?? remoteData.name ?? null,
-      location: remoteData.location ?? null,
-      pars: holeData.map((hole) => Number(hole.par ?? 0)),
-      handicaps: holeData.map((hole) => Number(hole.handicap ?? hole.stroke_index ?? 0)),
-      hole_count: holeData.length,
+      id: course.id ?? remoteData.id ?? courseId,
+      club_name: course.club_name ?? course.clubName ?? null,
+      course_name: course.course_name ?? course.name ?? null,
+      location: course.location ?? null,
+      hole_count: holes.length,
+      holes,
       limited: false
     }, 200);
   } catch (err) {
@@ -129,8 +131,35 @@ Deno.serve(async (req) => {
   }
 });
 
-async function getApiUsageRow(supabaseUrl: string, serviceRoleKey: string, userId: string, date: string) {
-  const url = `${supabaseUrl}/rest/v1/api_usage?select=call_count&user_id=eq.${encodeURIComponent(userId)}&date=eq.${encodeURIComponent(date)}`;
+// Walks the "tees" object (grouped by gender, each containing an array of
+// tee sets) and returns the holes array from the first tee set that has one.
+// We don't care which tee/gender it comes from -- just need hole number,
+// par, and handicap, which are consistent across tee sets.
+function extractHoles(tees: unknown): Array<Record<string, unknown>> {
+  let found: Array<Record<string, unknown>> = [];
+
+  const visit = (val: unknown) => {
+    if (found.length > 0 || !val || typeof val !== "object") {
+      return;
+    }
+    if (Array.isArray(val)) {
+      for (const item of val) visit(item);
+      return;
+    }
+    const obj = val as Record<string, unknown>;
+    if (Array.isArray(obj.holes) && obj.holes.length > 0) {
+      found = obj.holes as Array<Record<string, unknown>>;
+      return;
+    }
+    for (const nested of Object.values(obj)) visit(nested);
+  };
+
+  visit(tees);
+  return found;
+}
+
+async function getApiUsageRow(supabaseUrl: string, serviceRoleKey: string, date: string) {
+  const url = `${supabaseUrl}/rest/v1/api_usage?select=call_count&usage_key=eq.${encodeURIComponent(API_USAGE_SCOPE_KEY)}&date=eq.${encodeURIComponent(date)}`;
 
   const response = await fetch(url, {
     headers: {
@@ -157,7 +186,7 @@ async function getApiUsageRow(supabaseUrl: string, serviceRoleKey: string, userI
         Prefer: "return=minimal"
       },
       body: JSON.stringify({
-        user_id: userId,
+        usage_key: API_USAGE_SCOPE_KEY,
         call_count: 0,
         date
       })
@@ -173,8 +202,8 @@ async function getApiUsageRow(supabaseUrl: string, serviceRoleKey: string, userI
   return { call_count: Number(row.call_count ?? 0) };
 }
 
-async function incrementApiUsage(supabaseUrl: string, serviceRoleKey: string, userId: string, date: string) {
-  const url = `${supabaseUrl}/rest/v1/api_usage?user_id=eq.${encodeURIComponent(userId)}&date=eq.${encodeURIComponent(date)}`;
+async function incrementApiUsage(supabaseUrl: string, serviceRoleKey: string, date: string, currentCount: number) {
+  const url = `${supabaseUrl}/rest/v1/api_usage?usage_key=eq.${encodeURIComponent(API_USAGE_SCOPE_KEY)}&date=eq.${encodeURIComponent(date)}`;
   const response = await fetch(url, {
     method: "PATCH",
     headers: {
@@ -183,7 +212,7 @@ async function incrementApiUsage(supabaseUrl: string, serviceRoleKey: string, us
       "Content-Type": "application/json",
       Prefer: "return=minimal"
     },
-    body: JSON.stringify({ call_count: "call_count + 1" })
+    body: JSON.stringify({ call_count: currentCount + 1 })
   });
 
   if (!response.ok) {
