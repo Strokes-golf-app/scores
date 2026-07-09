@@ -9,6 +9,17 @@ describe('allocateStrokes', () => {
     expect(strokes.reduce((a, b) => a + b, 0)).toBe(10);
   });
 
+  describe('toRelativeStrokeIndex', () => {
+  it('re-ranks a 9-hole subset of an 18-hole stroke index to 1-9', () => {
+    const backNine = [2, 14, 6, 18, 4, 16, 8, 12, 10];
+    expect(Golf.toRelativeStrokeIndex(backNine)).toEqual([1, 7, 3, 9, 2, 8, 4, 6, 5]);
+  });
+
+  it('leaves an already-dense 1-9 ranking unchanged', () => {
+    expect(Golf.toRelativeStrokeIndex([3, 1, 2, 5, 4, 9, 7, 8, 6])).toEqual([3, 1, 2, 5, 4, 9, 7, 8, 6]);
+  });
+});
+
   it('gives a second stroke on the hardest holes once handicap exceeds hole count', () => {
     const strokes = Golf.allocateStrokes(20, 18);
     expect(strokes[0]).toBe(2);
@@ -223,5 +234,40 @@ describe('formatToPar', () => {
     expect(Golf.formatToPar(0)).toBe('E');
     expect(Golf.formatToPar(3)).toBe('+3');
     expect(Golf.formatToPar(-2)).toBe('-2');
+  });
+});
+
+describe('findMissingScores', () => {
+  it('returns an empty array when everyone has a score for every hole', () => {
+    const players = [
+      { name: 'Alice', scores: { 1: 4, 2: 5, 3: 3 } },
+      { name: 'Bob', scores: { 1: 5, 2: 4, 3: 4 } },
+    ];
+    expect(Golf.findMissingScores(players, 3)).toEqual([]);
+  });
+
+  it('lists the specific holes a player is missing', () => {
+    const players = [
+      { name: 'Alice', scores: { 1: 4, 2: 5, 3: 3 } },
+      { name: 'Bob', scores: { 1: 5 } }, // missing holes 2 and 3
+    ];
+    const missing = Golf.findMissingScores(players, 3);
+    expect(missing).toEqual([{ name: 'Bob', missingHoles: [2, 3] }]);
+  });
+
+  it('reports every incomplete player, not just the first one found', () => {
+    const players = [
+      { name: 'Alice', scores: { 1: 4 } },        // missing hole 2
+      { name: 'Bob', scores: { 1: 5 } },          // missing hole 2
+      { name: 'Cara', scores: { 1: 4, 2: 4 } },   // complete
+    ];
+    const missing = Golf.findMissingScores(players, 2);
+    expect(missing.map(m => m.name)).toEqual(['Alice', 'Bob']);
+  });
+
+  it('treats a player with no scores object at all as fully missing', () => {
+    const players = [{ name: 'NewGuy' }];
+    const missing = Golf.findMissingScores(players, 2);
+    expect(missing).toEqual([{ name: 'NewGuy', missingHoles: [1, 2] }]);
   });
 });

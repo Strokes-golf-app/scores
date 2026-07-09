@@ -40,6 +40,9 @@ async function handleAuthSubmit(e) {
     // Stash the name so we can create the profile row after they verify
     // and log in for the first time (no session exists yet to do it now).
     state.pendingSignupName = name;
+    // If they're signing up from a round invite, remember the code across
+    // the email verification round-trip so we can rejoin them afterward.
+    if (state.pendingJoinCode) savePendingJoin(state.pendingJoinCode);
     document.getElementById('verify-email-display').textContent = email;
     state.pendingVerifyEmail = email;
     document.getElementById('form-auth').reset();
@@ -92,6 +95,20 @@ async function afterAuthSuccess() {
 
   await resetSetupScreen();
   showScreen('screen-home');
+}
+
+async function playAsGuest() {
+  if (!state.pendingJoinCode) return;
+  const code = state.pendingJoinCode;
+  state.pendingJoinCode = null;
+  const { error } = await supabaseClient.auth.signInAnonymously();
+  if (error) {
+    showToast('Could not start a guest session — check your connection');
+    state.pendingJoinCode = code; // restore so they can try again
+    return;
+  }
+  showScreen('screen-home');
+  joinRound(code);
 }
 
 async function handleLogout() {

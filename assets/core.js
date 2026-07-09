@@ -24,6 +24,7 @@ const state = {
   selectedCourseStrokeIndex: null,  // handicap-ranking array from a selected saved course, or null for manual/hole-order default
   editingCourseId: null,            // set while the upload screen is editing an existing course, instead of creating a new one
   realtimeChannel: null,
+  endingRound: false, // guards against double-tapping "End Round" while the RPC calls are in flight
   authMode: 'login',     // 'login' or 'signup'
   pendingJoinCode: null, // round code from a ?code= deep link, applied after auth
   pendingVerifyEmail: null, // email awaiting verification, for the resend button
@@ -31,6 +32,12 @@ const state = {
 };
 
 const LS_KEY = 'fairwaylive_session';
+const PENDING_JOIN_KEY = 'fairwaylive_pending_join';
+
+// Display labels for each game mode, keyed by the value stored in
+// rounds.modes. Shared by the lobby chips and the leaderboard mode
+// tabs so the labels only need updating in one place.
+const MODE_NAMES = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play' };
 
 // ---------------------------------------------------------
 // Utilities
@@ -89,6 +96,19 @@ function loadSession() {
 
 function clearSession() {
   try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ }
+}
+
+// A round code the user intended to join, stashed before an email
+// round-trip (e.g. signing up from an invite link) so we can drop
+// them back into that round once they return and log in.
+function savePendingJoin(code) {
+  try { localStorage.setItem(PENDING_JOIN_KEY, code); } catch (e) { /* ignore */ }
+}
+function loadPendingJoin() {
+  try { return localStorage.getItem(PENDING_JOIN_KEY); } catch (e) { return null; }
+}
+function clearPendingJoin() {
+  try { localStorage.removeItem(PENDING_JOIN_KEY); } catch (e) { /* ignore */ }
 }
 
 function escapeHtml(str) {

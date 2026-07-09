@@ -10,11 +10,15 @@ function renderParGrid() {
   const holeCount = Number(document.getElementById('hole-count').value);
   const grid = document.getElementById('par-grid');
   grid.innerHTML = '';
+  // Back nine of an 18-hole course: holes are still stored as positions
+  // 1..9 internally (data-hole, which the scoring logic depends on), but
+  // we label them 10..18 so the grid matches the scorecard on the course.
+  const labelOffset = state.selectedCourseNine === 'back' ? 9 : 0;
   for (let h = 1; h <= holeCount; h++) {
     const cell = document.createElement('div');
     cell.className = 'par-cell';
     cell.innerHTML = `
-      <span class="par-cell-label">${h}</span>
+      <span class="par-cell-label">${h + labelOffset}</span>
       <input type="number" class="par-input" data-hole="${h}" min="2" max="6" placeholder="4" inputmode="numeric">
     `;
     grid.appendChild(cell);
@@ -149,8 +153,11 @@ async function resetSetupScreen() {
   }
 
   state.selectedCourseStrokeIndex = null;
+  state.selectedFullCourse = null;
+  state.selectedCourseNine = null;
+  document.getElementById('nine-select-field').hidden = true;
+  document.querySelectorAll('.nine-btn').forEach(b => b.classList.remove('selected'));
   await renderCourseSelectOptions();
-
   state.setupPlayers = [{ id: uid('p'), name: hostName, handicap: hostHandicap }];
   renderParGrid();
   renderSetupPlayerList();
@@ -166,20 +173,69 @@ async function renderCourseSelectOptions() {
 
 function applySelectedCourse(courseId) {
   const course = (state.myCourses || []).find(c => c.id === courseId);
+  const nineField = document.getElementById('nine-select-field');
+
+  state.selectedFullCourse = course || null;
+  state.selectedCourseNine = null;
+  nineField.hidden = true;
+  document.querySelectorAll('.nine-btn').forEach(b => b.classList.remove('selected'));
+
   if (!course) {
     state.selectedCourseStrokeIndex = null;
     return;
   }
 
   document.getElementById('course-name').value = course.name;
+
+  const roundHoleCount = Number(document.getElementById('hole-count').value);
+
+  // A 9-hole round against an 18-hole saved course needs the player to
+  // pick which nine before we know which pars/stroke index to use.
+  if (roundHoleCount === 9 && course.hole_count === 18) {
+    nineField.hidden = false;
+    document.getElementById('par-grid').innerHTML = '';
+    state.selectedCourseStrokeIndex = null;
+    return;
+  }
+
   document.getElementById('hole-count').value = String(course.hole_count);
+  applyCourseToGrid(course, null);
+}
+
+// Fills the par grid (and stroke index) from a saved course. `nine` is
+// null for a full course, or 'front'/'back' when a 9-hole round is
+// using one half of an 18-hole course.
+function applyCourseToGrid(course, nine) {
   renderParGrid();
+
+  let pars = course.pars;
+  let strokeIndex = course.stroke_index;
+
+  if (nine === 'front') {
+    pars = course.pars.slice(0, 9);
+    strokeIndex = strokeIndex ? strokeIndex.slice(0, 9) : null;
+  } else if (nine === 'back') {
+    pars = course.pars.slice(9, 18);
+    strokeIndex = strokeIndex ? strokeIndex.slice(9, 18) : null;
+  }
+
   document.querySelectorAll('.par-input').forEach(inp => {
     const h = Number(inp.dataset.hole) - 1;
-    inp.value = course.pars[h];
+    inp.value = pars[h];
   });
 
-  state.selectedCourseStrokeIndex = course.stroke_index;
+  state.selectedCourseStrokeIndex = strokeIndex ? Golf.toRelativeStrokeIndex(strokeIndex) : null;
+}
+
+function selectCourseNine(nine) {
+  if (!state.selectedFullCourse) return;
+  state.selectedCourseNine = nine;
+  document.querySelectorAll('.nine-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.nine === nine);
+  });
+  const label = nine === 'front' ? 'Front 9' : 'Back 9';
+  document.getElementById('course-name').value = `${state.selectedFullCourse.name} — ${label}`;
+  applyCourseToGrid(state.selectedFullCourse, nine);
 }
 
 function collectPars() {
@@ -251,6 +307,7 @@ async function createRound() {
         ended: false,
         host_user_id: currentUser.id,
         stroke_index: state.selectedCourseStrokeIndex || null,
+        hole_offset: state.selectedCourseNine === 'back' ? 9 : 0,
       });
 
     if (roundErr) throw roundErr;

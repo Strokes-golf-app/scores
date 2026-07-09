@@ -50,11 +50,16 @@ function init() {
   document.getElementById('btn-setup-back').addEventListener('click', () => showScreen('screen-home'));
 
   document.getElementById('hole-count').addEventListener('change', () => {
-    renderParGrid();
-    state.selectedCourseStrokeIndex = null;
-    document.getElementById('course-select').value = '';
-    document.getElementById('course-name').value = '';
+    const courseId = document.getElementById('course-select').value;
+    if (courseId) {
+      applySelectedCourse(courseId);
+    } else {
+      renderParGrid();
+    }
   });
+
+  document.getElementById('btn-nine-front').addEventListener('click', () => selectCourseNine('front'));
+  document.getElementById('btn-nine-back').addEventListener('click', () => selectCourseNine('back'));
 
   document.getElementById('btn-add-player').addEventListener('click', () => {
     state.setupPlayers.push({ id: uid('p'), name: '', handicap: 0 });
@@ -151,11 +156,36 @@ function init() {
 
   document.getElementById('btn-stroke-minus').addEventListener('click', () => setStroke(-1));
   document.getElementById('btn-stroke-plus').addEventListener('click', () => setStroke(1));
+  document.getElementById('btn-end-round').addEventListener('click', endRound);
 
   document.getElementById('auth-tab-login').addEventListener('click', () => setAuthMode('login'));
   document.getElementById('auth-tab-signup').addEventListener('click', () => setAuthMode('signup'));
   document.getElementById('form-auth').addEventListener('submit', handleAuthSubmit);
   document.getElementById('btn-logout').addEventListener('click', handleLogout);
+
+  // ----- Home sidebar drawer -----
+  const appDrawer = document.getElementById('app-drawer');
+  const drawerOverlay = document.getElementById('drawer-overlay');
+  function openDrawer() {
+    appDrawer.classList.add('open');
+    drawerOverlay.classList.add('open');
+    appDrawer.setAttribute('aria-hidden', 'false');
+  }
+  function closeDrawer() {
+    appDrawer.classList.remove('open');
+    drawerOverlay.classList.remove('open');
+    appDrawer.setAttribute('aria-hidden', 'true');
+  }
+  document.getElementById('btn-open-drawer').addEventListener('click', openDrawer);
+  drawerOverlay.addEventListener('click', closeDrawer);
+  // Any drawer item closes the drawer; its own handler still fires.
+  appDrawer.addEventListener('click', (e) => {
+    if (e.target.closest('.drawer-item')) closeDrawer();
+  });
+
+  document.getElementById('btn-round-history').addEventListener('click', openRoundHistory);
+  document.getElementById('btn-history-back').addEventListener('click', () => showScreen('screen-home'));
+  document.getElementById('btn-history-detail-back').addEventListener('click', () => showScreen('screen-history'));
 
   document.getElementById('btn-resend-verify').addEventListener('click', handleResendVerify);
   document.getElementById('btn-verify-back').addEventListener('click', () => showScreen('screen-auth'));
@@ -163,6 +193,16 @@ function init() {
   document.getElementById('btn-forgot-password').addEventListener('click', () => showScreen('screen-forgot'));
   document.getElementById('btn-forgot-back').addEventListener('click', () => showScreen('screen-auth'));
   document.getElementById('form-forgot').addEventListener('submit', handleForgotSubmit);
+
+  document.getElementById('btn-join-signup').addEventListener('click', () => {
+    setAuthMode('signup');
+    showScreen('screen-auth');
+  });
+  document.getElementById('btn-join-login').addEventListener('click', () => {
+    setAuthMode('login');
+    showScreen('screen-auth');
+  });
+  document.getElementById('btn-join-guest').addEventListener('click', playAsGuest);
 
   document.getElementById('form-reset-password').addEventListener('submit', handleResetPasswordSubmit);
 
@@ -190,14 +230,8 @@ function init() {
     }
     if (!isLoggedIn) {
       if (codeFromUrl) {
-        const { error } = await supabaseClient.auth.signInAnonymously();
-        if (error) {
-          showToast('Could not start a guest session — check your connection');
-          showScreen('screen-auth');
-          return;
-        }
-        showScreen('screen-home');
-        joinRound(codeFromUrl);
+        state.pendingJoinCode = codeFromUrl.toUpperCase();
+        showScreen('screen-join-options');
         return;
       }
       showScreen('screen-auth');
@@ -207,6 +241,17 @@ function init() {
     if (codeFromUrl) {
       showScreen('screen-home');
       joinRound(codeFromUrl);
+      return;
+    }
+
+    // Returning from email verification after signing up via an invite:
+    // the round code was stashed before the email round-trip. Consume it
+    // and drop them straight into that round.
+    const pendingJoin = loadPendingJoin();
+    if (pendingJoin) {
+      clearPendingJoin();
+      showScreen('screen-home');
+      joinRound(pendingJoin);
       return;
     }
 

@@ -30,9 +30,8 @@ function renderLobby() {
     list.appendChild(row);
   });
 
-  const modeNames = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play' };
   document.getElementById('lobby-modes').innerHTML =
-    (r.modes || ['gross']).map(m => `<span class="chip">${modeNames[m] || m}</span>`).join('');
+    (r.modes || ['gross']).map(m => `<span class="chip">${MODE_NAMES[m] || m}</span>`).join('');
 
   document.getElementById('btn-start-round').hidden = !isHost();
 
@@ -97,7 +96,8 @@ async function joinRound(code) {
     const roundRow = roundRows && roundRows[0];
 
     if (error || !roundRow) {
-      showToast('No round found with that code');
+      const { data: archived } = await supabaseClient.rpc('round_was_archived', { p_code: code });
+      showToast(archived ? 'This round has ended' : 'No round found with that code');
       return;
     }
 
@@ -194,6 +194,8 @@ async function resumeSession(session) {
       .single();
 
     if (error || !roundRow) {
+      const { data: archived } = await supabaseClient.rpc('round_was_archived', { p_code: session.roundCode });
+      if (archived) showToast('This round has ended');
       clearSession();
       resetSetupScreen();
       showScreen('screen-home');

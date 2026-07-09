@@ -82,6 +82,50 @@
   </div>
 </section>
 
+<!-- ============ SCREEN: JOIN OPTIONS ============ -->
+<section id="screen-join-options" class="screen">
+  <div class="home-wrap">
+    <div class="brand">
+      <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="brand-logo">
+      <p class="brand-tag">Built for the Match.</p>
+    </div>
+    <h2 class="auth-heading">You're invited!</h2>
+    <p class="auth-subtext">How would you like to join this round?</p>
+    <button type="button" class="btn btn-primary btn-lg btn-block" id="btn-join-signup">
+      <span class="btn-label">Create an account</span>
+      <span class="btn-sub">Save your scores and round history</span>
+    </button>
+    <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-login">
+      <span class="btn-label">Log in</span>
+      <span class="btn-sub">Already have an account</span>
+    </button>
+    <div class="divider"><span>or</span></div>
+    <button type="button" class="link-btn link-btn-center" id="btn-join-guest">Continue as guest</button>
+  </div>
+</section>
+
+<!-- ============ SCREEN: RESET PASSWORD (set new) ============ -->
+<section id="screen-join-options" class="screen" hidden>
+  <div class="home-wrap">
+    <div class="brand">
+      <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="brand-logo">
+      <p class="brand-tag">Built for the Match.</p>
+    </div>
+    <h2 class="auth-heading">You're invited!</h2>
+    <p class="auth-subtext">How would you like to join this round?</p>
+    <button type="button" class="btn btn-primary btn-lg btn-block" id="btn-join-signup">
+      <span class="btn-label">Create an account</span>
+      <span class="btn-sub">Save your scores and round history</span>
+    </button>
+    <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-login">
+      <span class="btn-label">Log in</span>
+      <span class="btn-sub">Already have an account</span>
+    </button>
+    <div class="divider"><span>or</span></div>
+    <button type="button" class="link-btn link-btn-center" id="btn-join-guest">Continue as guest</button>
+  </div>
+</section>
+
 <!-- ============ SCREEN: RESET PASSWORD (set new) ============ -->
 <section id="screen-reset-password" class="screen">
   <div class="home-wrap">
@@ -102,6 +146,12 @@
 
 <!-- ============ SCREEN: HOME ============ -->
 <section id="screen-home" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-open-drawer" aria-label="Open menu">☰</button>
+    <h2 class="topbar-title">Strokes Golf</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
   <div class="home-wrap">
     <div class="brand">
       <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="brand-logo">
@@ -125,12 +175,35 @@
       </form>
     </div>
 
-    <button class="btn btn-dark btn-lg" id="btn-upload-course">
-      <span class="btn-label">+ Upload a course</span>
-    </button>
-    <button class="link-btn link-btn-center" id="btn-manage-courses">Manage saved courses</button>
-    <button class="link-btn link-btn-center" id="btn-logout">Log out (<span id="auth-user-email"></span>)</button>
-  </div>
+    </div>
+
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+
+  <aside class="drawer" id="app-drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="drawer-logo">
+    </div>
+    <nav class="drawer-nav">
+      <button class="drawer-item" id="btn-round-history" type="button">
+        <span class="drawer-item-icon">🏌️</span> Round history
+      </button>
+      <button class="drawer-item" id="btn-upload-course" type="button">
+        <span class="drawer-item-icon">＋</span> Upload a course
+      </button>
+      <button class="drawer-item" id="btn-manage-courses" type="button">
+        <span class="drawer-item-icon">⛳</span> Manage courses
+      </button>
+    </nav>
+    <div class="drawer-footer">
+      <button class="drawer-item drawer-item-muted" id="btn-logout" type="button">
+        <span class="drawer-item-icon">⏻</span>
+        <span class="drawer-logout-text">
+          <span class="drawer-logout-label">Log out</span>
+          <span class="drawer-logout-email" id="auth-user-email"></span>
+        </span>
+      </button>
+    </div>
+  </aside>
 </section>
 
 <!-- ============ SCREEN: COURSE UPLOAD ============ -->
@@ -187,6 +260,38 @@
   </div>
 </section>
 
+<!-- ============ SCREEN: ROUND HISTORY ============ -->
+<section id="screen-history" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-history-back" aria-label="Back">←</button>
+    <h2 class="topbar-title">Round history</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
+  <div class="screen-body">
+    <div id="history-list" class="history-list"></div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: ROUND HISTORY DETAIL ============ -->
+<section id="screen-history-detail" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-history-detail-back" aria-label="Back">←</button>
+    <h2 class="topbar-title">Round detail</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
+  <div class="screen-body">
+    <div class="history-detail-header">
+      <span class="history-detail-course" id="history-detail-course"></span>
+      <span class="history-detail-meta" id="history-detail-meta"></span>
+    </div>
+    <nav class="modetab-row" id="history-mode-row"></nav>
+    <div class="board-meta" id="history-detail-meta-line"></div>
+    <div class="leaderboard" id="history-detail-board"></div>
+  </div>
+</section>
+
 <!-- ============ SCREEN: NEW ROUND SETUP ============ -->
 <section id="screen-setup" class="screen">
   <header class="topbar">
@@ -194,14 +299,21 @@
     <h2 class="topbar-title">New round</h2>
     <span class="topbar-spacer"></span>
   </header>
-
-  <div class="screen-body">
+ <div class="screen-body">
     <div class="field">
       <label class="field-label" for="course-select">Course</label>
       <select id="course-select">
         <option value="">Manual entry</option>
       </select>
       <p class="field-hint">Pick a saved course to auto-fill pars and handicaps, or leave on manual entry.</p>
+    </div>
+    <div class="field" id="nine-select-field" hidden>
+      <span class="field-label">Which nine?</span>
+      <p class="field-hint">This course has 18 holes — pick which nine you're playing.</p>
+      <div class="nine-toggle">
+        <button type="button" class="btn btn-secondary nine-btn" id="btn-nine-front" data-nine="front">Front 9 (1–9)</button>
+        <button type="button" class="btn btn-secondary nine-btn" id="btn-nine-back" data-nine="back">Back 9 (10–18)</button>
+      </div>
     </div>
 
     <div class="field">
@@ -360,7 +472,11 @@
       <div class="hole-nav-center">
         <p class="hole-nav-label">Hole</p>
         <p class="hole-nav-number" id="hole-number">1</p>
-        <p class="hole-nav-par" id="hole-par">Par 4</p>
+        <p class="hole-nav-meta">
+          <span class="hole-nav-stat" id="hole-par">Par 4</span>
+          <span class="hole-nav-stat" id="hole-handicap" hidden>Hcp 7</span>
+          <span class="hole-nav-stat" id="hole-score" hidden>Score 5</span>
+        </p>
       </div>
       <button class="icon-btn" id="btn-hole-next" aria-label="Next hole">→</button>
     </div>
@@ -381,6 +497,10 @@
         <span class="stroke-caption" id="stroke-caption">Tap + to enter score</span>
       </div>
       <button class="stroke-btn stroke-plus" id="btn-stroke-plus" aria-label="Increase strokes">+</button>
+    </div>
+
+    <div class="end-round-wrap" id="end-round-wrap" hidden>
+      <button class="btn btn-primary btn-block" id="btn-end-round" type="button">End Round</button>
     </div>
 
     <div class="my-progress">
@@ -414,6 +534,9 @@
 <script src="assets/setup.js"></script>
 <script src="assets/lobby.js"></script>
 <script src="assets/round.js"></script>
+<script src="assets/scorecard.js"></script>
+<script src="assets/leaderboard.js"></script>
+<script src="assets/history.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>

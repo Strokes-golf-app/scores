@@ -29,6 +29,19 @@ const Golf = (() => {
     return result;
   }
 
+  /**
+   * Converts a subset of stroke-index values (e.g. just the back nine
+   * of an 18-hole course, which might be ranks like [2,14,6,18,...])
+   * into a dense 1..N ranking based on relative difficulty. This keeps
+   * allocateStrokes() correct when a round only plays half a course —
+   * without it, a 9-hole round's hardest hole might carry an original
+   * rank like 14, and a 5-handicap player would barely get any strokes.
+   */
+  function toRelativeStrokeIndex(values) {
+    const sorted = [...values].sort((a, b) => a - b);
+    return values.map(v => sorted.indexOf(v) + 1);
+  }
+
   function netHoleScore(grossStrokes, strokesReceived) {
     if (grossStrokes == null) return null;
     return grossStrokes - strokesReceived;
@@ -233,8 +246,33 @@ const Golf = (() => {
     return n > 0 ? `+${n}` : `${n}`;
   }
 
+  /**
+   * Checks whether every player has a score for every hole. Used to
+   * gate ending a round — returns an array of { name, missingHoles }
+   * for any player who isn't fully scored yet; an empty array means
+   * everyone's done.
+   * @param {object[]} players - each with { name, scores }
+   * @param {number} holeCount
+   */
+  function findMissingScores(players, holeCount) {
+    const result = [];
+    players.forEach(player => {
+      const missingHoles = [];
+      for (let h = 1; h <= holeCount; h++) {
+        if (!player.scores || player.scores[String(h)] == null) {
+          missingHoles.push(h);
+        }
+      }
+      if (missingHoles.length > 0) {
+        result.push({ name: player.name, missingHoles });
+      }
+    });
+    return result;
+  }
+
   return {
     allocateStrokes,
+   toRelativeStrokeIndex,
     netHoleScore,
     stablefordPoints,
     summarizePlayer,
@@ -242,6 +280,7 @@ const Golf = (() => {
     computeSkins,
     computeMatchPlay,
     formatToPar,
+    findMissingScores,
   };
 })();
 
