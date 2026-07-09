@@ -160,6 +160,7 @@ function reconstructRound(row) {
   return {
     courseName: row.course_name || snap.course_name || 'Round',
     holeCount: snap.hole_count || (snap.pars ? snap.pars.length : 18),
+    holeOffset: snap.hole_offset || 0,
     pars: snap.pars || [],
     strokeIndex: snap.stroke_index || null,
     modes: (snap.modes && snap.modes.length) ? snap.modes : ['gross'],
@@ -350,6 +351,7 @@ function renderHistoryScorecard(round) {
   if (!wrap) return;
   const pars = round.pars || [];
   const hc = round.holeCount;
+  const offset = round.holeOffset || 0;
   const players = round.players;
   const meId = historyDetailUserId;
 
@@ -365,7 +367,7 @@ function renderHistoryScorecard(round) {
 
   const holeRow = (h) => {
     const par = pars[h - 1] || 4;
-    let cells = `<th class="sc-rowhead"><span class="sc-holenum">${h}</span><span class="sc-holepar">par ${par}</span></th>`;
+    let cells = `<th class="sc-rowhead"><span class="sc-holenum">${h + offset}</span><span class="sc-holepar">par ${par}</span></th>`;
     players.forEach(p => { cells += scoreCell(p.scores[String(h)], par, isMe(p)); });
     rows.push(`<tr>${cells}</tr>`);
   };
