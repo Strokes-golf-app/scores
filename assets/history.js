@@ -91,6 +91,8 @@ function buildHistoryCard(row, userId) {
 
   const card = document.createElement('div');
   card.className = 'history-card';
+  card.setAttribute('role', 'button');
+  card.setAttribute('tabindex', '0');
   card.innerHTML = `
     <div class="history-card-main">
       <span class="history-card-course">${escapeHtml(row.course_name || snap.course_name || 'Round')}</span>
@@ -98,7 +100,12 @@ function buildHistoryCard(row, userId) {
       ${playerLine}
     </div>
     ${scoreHtml}
+    <span class="history-card-chevron" aria-hidden="true">›</span>
   `;
+  card.addEventListener('click', () => openHistoryDetail(row, userId));
+  card.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHistoryDetail(row, userId); }
+  });
   return card;
 }
 
@@ -108,4 +115,207 @@ function formatHistoryDate(iso) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ===========================================================
+// Round detail — read-only view of one completed round, showing
+// every player's result for each mode the round used. Reconstructs
+// a round object from the snapshot and reuses the same Golf.*
+// scoring the live leaderboard uses, so results are identical.
+// ===========================================================
+
+let historyDetailRound = null;
+let historyDetailUserId = null;
+
+function openHistoryDetail(row, userId) {
+  historyDetailRound = reconstructRound(row);
+  historyDetailUserId = userId;
+  showScreen('screen-history-detail');
+  renderHistoryDetail();
+}
+
+// Rebuilds the round into the shape the scoring engine expects
+// (camelCase fields, per-player score maps), mirroring mapRoundRow.
+function reconstructRound(row) {
+  const snap = row.round_snapshot || {};
+  const playersSnap = row.players_snapshot || [];
+  const scoresSnap = row.scores_snapshot || [];
+
+  const scoresByPlayer = {};
+  playersSnap.forEach(p => { scoresByPlayer[p.id] = {}; });
+  scoresSnap.forEach(s => {
+    if (!scoresByPlayer[s.player_id]) scoresByPlayer[s.player_id] = {};
+    scoresByPlayer[s.player_id][String(s.hole)] = s.strokes;
+  });
+
+  const players = playersSnap.map(p => ({
+    id: p.id,
+    name: p.name,
+    handicap: p.handicap || 0,
+    user_id: p.user_id,
+    scores: scoresByPlayer[p.id] || {},
+  }));
+
+  return {
+    courseName: row.course_name || snap.course_name || 'Round',
+    holeCount: snap.hole_count || (snap.pars ? snap.pars.length : 18),
+    pars: snap.pars || [],
+    strokeIndex: snap.stroke_index || null,
+    modes: (snap.modes && snap.modes.length) ? snap.modes : ['gross'],
+    matchTeamA: snap.match_team_a || null,
+    matchTeamB: snap.match_team_b || null,
+    matchUseHandicap: snap.match_use_handicap !== false,
+    players,
+    endedAt: row.ended_at,
+  };
+}
+
+function renderHistoryDetail() {
+  const round = historyDetailRound;
+  if (!round) return;
+
+  document.getElementById('history-detail-course').textContent = round.courseName;
+  document.getElementById('history-detail-meta').textContent =
+    `${formatHistoryDate(round.endedAt)} · ${round.holeCount} holes`;
+
+  const modes = round.modes;
+  const activeMode = modes[0];
+  const tabRow = document.getElementById('history-mode-row');
+  tabRow.innerHTML = modes.map(m =>
+    `<button class="modetab ${m === activeMode ? 'active' : ''}" data-mode="${m}">${MODE_NAMES[m] || m}</button>`
+  ).join('');
+  tabRow.querySelectorAll('.modetab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabRow.querySelectorAll('.modetab').forEach(b => b.classList.toggle('active', b === btn));
+      renderHistoryDetailBoard(btn.dataset.mode);
+    });
+  });
+
+  renderHistoryDetailBoard(activeMode);
+}
+
+function historyDetailSummaries(round) {
+  return round.players.map(p =>
+    Golf.summarizePlayer(p, p.scores || {}, round.pars, round.strokeIndex, round.holeCount)
+  );
+}
+
+function isDetailMe(round, playerId) {
+  if (!historyDetailUserId) return false;
+  const p = round.players.find(pl => pl.id === playerId);
+  return p && p.user_id === historyDetailUserId;
+}
+
+function renderHistoryDetailBoard(mode) {
+  const round = historyDetailRound;
+  const summaries = historyDetailSummaries(round);
+  const metaEl = document.getElementById('history-detail-meta-line');
+  const boardEl = document.getElementById('history-detail-board');
+
+  if (mode === 'skins') return renderHistoryDetailSkins(summaries, round, metaEl, boardEl);
+  if (mode === 'match') return renderHistoryDetailMatch(summaries, round, metaEl, boardEl);
+
+  metaEl.textContent = mode === 'stableford'
+    ? 'Points scored per hole, summed. Higher is better.'
+    : 'Total score relative to par. Lower is better.';
+
+  const ranked = Golf.rankPlayers(summaries, mode);
+  boardEl.innerHTML = '';
+  ranked.forEach(s => {
+    const meMark = isDetailMe(round, s.playerId) ? ' (you)' : '';
+    let scoreText, scoreClass = '';
+    if (mode === 'stableford') {
+      scoreText = s.stablefordTotal;
+    } else {
+      const toPar = mode === 'net' ? s.toParNet : s.toParGross;
+      scoreText = Golf.formatToPar(toPar);
+      scoreClass = toPar < 0 ? 'neg' : (toPar > 0 ? 'pos' : '');
+    }
+    const detail = mode === 'net'
+      ? `${s.netTotal} net`
+      : (mode === 'stableford' ? `${s.grossTotal} gross` : `HCP ${s.handicap}`);
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'lb-row' + (s.rank === 1 ? ' leader' : '');
+    rowEl.innerHTML = `
+      <span class="lb-rank">${s.rank || '–'}</span>
+      <span class="lb-name-wrap">
+        <span class="lb-name">${escapeHtml(s.name)}${meMark}</span>
+      </span>
+      <span class="lb-detail">${detail}</span>
+      <span class="lb-score ${scoreClass}">${scoreText}</span>
+    `;
+    boardEl.appendChild(rowEl);
+  });
+}
+
+function renderHistoryDetailSkins(summaries, round, metaEl, boardEl) {
+  const { skinsByPlayer } = Golf.computeSkins(summaries, round.holeCount);
+  metaEl.textContent = 'Skins won. Lowest net score on a hole takes it; ties push.';
+
+  const ranked = Object.entries(skinsByPlayer)
+    .map(([playerId, count]) => ({
+      playerId, count,
+      name: summaries.find(s => s.playerId === playerId)?.name || '?',
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  boardEl.innerHTML = '';
+  ranked.forEach((p, i) => {
+    const meMark = isDetailMe(round, p.playerId) ? ' (you)' : '';
+    const rowEl = document.createElement('div');
+    rowEl.className = 'lb-row' + (i === 0 && p.count > 0 ? ' leader' : '');
+    rowEl.innerHTML = `
+      <span class="lb-rank">${i + 1}</span>
+      <span class="lb-name-wrap"><span class="lb-name">${escapeHtml(p.name)}${meMark}</span></span>
+      <span class="lb-detail"></span>
+      <span class="lb-score">${p.count}</span>
+    `;
+    boardEl.appendChild(rowEl);
+  });
+}
+
+function renderHistoryDetailMatch(summaries, round, metaEl, boardEl) {
+  if (!round.matchTeamA || !round.matchTeamB || !round.matchTeamA.length || !round.matchTeamB.length) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">This round didn\'t have match play teams set.</div>';
+    return;
+  }
+
+  const teamA = round.matchTeamA.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  const teamB = round.matchTeamB.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  if (!teamA.length || !teamB.length) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Match play players weren\'t found in this round.</div>';
+    return;
+  }
+
+  const m = Golf.computeMatchPlay(teamA, teamB, round.holeCount, round.matchUseHandicap);
+  const teamAName = teamA.map(s => s.name).join(' & ');
+  const teamBName = teamB.map(s => s.name).join(' & ');
+
+  metaEl.textContent = round.matchUseHandicap
+    ? 'Head-to-head, best-ball net score per hole.'
+    : 'Head-to-head, best-ball gross score per hole.';
+
+  let resultText;
+  if (m.diff === 0) {
+    resultText = 'Match halved — all square';
+  } else {
+    const winnerName = m.diff > 0 ? teamAName : teamBName;
+    resultText = m.remaining > 0
+      ? `${winnerName} won ${m.margin}&${m.remaining}`
+      : `${winnerName} won ${m.margin} up`;
+  }
+
+  boardEl.innerHTML = `
+    <div class="history-match-result">
+      <div class="history-match-teams">
+        <span class="history-match-team">${escapeHtml(teamAName)}</span>
+        <span class="history-match-vs">vs</span>
+        <span class="history-match-team">${escapeHtml(teamBName)}</span>
+      </div>
+      <div class="history-match-outcome">${escapeHtml(resultText)}</div>
+    </div>
+  `;
 }
