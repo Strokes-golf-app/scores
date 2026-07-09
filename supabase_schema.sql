@@ -55,6 +55,82 @@ create table if not exists scores (
 create index if not exists idx_players_round_id on players(round_id);
 create index if not exists idx_scores_player_id on scores(player_id);
 
+-- ---------- api usage ----------
+-- One row per app-wide daily usage bucket. The edge functions share
+-- this counter so the app stops calling the third-party API after
+-- the 50-call daily limit is reached.
+create table if not exists api_usage (
+  id uuid primary key default gen_random_uuid(),
+  usage_key text not null default 'app-wide',
+  date text not null,
+  call_count int not null default 0,
+  updated_at timestamptz not null default now(),
+  unique (usage_key, date)
+);
+
+create index if not exists idx_api_usage_usage_date on api_usage(usage_key, date);
+
+-- For existing Supabase projects that already have an api_usage table,
+-- run this block to align it with the app-wide daily counter design.
+alter table if exists api_usage
+  add column if not exists usage_key text not null default 'app-wide',
+  add column if not exists call_count int not null default 0,
+  add column if not exists updated_at timestamptz not null default now();
+
+-- Older versions of the table may still require a user_id value even though
+-- the new app-wide design no longer uses it.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_name = 'api_usage' and column_name = 'user_id'
+  ) then
+    alter table api_usage alter column user_id drop not null;
+  end if;
+end $$;
+
+update api_usage
+set usage_key = coalesce(usage_key, 'app-wide'),
+    call_count = coalesce(call_count, 0),
+    updated_at = coalesce(updated_at, now())
+where usage_key is null or call_count is null or updated_at is null;
+
+-- Collapse duplicate rows for the same usage scope and day so the
+-- new uniqueness constraint can be created safely.
+with ranked as (
+  select id,
+         row_number() over (
+           partition by usage_key, date
+           order by updated_at desc, id desc
+         ) as rn
+  from api_usage
+)
+delete from api_usage
+where id in (
+  select id from ranked where rn > 1
+);
+
+-- Add the unique constraint first, then use it for upserts.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'api_usage_usage_key_date_key'
+  ) then
+    alter table api_usage
+      add constraint api_usage_usage_key_date_key unique (usage_key, date);
+  end if;
+end $$;
+
+-- Rebuild the daily usage row so the app-wide counter remains a single row per day.
+insert into api_usage (usage_key, date, call_count, updated_at)
+select usage_key, date, sum(call_count) as call_count, max(updated_at) as updated_at
+from api_usage
+group by usage_key, date
+on conflict (usage_key, date) do update
+set call_count = api_usage.call_count + excluded.call_count,
+    updated_at = greatest(api_usage.updated_at, excluded.updated_at);
+
 -- ---------- realtime ----------
 -- Tells Supabase to broadcast row-level changes on these tables
 -- to any connected client subscribed to them. This is the
