@@ -132,6 +132,7 @@ function openHistoryDetail(row, userId) {
   historyDetailUserId = userId;
   showScreen('screen-history-detail');
   renderHistoryDetail();
+  renderHistoryScorecard(historyDetailRound);
 }
 
 // Rebuilds the round into the shape the scoring engine expects
