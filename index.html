@@ -215,7 +215,15 @@
   </header>
 
   <div class="screen-body">
-   <div class="field">
+    <div class="field">
+      <label class="field-label" for="course-search">Search saved or API courses</label>
+      <div class="course-search-wrapper">
+        <input type="text" id="course-search" placeholder="Search by course name or location" autocomplete="off">
+        <div id="course-search-results" class="search-results-dropdown" hidden></div>
+      </div>
+    </div>
+
+    <div class="field">
       <label class="field-label" for="course-upload-name">Course name</label>
       <input type="text" id="course-upload-name" placeholder="e.g. Bobby Jones Golf Course">
     </div>
