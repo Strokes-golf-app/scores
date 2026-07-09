@@ -14,6 +14,10 @@
 function init() {
   setAuthMode('login');
 
+  if (typeof initializeSetupCourseSearch === 'function') {
+    initializeSetupCourseSearch();
+  }
+
   document.getElementById('btn-new-round').addEventListener('click', async () => {
     await resetSetupScreen();
     showScreen('screen-setup');

@@ -163,6 +163,190 @@ async function resetSetupScreen() {
   renderSetupPlayerList();
 }
 
+let setupCourseSearchDebounceTimer = null;
+
+function initializeSetupCourseSearch() {
+  const searchInput = document.getElementById('setup-course-search');
+  const resultsEl = document.getElementById('setup-course-search-results');
+  if (!searchInput || !resultsEl || searchInput.dataset.initialized === 'true') return;
+
+  searchInput.dataset.initialized = 'true';
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(setupCourseSearchDebounceTimer);
+    setupCourseSearchDebounceTimer = setTimeout(() => {
+      searchSetupCourseResults(e.target.value);
+    }, 300);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.course-search-wrapper')) {
+      hideSetupCourseSearchResults();
+    }
+  });
+}
+
+async function searchSetupCourseResults(query) {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) {
+    hideSetupCourseSearchResults();
+    return;
+  }
+
+  const localResults = await searchLocalCourses(trimmed);
+  let apiResults = [];
+  if (localResults.length < 5) {
+    apiResults = await searchApiCourses(trimmed);
+  }
+  displaySetupCourseSearchResults(localResults, apiResults);
+}
+
+function displaySetupCourseSearchResults(localResults, apiResults) {
+  const resultsEl = document.getElementById('setup-course-search-results');
+  if (!resultsEl) return;
+
+  resultsEl.innerHTML = '';
+
+  const combined = [];
+  if (localResults.length > 0) {
+    combined.push({ label: 'YOUR COURSES', items: localResults.map(course => ({ ...course, source: 'local' })) });
+  }
+  if (apiResults.length > 0) {
+    combined.push({ label: 'GOLF COURSE API', items: apiResults });
+  }
+
+  if (combined.length === 0) {
+    resultsEl.innerHTML = '<div class="search-result-empty">No matches found</div>';
+    resultsEl.hidden = false;
+    return;
+  }
+
+  combined.forEach(group => {
+    const label = document.createElement('div');
+    label.className = 'search-result-label';
+    label.textContent = group.label;
+    resultsEl.appendChild(label);
+
+    group.items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `search-result-item ${item.source === 'api' ? 'api' : 'local'}`;
+      row.textContent = `${item.name || item.course_name || 'Course'}${item.location ? ` - ${item.location}` : ''}`;
+      row.addEventListener('click', () => selectSetupCourseResult(item));
+      resultsEl.appendChild(row);
+    });
+  });
+
+  resultsEl.hidden = false;
+}
+
+function hideSetupCourseSearchResults() {
+  const resultsEl = document.getElementById('setup-course-search-results');
+  if (resultsEl) {
+    resultsEl.hidden = true;
+    resultsEl.innerHTML = '';
+  }
+}
+
+async function selectSetupCourseResult(course) {
+  hideSetupCourseSearchResults();
+  if (!course) return;
+
+  if (course.source === 'api') {
+    await importSetupApiCourse(course);
+    return;
+  }
+
+  document.getElementById('setup-course-search').value = '';
+  document.getElementById('course-select').value = course.id;
+  applySelectedCourse(course.id);
+}
+
+async function importSetupApiCourse(course) {
+  const searchInput = document.getElementById('setup-course-search');
+  const originalValue = searchInput?.value || '';
+  if (searchInput) {
+    searchInput.disabled = true;
+    searchInput.value = 'Loading course details...';
+  }
+
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) {
+    showToast('You need to be logged in to import a course');
+    if (searchInput) {
+      searchInput.disabled = false;
+      searchInput.value = originalValue;
+    }
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient.functions.invoke('get-golf-course', {
+      body: { courseId: course.external_id || course.id, userId: user.id }
+    });
+
+    if (error || data?.error) {
+      console.error(error || data?.error);
+      showToast('Could not import that course right now');
+      if (searchInput) {
+        searchInput.disabled = false;
+        searchInput.value = originalValue;
+      }
+      return;
+    }
+
+    const importedCourse = {
+      id: `api:${course.external_id || course.id}`,
+      name: data.course_name || course.name || '',
+      location: data.location?.city && data.location?.state
+        ? `${data.location.city}, ${data.location.state}`
+        : data.location?.city || data.location?.state || '',
+      hole_count: data.hole_count || 18,
+      pars: Array.isArray(data.pars) ? data.pars : [],
+      stroke_index: Array.isArray(data.handicaps) ? data.handicaps : [],
+      source: 'api'
+    };
+
+    document.getElementById('course-select').value = '';
+    populateSetupCourseFields(importedCourse);
+    if (searchInput) {
+      searchInput.disabled = false;
+      searchInput.value = '';
+    }
+  } catch (err) {
+    console.error('Failed to import course', err);
+    showToast('Could not import that course right now');
+    if (searchInput) {
+      searchInput.disabled = false;
+      searchInput.value = originalValue;
+    }
+  }
+}
+
+function populateSetupCourseFields(course) {
+  const nineField = document.getElementById('nine-select-field');
+  state.selectedFullCourse = course || null;
+  state.selectedCourseNine = null;
+  nineField.hidden = true;
+  document.querySelectorAll('.nine-btn').forEach(b => b.classList.remove('selected'));
+
+  if (!course) {
+    state.selectedCourseStrokeIndex = null;
+    return;
+  }
+
+  document.getElementById('course-name').value = course.name || '';
+  const roundHoleCount = Number(document.getElementById('hole-count').value);
+
+  if (roundHoleCount === 9 && course.hole_count === 18) {
+    nineField.hidden = false;
+    document.getElementById('par-grid').innerHTML = '';
+    state.selectedCourseStrokeIndex = null;
+    return;
+  }
+
+  document.getElementById('hole-count').value = String(course.hole_count || 18);
+  applyCourseToGrid(course, null);
+}
+
 async function renderCourseSelectOptions() {
   const select = document.getElementById('course-select');
   const courses = await loadMyCourses();
