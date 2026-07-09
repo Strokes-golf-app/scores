@@ -38,13 +38,251 @@ function updateStartRoundButtonState() {
   document.getElementById('btn-save-course-start-round').disabled = !allFilled;
 }
 
+let courseSearchDebounceTimer = null;
+
+function initializeCourseSearch() {
+  const searchInput = document.getElementById('course-search');
+  const resultsEl = document.getElementById('course-search-results');
+  if (!searchInput || !resultsEl) return;
+
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(courseSearchDebounceTimer);
+    courseSearchDebounceTimer = setTimeout(() => {
+      searchCourses(e.target.value);
+    }, 300);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.course-search-wrapper')) {
+      hideCourseSearchResults();
+    }
+  });
+}
+
+async function searchCourses(query) {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) {
+    hideCourseSearchResults();
+    return;
+  }
+
+  const localResults = await searchLocalCourses(trimmed);
+  let apiResults = [];
+  if (localResults.length < 5) {
+    apiResults = await searchApiCourses(trimmed);
+  }
+  displayCourseSearchResults(localResults, apiResults);
+}
+
+async function searchLocalCourses(query) {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabaseClient
+    .from('courses')
+    .select('*')
+    .or(`name.ilike.%${query}%,location.ilike.%${query}%`)
+    .eq('user_id', user.id)
+    .order('name', { ascending: true })
+    .limit(10);
+
+  if (error) {
+    console.error(error);
+    return [];
+  }
+
+  return data || [];
+}
+
+async function searchApiCourses(query) {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabaseClient.functions.invoke('search-golf-course', {
+      body: { searchQuery: query, userId: user.id }
+    });
+
+    if (error || data?.error) {
+      return [];
+    }
+
+    return (data?.results || []).map(course => ({
+      ...course,
+      source: 'api',
+      external_id: course.id,
+      name: course.course_name || course.club_name,
+      location: course.location_text || course.location?.city || course.location?.state || ''
+    }));
+  } catch (err) {
+    console.error('API search failed', err);
+    return [];
+  }
+}
+
+function displayCourseSearchResults(localResults, apiResults) {
+  const resultsEl = document.getElementById('course-search-results');
+  if (!resultsEl) return;
+
+  resultsEl.innerHTML = '';
+
+  const combined = [];
+  if (localResults.length > 0) {
+    combined.push({ label: 'YOUR COURSES', items: localResults.map(course => ({ ...course, source: 'local' })) });
+  }
+  if (apiResults.length > 0) {
+    combined.push({ label: 'GOLF COURSE API', items: apiResults });
+  }
+
+  if (combined.length === 0) {
+    resultsEl.innerHTML = '<div class="search-result-empty">No matches found</div>';
+    resultsEl.hidden = false;
+    return;
+  }
+
+  combined.forEach(group => {
+    const label = document.createElement('div');
+    label.className = 'search-result-label';
+    label.textContent = group.label;
+    resultsEl.appendChild(label);
+
+    group.items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `search-result-item ${item.source === 'api' ? 'api' : 'local'}`;
+      row.textContent = `${item.name || item.course_name || 'Course'}${item.location ? ` - ${item.location}` : ''}`;
+      row.addEventListener('click', () => selectCourseFromSearch(item));
+      resultsEl.appendChild(row);
+    });
+  });
+
+  resultsEl.hidden = false;
+}
+
+function hideCourseSearchResults() {
+  const resultsEl = document.getElementById('course-search-results');
+  if (resultsEl) {
+    resultsEl.hidden = true;
+    resultsEl.innerHTML = '';
+  }
+}
+
+async function selectCourseFromSearch(course) {
+  hideCourseSearchResults();
+  if (!course) return;
+
+  if (course.source === 'api') {
+    await importApiCourse(course);
+  } else {
+    populateFormWithCourse(course);
+  }
+}
+
+function populateFormWithCourse(course) {
+  document.getElementById('course-upload-name').value = course.name || '';
+  document.getElementById('course-upload-location').value = course.location || '';
+  document.getElementById('course-hole-count').value = String(course.hole_count || '18');
+  renderCourseHoleGrid();
+
+  const pars = Array.isArray(course.pars) ? course.pars : [];
+  const strokeIndex = Array.isArray(course.stroke_index) ? course.stroke_index : [];
+
+  document.querySelectorAll('.course-par-input').forEach((inp, index) => {
+    inp.value = pars[index] ?? '';
+  });
+  document.querySelectorAll('.course-hcp-input').forEach((inp, index) => {
+    inp.value = strokeIndex[index] ?? '';
+  });
+
+  state.editingCourseId = course.id;
+  document.getElementById('course-upload-heading').textContent = 'Edit course';
+  document.getElementById('btn-save-course').textContent = 'Save changes';
+  document.getElementById('course-search').value = '';
+  window.currentCourseImport = null;
+  updateStartRoundButtonState();
+}
+
+async function importApiCourse(course) {
+  try {
+    const searchInput = document.getElementById('course-search');
+    const originalValue = searchInput?.value || '';
+    if (searchInput) {
+      searchInput.disabled = true;
+      searchInput.value = 'Loading course details...';
+    }
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      showToast('You need to be logged in to import a course');
+      if (searchInput) {
+        searchInput.disabled = false;
+        searchInput.value = originalValue;
+      }
+      return;
+    }
+
+    const { data, error } = await supabaseClient.functions.invoke('get-golf-course', {
+      body: { courseId: course.external_id, userId: user.id }
+    });
+
+    if (error || data?.error) {
+      console.error(error || data?.error);
+      showToast('Could not import that course right now');
+      if (searchInput) {
+        searchInput.disabled = false;
+        searchInput.value = originalValue;
+      }
+      return;
+    }
+
+    document.getElementById('course-upload-name').value = data.course_name || course.name || '';
+    document.getElementById('course-upload-location').value = data.location?.city && data.location?.state
+      ? `${data.location.city}, ${data.location.state}`
+      : data.location?.city || data.location?.state || '';
+
+    document.getElementById('course-hole-count').value = String(data.hole_count || 18);
+    renderCourseHoleGrid();
+
+    const pars = Array.isArray(data.pars) ? data.pars : [];
+    const strokeIndex = Array.isArray(data.handicaps) ? data.handicaps : [];
+
+    document.querySelectorAll('.course-par-input').forEach((inp, index) => {
+      inp.value = pars[index] ?? '';
+    });
+    document.querySelectorAll('.course-hcp-input').forEach((inp, index) => {
+      inp.value = strokeIndex[index] ?? '';
+    });
+
+    state.editingCourseId = null;
+    document.getElementById('course-upload-heading').textContent = 'Upload a course';
+    document.getElementById('btn-save-course').textContent = 'Save course';
+    window.currentCourseImport = {
+      source: 'api',
+      external_id: course.external_id,
+      api_club_name: data.club_name,
+      api_location: data.location
+    };
+
+    updateStartRoundButtonState();
+    if (searchInput) {
+      searchInput.disabled = false;
+      searchInput.value = '';
+    }
+  } catch (err) {
+    console.error('Failed to import course', err);
+    showToast('Could not import that course right now');
+  }
+}
+
 async function resetCourseUploadScreen() {
   state.editingCourseId = null;
   document.getElementById('course-upload-heading').textContent = 'Upload a course';
   document.getElementById('btn-save-course').textContent = 'Save course';
   document.getElementById('course-upload-name').value = '';
   document.getElementById('course-upload-location').value = '';
+  document.getElementById('course-search').value = '';
   document.getElementById('course-hole-count').value = '18';
+  hideCourseSearchResults();
+  window.currentCourseImport = null;
   renderCourseHoleGrid();
   // Load the current course list now so saveCourse() can check for
   // duplicates locally without an extra round-trip at save time.
@@ -152,12 +390,31 @@ async function saveCourseCore() {
     return null;
   }
 
-  const payload = { name, location, hole_count: holeCount, pars, stroke_index: strokeIndex };
+  const payload = {
+    name,
+    location,
+    hole_count: holeCount,
+    pars,
+    stroke_index: strokeIndex,
+    source: window.currentCourseImport?.source || 'manual',
+    external_id: window.currentCourseImport?.external_id || null,
+    api_club_name: window.currentCourseImport?.api_club_name || null,
+    api_location: window.currentCourseImport?.api_location || null
+  };
+
   const query = state.editingCourseId
     ? supabaseClient.from('courses').update(payload).eq('id', state.editingCourseId)
     : supabaseClient.from('courses').insert({ ...payload, user_id: user.id });
 
-  const { data, error } = await query.select().single();
+  let { data, error } = await query.select().single();
+
+  if (error && error.code === '42703') {
+    const fallbackPayload = { name, location, hole_count: holeCount, pars, stroke_index: strokeIndex };
+    const fallbackQuery = state.editingCourseId
+      ? supabaseClient.from('courses').update(fallbackPayload).eq('id', state.editingCourseId)
+      : supabaseClient.from('courses').insert({ ...fallbackPayload, user_id: user.id });
+    ({ data, error } = await fallbackQuery.select().single());
+  }
 
   if (error) {
     // 23505 = unique constraint violation — catches the rare case where
@@ -172,6 +429,7 @@ async function saveCourseCore() {
     return null;
   }
 
+  window.currentCourseImport = null;
   return data;
 }
 
@@ -272,4 +530,10 @@ async function loadMyCourses() {
     return [];
   }
   return data || [];
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeCourseSearch);
+} else {
+  initializeCourseSearch();
 }

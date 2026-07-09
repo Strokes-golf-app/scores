@@ -142,6 +142,66 @@ h1, h2, h3 {
   flex: 1;
 }
 
+.course-search-wrapper {
+  position: relative;
+}
+
+.course-search-wrapper input {
+  width: 100%;
+}
+
+.search-results-dropdown {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background: var(--cream);
+}
+
+.search-result-item.local {
+  border-left: 3px solid var(--fairway-light);
+}
+
+.search-result-item.api {
+  border-left: 3px solid var(--flag);
+}
+
+.search-result-label {
+  padding: 0.5rem 0.9rem 0.25rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.search-result-empty {
+  padding: 0.75rem 0.9rem;
+  color: var(--ink-faint);
+  font-size: 14px;
+}
+
 .home-footnote {
   text-align: center;
   color: var(--ink-faint);
