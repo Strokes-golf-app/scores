@@ -132,6 +132,7 @@ function openHistoryDetail(row, userId) {
   historyDetailUserId = userId;
   showScreen('screen-history-detail');
   renderHistoryDetail();
+  renderHistoryScorecard(historyDetailRound);
 }
 
 // Rebuilds the round into the shape the scoring engine expects
@@ -159,6 +160,7 @@ function reconstructRound(row) {
   return {
     courseName: row.course_name || snap.course_name || 'Round',
     holeCount: snap.hole_count || (snap.pars ? snap.pars.length : 18),
+    holeOffset: snap.hole_offset || 0,
     pars: snap.pars || [],
     strokeIndex: snap.stroke_index || null,
     modes: (snap.modes && snap.modes.length) ? snap.modes : ['gross'],
@@ -317,5 +319,93 @@ function renderHistoryDetailMatch(summaries, round, metaEl, boardEl) {
       </div>
       <div class="history-match-outcome">${escapeHtml(resultText)}</div>
     </div>
+  `;
+}
+
+// ===========================================================
+// Read-only scorecard grid: holes down the rows, players across
+// the columns. The hole column is frozen so extra players scroll
+// sideways. Scores are colored vs par (circle under, square over).
+// ===========================================================
+
+function firstName(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/)[0];
+}
+
+// One score cell, marked by result relative to par.
+function scoreCell(gross, par, isMe) {
+  const meCls = isMe ? ' sc-me' : '';
+  if (gross == null) return `<td class="sc-score${meCls}">–</td>`;
+  const diff = Number(gross) - par;
+  let mark = '';
+  if (diff <= -2) mark = ' sc-eagle';
+  else if (diff === -1) mark = ' sc-birdie';
+  else if (diff === 1) mark = ' sc-bogey';
+  else if (diff >= 2) mark = ' sc-double';
+  return `<td class="sc-score${meCls}"><span class="sc-mark${mark}">${gross}</span></td>`;
+}
+
+function renderHistoryScorecard(round) {
+  const wrap = document.getElementById('history-scorecard');
+  if (!wrap) return;
+  const pars = round.pars || [];
+  const hc = round.holeCount;
+  const offset = round.holeOffset || 0;
+  const players = round.players;
+  const meId = historyDetailUserId;
+
+  const isMe = (p) => !!(meId && p.user_id === meId);
+
+  // Header: corner + one column per player.
+  let head = '<th class="sc-rowhead sc-corner">Hole</th>';
+  players.forEach(p => {
+    head += `<th class="sc-playercol${isMe(p) ? ' sc-me' : ''}" title="${escapeAttr(p.name)}">${escapeHtml(firstName(p.name))}</th>`;
+  });
+
+  const rows = [];
+
+  const holeRow = (h) => {
+    const par = pars[h - 1] || 4;
+    let cells = `<th class="sc-rowhead"><span class="sc-holenum">${h + offset}</span><span class="sc-holepar">par ${par}</span></th>`;
+    players.forEach(p => { cells += scoreCell(p.scores[String(h)], par, isMe(p)); });
+    rows.push(`<tr>${cells}</tr>`);
+  };
+
+  const sumRow = (label, from, to) => {
+    let parSum = 0;
+    for (let h = from; h <= to; h++) parSum += (pars[h - 1] || 4);
+    let cells = `<th class="sc-rowhead"><span class="sc-holenum">${label}</span><span class="sc-holepar">par ${parSum}</span></th>`;
+    players.forEach(p => {
+      let total = 0, any = false;
+      for (let h = from; h <= to; h++) {
+        const g = p.scores[String(h)];
+        if (g != null) { total += Number(g); any = true; }
+      }
+      cells += `<td class="sc-sub${isMe(p) ? ' sc-me' : ''}">${any ? total : '–'}</td>`;
+    });
+    rows.push(`<tr class="sc-subrow">${cells}</tr>`);
+  };
+
+  if (hc > 9) {
+    for (let h = 1; h <= 9; h++) holeRow(h);
+    sumRow('OUT', 1, 9);
+    for (let h = 10; h <= hc; h++) holeRow(h);
+    sumRow('IN', 10, hc);
+    sumRow('TOTAL', 1, hc);
+  } else {
+    for (let h = 1; h <= hc; h++) holeRow(h);
+    sumRow('TOTAL', 1, hc);
+  }
+
+  wrap.innerHTML = `
+    <h3 class="history-scorecard-title">Scorecard</h3>
+    <div class="scorecard-scroll">
+      <table class="scorecard-table">
+        <thead><tr>${head}</tr></thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    </div>
+    <p class="scorecard-key">Gross strokes · ○ under par · □ over par</p>
   `;
 }
