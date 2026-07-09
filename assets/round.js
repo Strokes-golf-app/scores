@@ -203,10 +203,9 @@ function renderScoringSelector() {
 function populateModeTabs() {
   const modes = state.round.modes && state.round.modes.length ? state.round.modes : ['gross'];
   state.activeModeTab = modes[0];
-  const modeNames = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play' };
   const row = document.getElementById('modetab-row');
   row.innerHTML = modes.map(m =>
-    `<button class="modetab ${m === state.activeModeTab ? 'active' : ''}" data-mode="${m}">${modeNames[m] || m}</button>`
+    `<button class="modetab ${m === state.activeModeTab ? 'active' : ''}" data-mode="${m}">${MODE_NAMES[m] || m}</button>`
   ).join('');
   row.querySelectorAll('.modetab').forEach(btn => {
     btn.addEventListener('click', () => {
