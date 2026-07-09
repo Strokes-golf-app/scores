@@ -30,9 +30,8 @@ function renderLobby() {
     list.appendChild(row);
   });
 
-  const modeNames = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play' };
   document.getElementById('lobby-modes').innerHTML =
-    (r.modes || ['gross']).map(m => `<span class="chip">${modeNames[m] || m}</span>`).join('');
+    (r.modes || ['gross']).map(m => `<span class="chip">${MODE_NAMES[m] || m}</span>`).join('');
 
   document.getElementById('btn-start-round').hidden = !isHost();
 
