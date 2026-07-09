@@ -479,6 +479,7 @@ h1, h2, h3 {
   width: 160px;
   height: auto;
   display: block;
+  margin: 0 auto;
 }
 .drawer-nav {
   display: flex;
@@ -516,6 +517,19 @@ h1, h2, h3 {
 .drawer-item-muted {
   color: var(--ink-soft);
   font-weight: 500;
+}
+.drawer-logout-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.drawer-logout-email {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---------- Fields ---------- */
