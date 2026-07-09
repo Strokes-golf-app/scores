@@ -185,6 +185,7 @@ function init() {
 
   document.getElementById('btn-round-history').addEventListener('click', openRoundHistory);
   document.getElementById('btn-history-back').addEventListener('click', () => showScreen('screen-home'));
+  document.getElementById('btn-history-detail-back').addEventListener('click', () => showScreen('screen-history'));
 
   document.getElementById('btn-resend-verify').addEventListener('click', handleResendVerify);
   document.getElementById('btn-verify-back').addEventListener('click', () => showScreen('screen-auth'));
