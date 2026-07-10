@@ -42,10 +42,6 @@ function init() {
     showScreen('screen-course-upload');
   });
 
-  document.getElementById('course-select').addEventListener('change', e => {
-    applySelectedCourse(e.target.value);
-  });
-
   document.getElementById('form-join').addEventListener('submit', e => {
     e.preventDefault();
     joinRound(document.getElementById('join-code').value);
@@ -54,9 +50,10 @@ function init() {
   document.getElementById('btn-setup-back').addEventListener('click', () => showScreen('screen-home'));
 
   document.getElementById('hole-count').addEventListener('change', () => {
-    const courseId = document.getElementById('course-select').value;
-    if (courseId) {
-      applySelectedCourse(courseId);
+    const course = state.selectedFullCourse;
+    const isSavedCourse = course && (state.myCourses || []).some(c => c.id === course.id);
+    if (isSavedCourse) {
+      applySelectedCourse(course.id);
     } else {
       renderParGrid();
     }
