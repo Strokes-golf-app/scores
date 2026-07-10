@@ -150,6 +150,24 @@ h1, h2, h3 {
   width: 100%;
 }
 
+.course-search-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.course-search-row input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+.course-search-row .course-search-btn {
+  flex: none;
+  width: auto;
+  white-space: nowrap;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
 .search-results-dropdown {
   position: absolute;
   top: calc(100% + 0.25rem);
