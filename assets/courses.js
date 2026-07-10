@@ -81,13 +81,22 @@ async function searchLocalCourses(query) {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return [];
 
+  const search = query.trim();
+
   const { data, error } = await supabaseClient
     .from('courses')
     .select('*')
-    .or(`name.ilike.%${query}%,location.ilike.%${query}%`)
-    .eq('user_id', user.id)
+    .or(
+      [
+        // API courses are visible to everyone
+        `and(source.eq.api,or(name.ilike.%${search}%,location.ilike.%${search}%))`,
+
+        // Manual courses are only shown if they belong to this user
+        `and(source.eq.manual,user_id.eq.${user.id},or(name.ilike.%${search}%,location.ilike.%${search}%))`
+      ].join(',')
+    )
     .order('name', { ascending: true })
-    .limit(10);
+    .limit(25);
 
   if (error) {
     console.error(error);
