@@ -221,7 +221,18 @@ function displaySetupCourseSearchResults(localResults, apiResults) {
   }
 
   if (combined.length === 0) {
-    resultsEl.innerHTML = '<div class="search-result-empty">No matches found</div>';
+    resultsEl.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'search-result-empty';
+    empty.textContent = 'No saved or API matches.';
+    resultsEl.appendChild(empty);
+
+    const manualRow = document.createElement('div');
+    manualRow.className = 'search-result-item manual';
+    manualRow.textContent = 'Enter this course manually';
+    manualRow.addEventListener('click', useSetupManualEntry);
+    resultsEl.appendChild(manualRow);
+
     resultsEl.hidden = false;
     return;
   }
@@ -252,6 +263,21 @@ function hideSetupCourseSearchResults() {
   }
 }
 
+function useSetupManualEntry() {
+  hideSetupCourseSearchResults();
+  const searchInput = document.getElementById('setup-course-search');
+  if (searchInput) searchInput.value = '';
+  state.selectedFullCourse = null;
+  state.selectedCourseNine = null;
+  state.selectedCourseStrokeIndex = null;
+  const nineField = document.getElementById('nine-select-field');
+  if (nineField) nineField.hidden = true;
+  document.querySelectorAll('.nine-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('course-name').value = '';
+  renderParGrid();
+  document.getElementById('course-name').focus();
+}
+
 async function selectSetupCourseResult(course) {
   hideSetupCourseSearchResults();
   if (!course) return;
@@ -262,7 +288,6 @@ async function selectSetupCourseResult(course) {
   }
 
   document.getElementById('setup-course-search').value = '';
-  document.getElementById('course-select').value = course.id;
   applySelectedCourse(course.id);
 }
 
@@ -311,7 +336,6 @@ async function importSetupApiCourse(course) {
       source: 'api'
     };
 
-    document.getElementById('course-select').value = '';
     populateSetupCourseFields(importedCourse);
     if (searchInput) {
       searchInput.disabled = false;
@@ -354,11 +378,10 @@ function populateSetupCourseFields(course) {
 }
 
 async function renderCourseSelectOptions() {
-  const select = document.getElementById('course-select');
-  const courses = await loadMyCourses();
-  state.myCourses = courses;
-  select.innerHTML = '<option value="">Manual entry</option>' +
-    courses.map(c => `<option value="${c.id}">${escapeHtml(c.name)} - ${escapeHtml(c.location)}</option>`).join('');
+  // The manual-entry <select> was removed; saved courses are now reached
+  // through the search field. We still load them into state so
+  // applySelectedCourse() and the search-result handlers can find them.
+  state.myCourses = await loadMyCourses();
 }
 
 function applySelectedCourse(courseId) {
