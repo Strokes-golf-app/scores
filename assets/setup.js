@@ -290,6 +290,80 @@ async function selectSetupCourseResult(course) {
   applySelectedCourse(course.id);
 }
 
+async function findOrSaveApiCourse({
+  name,
+  location,
+  holeCount,
+  pars,
+  strokeIndex,
+  externalId,
+  apiClubName,
+  apiLocation,
+  userId
+}) {
+  // First try to find an existing course by external_id
+  if (externalId) {
+    const { data: existing } = await supabaseClient
+      .from('courses')
+      .select('*')
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    if (existing) {
+      return existing;
+    }
+  }
+
+  // Attempt to insert a new cached course
+  const { data: inserted, error } = await supabaseClient
+    .from('courses')
+    .insert({
+      name,
+      location,
+      hole_count: holeCount,
+      pars,
+      stroke_index: strokeIndex,
+      source: 'api',
+      external_id: externalId,
+      api_club_name: apiClubName,
+      api_location: apiLocation,
+      user_id: userId
+    })
+    .select()
+    .single();
+
+  if (!error) {
+    return inserted;
+  }
+
+  // Someone else may have inserted it first.
+  if (error.code === '23505') {
+    let query = supabaseClient
+      .from('courses')
+      .select('*');
+
+    if (externalId) {
+      query = query.or(
+        `external_id.eq.${externalId},and(name.ilike.${name},location.ilike.${location})`
+      );
+    } else {
+      query = query
+        .ilike('name', name)
+        .ilike('location', location);
+    }
+
+    const { data: existing } = await query.maybeSingle();
+
+    if (existing) {
+      return existing;
+    }
+  }
+
+  console.error('Failed to cache imported course', error);
+
+  return null;
+}
+
 async function importSetupApiCourse(course) {
   const searchInput = document.getElementById('setup-course-search');
   const originalValue = searchInput?.value || '';
@@ -325,23 +399,50 @@ async function importSetupApiCourse(course) {
 
     // setup.js — importSetupApiCourse
     const holes = Array.isArray(data.holes) ? data.holes : [];
+    const name = data.course_name || course.name || '';
+    const location =
+      data.location?.city && data.location?.state
+        ? `${data.location.city}, ${data.location.state}`
+        : data.location?.city || data.location?.state || '';
+
     const importedCourse = {
       id: `api:${course.external_id || course.id}`,
-      name: data.course_name || course.name || '',
-      location: data.location?.city && data.location?.state
-        ? `${data.location.city}, ${data.location.state}`
-        : data.location?.city || data.location?.state || '',
+      name,
+      location,
       hole_count: data.hole_count || holes.length || 18,
       pars: holes.map(h => h.par),
       stroke_index: holes.map(h => h.handicap),
       source: 'api'
     };
 
-    populateSetupCourseFields(importedCourse);
+    // Save to the shared course cache
+    const savedCourse = await findOrSaveApiCourse({
+      name,
+      location,
+      holeCount: importedCourse.hole_count,
+      pars: importedCourse.pars,
+      strokeIndex: importedCourse.stroke_index,
+      externalId: course.external_id || course.id,
+      apiClubName: data.club_name || null,
+      apiLocation: data.location || null,
+      userId: user.id
+    });
+
+    // Keep local cache in sync so future searches don't require another API call
+    if (savedCourse) {
+      state.myCourses = [
+        ...(state.myCourses || []).filter(c => c.id !== savedCourse.id),
+        savedCourse
+      ];
+    }
+
+    populateSetupCourseFields(savedCourse || importedCourse);
+
     if (searchInput) {
       searchInput.disabled = false;
       searchInput.value = '';
     }
+
   } catch (err) {
     console.error('Failed to import course', err);
     showToast('Could not import that course right now');
