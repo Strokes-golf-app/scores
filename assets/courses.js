@@ -454,7 +454,6 @@ async function saveCourseAndStartRound() {
 
   showToast(`${saved.name} saved`);
   await resetSetupScreen();
-  document.getElementById('course-select').value = saved.id;
   applySelectedCourse(saved.id);
   showScreen('screen-setup');
 }
