@@ -163,7 +163,6 @@ async function resetSetupScreen() {
   renderSetupPlayerList();
 }
 
-let setupCourseSearchDebounceTimer = null;
 
 function initializeSetupCourseSearch() {
   const searchInput = document.getElementById('setup-course-search');
@@ -171,11 +170,17 @@ function initializeSetupCourseSearch() {
   if (!searchInput || !resultsEl || searchInput.dataset.initialized === 'true') return;
 
   searchInput.dataset.initialized = 'true';
-  searchInput.addEventListener('input', (e) => {
-    clearTimeout(setupCourseSearchDebounceTimer);
-    setupCourseSearchDebounceTimer = setTimeout(() => {
-      searchSetupCourseResults(e.target.value);
-    }, 300);
+
+  const runSetupCourseSearch = () => searchSetupCourseResults(searchInput.value);
+
+  const searchBtn = document.getElementById('btn-setup-course-search');
+  if (searchBtn) searchBtn.addEventListener('click', runSetupCourseSearch);
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runSetupCourseSearch();
+    }
   });
 
   document.addEventListener('click', (e) => {
@@ -189,6 +194,7 @@ async function searchSetupCourseResults(query) {
   const trimmed = query.trim();
   if (trimmed.length < 2) {
     hideSetupCourseSearchResults();
+    showToast('Type at least 2 characters to search');
     return;
   }
 
