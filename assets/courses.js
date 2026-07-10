@@ -38,8 +38,6 @@ function updateStartRoundButtonState() {
   document.getElementById('btn-save-course-start-round').disabled = !allFilled;
 }
 
-let courseSearchDebounceTimer = null;
-
 function initializeCourseSearch() {
   const searchInput = document.getElementById('course-search');
   const resultsEl = document.getElementById('course-search-results');
