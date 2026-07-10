@@ -45,11 +45,16 @@ function initializeCourseSearch() {
   const resultsEl = document.getElementById('course-search-results');
   if (!searchInput || !resultsEl) return;
 
-  searchInput.addEventListener('input', (e) => {
-    clearTimeout(courseSearchDebounceTimer);
-    courseSearchDebounceTimer = setTimeout(() => {
-      searchCourses(e.target.value);
-    }, 300);
+  const runCourseSearch = () => searchCourses(searchInput.value);
+
+  const searchBtn = document.getElementById('btn-course-search');
+  if (searchBtn) searchBtn.addEventListener('click', runCourseSearch);
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runCourseSearch();
+    }
   });
 
   document.addEventListener('click', (e) => {
