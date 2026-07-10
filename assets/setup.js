@@ -20,6 +20,7 @@ function renderParGrid() {
     cell.innerHTML = `
       <span class="par-cell-label">${h + labelOffset}</span>
       <input type="number" class="par-input" data-hole="${h}" min="2" max="6" placeholder="4" inputmode="numeric">
+      <span class="hole-hcp-display" data-hole="${h}"></span>
     `;
     grid.appendChild(cell);
   }
@@ -537,6 +538,11 @@ function applyCourseToGrid(course, nine) {
   document.querySelectorAll('.par-input').forEach(inp => {
     const h = Number(inp.dataset.hole) - 1;
     inp.value = pars[h];
+  });
+
+  document.querySelectorAll('.hole-hcp-display').forEach(el => {
+    const h = Number(el.dataset.hole) - 1;
+    el.textContent = strokeIndex ? strokeIndex[h] : '';
   });
 
   state.selectedCourseStrokeIndex = strokeIndex ? Golf.toRelativeStrokeIndex(strokeIndex) : null;
