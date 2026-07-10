@@ -129,7 +129,6 @@ function collectMatchAssignments() {
 async function resetSetupScreen() {
   document.getElementById('course-name').value = '';
   document.getElementById('hole-count').value = '18';
-  document.getElementById('course-select').value = '';
   document.querySelectorAll('#mode-grid input[name="mode"]').forEach(cb => {
     if (cb.value !== 'gross') cb.checked = false;
     cb.closest('.mode-card').classList.toggle('checked', cb.checked);
