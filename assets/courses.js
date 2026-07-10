@@ -245,8 +245,10 @@ async function importApiCourse(course) {
     document.getElementById('course-hole-count').value = String(data.hole_count || 18);
     renderCourseHoleGrid();
 
-    const pars = Array.isArray(data.pars) ? data.pars : [];
-    const strokeIndex = Array.isArray(data.handicaps) ? data.handicaps : [];
+    // courses.js — importApiCourse
+    const holes = Array.isArray(data.holes) ? data.holes : [];
+    const pars = holes.map(h => h.par);
+    const strokeIndex = holes.map(h => h.handicap);
 
     document.querySelectorAll('.course-par-input').forEach((inp, index) => {
       inp.value = pars[index] ?? '';
