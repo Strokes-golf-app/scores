@@ -218,8 +218,11 @@
     <div class="field">
       <label class="field-label" for="course-search">Search saved or API courses</label>
       <div class="course-search-wrapper">
-        <input type="text" id="course-search" placeholder="Search by course name or location" autocomplete="off">
-        <div id="course-search-results" class="search-results-dropdown" hidden></div>
+        <div class="course-search-row">
+          <input type="text" id="setup-course-search" placeholder="Search saved or API courses" autocomplete="off">
+          <button type="button" class="btn btn-secondary course-search-btn" id="btn-setup-course-search">Search</button>
+        </div>
+        <div id="setup-course-search-results" class="search-results-dropdown" hidden></div>
       </div>
     </div>
 
