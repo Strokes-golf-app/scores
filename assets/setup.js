@@ -323,15 +323,17 @@ async function importSetupApiCourse(course) {
       return;
     }
 
+    // setup.js — importSetupApiCourse
+    const holes = Array.isArray(data.holes) ? data.holes : [];
     const importedCourse = {
       id: `api:${course.external_id || course.id}`,
       name: data.course_name || course.name || '',
       location: data.location?.city && data.location?.state
         ? `${data.location.city}, ${data.location.state}`
         : data.location?.city || data.location?.state || '',
-      hole_count: data.hole_count || 18,
-      pars: Array.isArray(data.pars) ? data.pars : [],
-      stroke_index: Array.isArray(data.handicaps) ? data.handicaps : [],
+      hole_count: data.hole_count || holes.length || 18,
+      pars: holes.map(h => h.par),
+      stroke_index: holes.map(h => h.handicap),
       source: 'api'
     };
 
