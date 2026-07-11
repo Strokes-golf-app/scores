@@ -894,6 +894,14 @@ input::placeholder {
   color: var(--ink-faint);
   font-family: var(--font-mono);
 }
+.par-cell-sublabel {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: -0.15rem;
+}
 .par-cell input {
   text-align: center;
   padding: 0.5rem 0.25rem;
