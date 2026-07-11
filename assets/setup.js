@@ -431,32 +431,15 @@ async function importSetupApiCourse(course) {
       userId: user.id
     });
 
-    // A cached row can predate handicap extraction and carry an all-null
-    // stroke_index. The fresh import always has real values, so if the saved
-    // row is missing handicaps, overlay the fresh ones — otherwise the grid
-    // renders blank Hcp boxes (textContent turns null into "").
-    const savedHasHcp =
-      savedCourse &&
-      Array.isArray(savedCourse.stroke_index) &&
-      savedCourse.stroke_index.some(v => v != null);
-
-    const displayCourse = savedCourse
-      ? {
-          ...savedCourse,
-          pars: savedHasHcp ? savedCourse.pars : importedCourse.pars,
-          stroke_index: savedHasHcp ? savedCourse.stroke_index : importedCourse.stroke_index
-        }
-      : importedCourse;
-
     // Keep local cache in sync so future searches don't require another API call
     if (savedCourse) {
       state.myCourses = [
-        ...(state.myCourses || []).filter(c => c.id !== displayCourse.id),
-        displayCourse
+        ...(state.myCourses || []).filter(c => c.id !== savedCourse.id),
+        savedCourse
       ];
     }
 
-    populateSetupCourseFields(displayCourse);
+    populateSetupCourseFields(savedCourse || importedCourse);
 
     if (searchInput) {
       searchInput.disabled = false;
