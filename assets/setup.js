@@ -290,7 +290,7 @@ async function selectSetupCourseResult(course) {
   }
 
   document.getElementById('setup-course-search').value = '';
-  applySelectedCourse(course.id);
+  applySelectedCourse(course);
 }
 
 async function findOrSaveApiCourse({
@@ -489,8 +489,10 @@ async function renderCourseSelectOptions() {
   state.myCourses = await loadMyCourses();
 }
 
-function applySelectedCourse(courseId) {
-  const course = (state.myCourses || []).find(c => c.id === courseId);
+function applySelectedCourse(courseOrId) {
+  const course = (courseOrId && typeof courseOrId === 'object')
+    ? courseOrId
+    : (state.myCourses || []).find(c => c.id === courseOrId);
   const nineField = document.getElementById('nine-select-field');
 
   state.selectedFullCourse = course || null;
