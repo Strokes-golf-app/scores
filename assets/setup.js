@@ -19,7 +19,9 @@ function renderParGrid() {
     cell.className = 'par-cell';
     cell.innerHTML = `
       <span class="par-cell-label">${h + labelOffset}</span>
+      <span class="par-cell-sublabel">Par</span>
       <input type="number" class="par-input" data-hole="${h}" min="2" max="6" placeholder="4" inputmode="numeric">
+      <span class="par-cell-sublabel">Hcp</span>
       <span class="hole-hcp-display" data-hole="${h}"></span>
     `;
     grid.appendChild(cell);
