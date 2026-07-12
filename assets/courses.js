@@ -38,6 +38,34 @@ function updateStartRoundButtonState() {
   document.getElementById('btn-save-course-start-round').disabled = !allFilled;
 }
 
+// Looks up a course already cached locally by its Golf Course API id, so
+// we can skip re-fetching full hole details (get-golf-course) for a
+// course that's already been imported — by this user or anyone else,
+// since courses are a shared library.
+async function findCachedApiCourse(externalId) {
+  if (!externalId) return null;
+  const { data, error } = await supabaseClient
+    .from('courses')
+    .select('*')
+    .eq('external_id', externalId)
+    .maybeSingle();
+  if (error) {
+    console.error(error);
+    return null;
+  }
+  return data || null;
+}
+
+// Drops API search results we've already cached locally (matched by
+// external_id), so an already-imported course doesn't show up twice —
+// once under "SAVED COURSES" and again under "GOLF COURSE API".
+function filterCachedApiResults(apiResults, localResults) {
+  const cachedIds = new Set(
+    localResults.filter(c => c.external_id != null).map(c => String(c.external_id))
+  );
+  return apiResults.filter(c => !cachedIds.has(String(c.external_id)));
+}
+
 function initializeCourseSearch() {
   const searchInput = document.getElementById('course-search');
   const resultsEl = document.getElementById('course-search-results');
@@ -72,7 +100,7 @@ async function searchCourses(query) {
   const localResults = await searchLocalCourses(trimmed);
   let apiResults = [];
   if (localResults.length < 5) {
-    apiResults = await searchApiCourses(trimmed);
+    apiResults = filterCachedApiResults(await searchApiCourses(trimmed), localResults);
   }
   displayCourseSearchResults(localResults, apiResults);
 }
@@ -211,6 +239,21 @@ async function importApiCourse(course) {
   try {
     const searchInput = document.getElementById('course-search');
     const originalValue = searchInput?.value || '';
+
+    // Already imported by someone — reuse it instead of burning another
+    // get-golf-course call.
+    const cached = await findCachedApiCourse(course.external_id);
+    if (cached) {
+      hideCourseSearchResults();
+      if (searchInput) searchInput.value = '';
+      state.myCourses = [
+        ...(state.myCourses || []).filter(c => c.id !== cached.id),
+        cached
+      ];
+      populateFormWithCourse(cached);
+      return;
+    }
+
     if (searchInput) {
       searchInput.disabled = true;
       searchInput.value = 'Loading course details...';
