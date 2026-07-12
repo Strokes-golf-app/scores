@@ -77,24 +77,18 @@ async function searchCourses(query) {
   displayCourseSearchResults(localResults, apiResults);
 }
 
+// Searches the shared course library. Every course is visible to every
+// user here regardless of who made it or how (manual entry, API import,
+// or anything added later) — ownership only matters for edit/delete,
+// which is enforced separately (see startEditingCourse / deleteCourse
+// and the courses RLS policies), not for search visibility.
 async function searchLocalCourses(query) {
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) return [];
-
   const search = query.trim();
 
   const { data, error } = await supabaseClient
     .from('courses')
     .select('*')
-    .or(
-      [
-        // API courses are visible to everyone
-        `and(source.eq.api,or(name.ilike.%${search}%,location.ilike.%${search}%))`,
-
-        // Manual courses are only shown if they belong to this user
-        `and(source.eq.manual,user_id.eq.${user.id},or(name.ilike.%${search}%,location.ilike.%${search}%))`
-      ].join(',')
-    )
+    .or(`name.ilike.%${search}%,location.ilike.%${search}%`)
     .order('name', { ascending: true })
     .limit(25);
 
@@ -140,7 +134,7 @@ function displayCourseSearchResults(localResults, apiResults) {
 
   const combined = [];
   if (localResults.length > 0) {
-    combined.push({ label: 'YOUR COURSES', items: localResults.map(course => ({ ...course, source: 'local' })) });
+    combined.push({ label: 'SAVED COURSES', items: localResults.map(course => ({ ...course, source: 'local' })) });
   }
   if (apiResults.length > 0) {
     combined.push({ label: 'GOLF COURSE API', items: apiResults });
@@ -363,6 +357,10 @@ function validateCourseHoles(holeCount, pars, strokeIndex) {
   return null;
 }
 
+// Duplicate check now runs against the full shared library (state.myCourses
+// already holds every course, not just this user's), since courses are
+// global — nobody should be able to create a second "Pebble Beach" just
+// because someone else made the first one.
 function isDuplicateCourse(name, location, excludeId) {
   const normalize = s => s.trim().toLowerCase();
   return (state.myCourses || []).some(c =>
@@ -470,6 +468,12 @@ async function saveCourseAndStartRound() {
 // ---------------------------------------------------------
 // Manage (edit/delete) saved courses
 // ---------------------------------------------------------
+// Lists every course in the shared library. Edit/delete controls only
+// show for the course's own creator (isOwner) — enforced both here in
+// the UI and by the courses RLS policies, so this isn't just cosmetic.
+// Courses whose creator's account has since been deleted (user_id is
+// null) show with no edit/delete controls for anyone, since they no
+// longer have an owner — they just keep working, permanently.
 async function renderCourseManageList() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   const courses = await loadMyCourses();
@@ -529,6 +533,10 @@ async function deleteCourse(courseId) {
   await renderCourseManageList();
 }
 
+// Loads the full shared course library — every course, from every
+// user, regardless of source. No user_id filter here: courses are a
+// shared resource, not personal data. (Auth is still required just
+// because this is only ever called from screens behind a login.)
 async function loadMyCourses() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return [];

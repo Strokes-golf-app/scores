@@ -10,17 +10,19 @@
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
 
-// --- API usage tracking constants ---------------------------------------
-// Kept inline (rather than imported from a shared module) so this function
-// can be deployed as a single file with no bundling of relative imports.
-// If you ever need to change these, update them here AND in
+// --- API usage tracking -------------------------------------------------
+// This app-wide counter is kept purely for observability (so we can see
+// how many calls we're making against the Golf Course API day to day).
+// It is NOT used to pre-emptively block requests — we don't try to
+// predict when we'll run out. Instead, the Golf Course API itself is the
+// source of truth: if we've hit our limit, it tells us with a 429, and
+// we handle that gracefully below (empty results, no error surfaced to
+// the user beyond falling back to manual course entry).
+// Kept inline (rather than imported from a shared module) so this
+// function can be deployed as a single file with no bundling of relative
+// imports. If you ever need to change this, update it here AND in
 // get-golf-course/index.ts to keep both functions in sync.
-const DAILY_API_CALL_LIMIT = 50;
 const API_USAGE_SCOPE_KEY = "app-wide";
-
-function shouldLimitApiUsage(callCount: number) {
-  return callCount >= DAILY_API_CALL_LIMIT;
-}
 // --------------------------------------------------------------------------
 
 const corsHeaders = {
@@ -64,14 +66,6 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().slice(0, 10);
     const usage = await getApiUsageRow(supabaseUrl, serviceRoleKey, today);
 
-    if (shouldLimitApiUsage(usage.call_count)) {
-      return jsonResponse({
-        results: [],
-        limited: true,
-        message: "Daily API limit reached"
-      }, 200);
-    }
-
     const remoteUrl = `${apiBaseUrl}/v1/search?search_query=${encodeURIComponent(searchQuery)}`;
     const remoteResponse = await fetch(remoteUrl, {
       method: "GET",
@@ -80,6 +74,19 @@ Deno.serve(async (req) => {
         Accept: "application/json"
       }
     });
+
+    // Record that we made a call, regardless of outcome — this is for
+    // tracking/analytics only and never gates whether the call happens.
+    await incrementApiUsage(supabaseUrl, serviceRoleKey, today, usage.call_count);
+
+    if (remoteResponse.status === 429) {
+      console.warn("Golf Course API rate-limited this search request (429)");
+      return jsonResponse({
+        results: [],
+        limited: true,
+        message: "Course search is temporarily unavailable — try again shortly, or enter the course manually."
+      }, 200);
+    }
 
     if (!remoteResponse.ok) {
       const errorText = await remoteResponse.text();
@@ -104,8 +111,6 @@ Deno.serve(async (req) => {
       location: course.location ?? null,
       location_text: formatLocation(course.location)
     }));
-
-    await incrementApiUsage(supabaseUrl, serviceRoleKey, today, usage.call_count);
 
     return jsonResponse({
       results: normalizedResults,
@@ -164,21 +169,28 @@ async function getApiUsageRow(supabaseUrl: string, serviceRoleKey: string, date:
   return { call_count: Number(row.call_count ?? 0) };
 }
 
+// Best-effort usage tracking: logs a warning instead of throwing if this
+// fails, since a tracking hiccup should never prevent a real course
+// search/lookup from returning results to the user.
 async function incrementApiUsage(supabaseUrl: string, serviceRoleKey: string, date: string, currentCount: number) {
-  const url = `${supabaseUrl}/rest/v1/api_usage?usage_key=eq.${encodeURIComponent(API_USAGE_SCOPE_KEY)}&date=eq.${encodeURIComponent(date)}`;
-  const response = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal"
-    },
-    body: JSON.stringify({ call_count: currentCount + 1 })
-  });
+  try {
+    const url = `${supabaseUrl}/rest/v1/api_usage?usage_key=eq.${encodeURIComponent(API_USAGE_SCOPE_KEY)}&date=eq.${encodeURIComponent(date)}`;
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify({ call_count: currentCount + 1 })
+    });
 
-  if (!response.ok) {
-    throw new Error(`Failed to increment api_usage: ${response.status}`);
+    if (!response.ok) {
+      console.warn(`Failed to increment api_usage: ${response.status}`);
+    }
+  } catch (err) {
+    console.warn("Failed to increment api_usage", err instanceof Error ? err.message : err);
   }
 }
 
