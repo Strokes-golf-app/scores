@@ -23,10 +23,6 @@ function init() {
     showScreen('screen-setup');
   });
 
-  document.getElementById('btn-upload-course').addEventListener('click', async () => {
-    await resetCourseUploadScreen();
-    showScreen('screen-course-upload');
-  });
   document.getElementById('btn-course-upload-back').addEventListener('click', () => showScreen('screen-home'));
   document.getElementById('course-hole-count').addEventListener('change', renderCourseHoleGrid);
   document.getElementById('btn-save-course').addEventListener('click', saveCourse);
