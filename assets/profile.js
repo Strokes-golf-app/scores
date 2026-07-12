@@ -120,5 +120,31 @@ async function saveProfile(e) {
   }
 
   showToast('Profile saved');
+  await refreshDrawerName();
   showScreen('screen-home');
+}
+
+// Updates the name shown at the top of the home drawer (above the
+// separator) to the signed-in user's display_name. Hidden for guests
+// or before a name has been set.
+async function refreshDrawerName() {
+  const el = document.getElementById('drawer-user-name');
+  if (!el) return;
+
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user || user.is_anonymous) {
+    el.textContent = '';
+    el.hidden = true;
+    return;
+  }
+
+  const { data: profile } = await supabaseClient
+    .from('user_profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const name = profile?.display_name || '';
+  el.textContent = name;
+  el.hidden = !name;
 }
