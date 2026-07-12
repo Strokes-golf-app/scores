@@ -529,6 +529,14 @@ async function saveCourseAndStartRound() {
 async function renderCourseManageList() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   const isAdmin = user?.app_metadata?.is_admin === true;
+
+  // Course management outside the start-round flow is admin-only now.
+  // Non-admins get a read-only view, so hide the "+ Upload a course" button.
+  // Using style.display rather than the [hidden] attribute to sidestep the
+  // specificity issue where .btn display rules can override [hidden].
+  const addBtn = document.getElementById('btn-manage-add-course');
+  if (addBtn) addBtn.style.display = isAdmin ? '' : 'none';
+
   const courses = await loadMyCourses();
   state.myCourses = courses;
 
@@ -543,14 +551,14 @@ async function renderCourseManageList() {
   courses.forEach(c => {
     const row = document.createElement('div');
     row.className = 'course-manage-row';
-    const isOwner = isAdmin || (user && c.user_id === user.id);
+    const canManage = isAdmin;
     row.innerHTML = `
       <div class="course-manage-info">
         <span class="course-manage-name">${escapeHtml(c.name)} - ${escapeHtml(c.location)}</span>
         <span class="course-manage-meta">${c.hole_count} holes</span>
       </div>
       <div class="course-manage-actions">
-        ${isOwner ? `
+        ${canManage ? `
           <button class="icon-btn" data-action="edit" data-id="${c.id}" aria-label="Edit course">✏️</button>
           <button class="icon-btn" data-action="delete" data-id="${c.id}" aria-label="Delete course">🗑️</button>
         ` : ''}
