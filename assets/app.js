@@ -28,7 +28,7 @@ function init() {
   document.getElementById('btn-save-course').addEventListener('click', saveCourse);
   document.getElementById('btn-save-course-start-round').addEventListener('click', saveCourseAndStartRound);
 
-  ddocument.getElementById('btn-manage-courses').addEventListener('click', async () => {
+  document.getElementById('btn-manage-courses').addEventListener('click', async () => {
     await renderCourseManageList();
     showScreen('screen-course-manage');
   });
