@@ -190,6 +190,9 @@
       <button class="drawer-item" id="btn-manage-courses" type="button">
         <span class="drawer-item-icon">⛳</span> View courses
       </button>
+      <button class="drawer-item" id="btn-manage-profile" type="button">
+        <span class="drawer-item-icon">👤</span> Manage profile
+      </button>
     </nav>
     <div class="drawer-footer">
       <button class="drawer-item drawer-item-muted" id="btn-logout" type="button">
@@ -265,6 +268,48 @@
   <div class="screen-body">
     <div id="course-manage-list" class="course-manage-list"></div>
     <button class="btn btn-secondary btn-block" id="btn-manage-add-course" type="button">+ Upload a course</button>
+  </div>
+</section>
+
+<!-- ============ SCREEN: MANAGE PROFILE ============ -->
+<section id="screen-profile" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-profile-back" aria-label="Back">←</button>
+    <h2 class="topbar-title">Manage profile</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
+  <div class="screen-body">
+    <form id="form-profile" class="auth-form">
+      <div class="field">
+        <label class="field-label" for="profile-name">Name</label>
+        <input type="text" id="profile-name" placeholder="e.g. Hunter" autocomplete="name">
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="profile-handicap">Handicap</label>
+        <input type="number" id="profile-handicap" placeholder="e.g. 10.2" inputmode="decimal" step="0.1" min="0" max="54">
+        <p class="field-hint">Your default handicap — pre-fills when you start or join a round. Leave blank for 0.</p>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="profile-city">City</label>
+          <input type="text" id="profile-city" placeholder="e.g. Atlanta" autocomplete="address-level2">
+        </div>
+        <div class="field">
+          <label class="field-label" for="profile-state">State</label>
+          <select id="profile-state" autocomplete="address-level1">
+            <option value="">—</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="auth-error" id="profile-error" hidden></p>
+      <button type="submit" class="btn btn-primary btn-lg btn-block" id="btn-profile-save">
+        <span class="btn-label">Save profile</span>
+      </button>
+    </form>
   </div>
 </section>
 
@@ -550,6 +595,7 @@
 <script src="assets/scorecard.js"></script>
 <script src="assets/leaderboard.js"></script>
 <script src="assets/history.js"></script>
+<script src="assets/profile.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
