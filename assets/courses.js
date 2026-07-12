@@ -519,6 +519,7 @@ async function saveCourseAndStartRound() {
 // longer have an owner — they just keep working, permanently.
 async function renderCourseManageList() {
   const { data: { user } } = await supabaseClient.auth.getUser();
+  const isAdmin = user?.app_metadata?.is_admin === true;
   const courses = await loadMyCourses();
   state.myCourses = courses;
 
@@ -533,7 +534,7 @@ async function renderCourseManageList() {
   courses.forEach(c => {
     const row = document.createElement('div');
     row.className = 'course-manage-row';
-    const isOwner = user && c.user_id === user.id;
+    const isOwner = isAdmin || (user && c.user_id === user.id);
     row.innerHTML = `
       <div class="course-manage-info">
         <span class="course-manage-name">${escapeHtml(c.name)} - ${escapeHtml(c.location)}</span>
