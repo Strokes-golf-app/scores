@@ -28,11 +28,15 @@ function init() {
   document.getElementById('btn-save-course').addEventListener('click', saveCourse);
   document.getElementById('btn-save-course-start-round').addEventListener('click', saveCourseAndStartRound);
 
-  document.getElementById('btn-manage-courses').addEventListener('click', async () => {
+  ddocument.getElementById('btn-manage-courses').addEventListener('click', async () => {
     await renderCourseManageList();
     showScreen('screen-course-manage');
   });
   document.getElementById('btn-course-manage-back').addEventListener('click', () => showScreen('screen-home'));
+
+  document.getElementById('btn-manage-profile').addEventListener('click', openProfileScreen);
+  document.getElementById('btn-profile-back').addEventListener('click', () => showScreen('screen-home'));
+  document.getElementById('form-profile').addEventListener('submit', saveProfile);
   document.getElementById('btn-manage-add-course').addEventListener('click', async () => {
     await resetCourseUploadScreen();
     showScreen('screen-course-upload');
