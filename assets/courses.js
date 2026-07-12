@@ -445,16 +445,25 @@ async function saveCourseCore() {
     return null;
   }
 
+  // When editing, fall back to the course's already-stored API metadata so
+  // that saving an API-sourced course doesn't silently reset it to manual and
+  // drop external_id — the key findOrSaveApiCourse uses to avoid re-importing.
+  // Priority: a fresh import wins, else keep what's on the existing row, else default.
+  const existingCourse = state.editingCourseId
+    ? (state.myCourses || []).find(c => c.id === state.editingCourseId)
+    : null;
+  const importInfo = window.currentCourseImport;
+
   const payload = {
     name,
     location,
     hole_count: holeCount,
     pars,
     stroke_index: strokeIndex,
-    source: window.currentCourseImport?.source || 'manual',
-    external_id: window.currentCourseImport?.external_id || null,
-    api_club_name: window.currentCourseImport?.api_club_name || null,
-    api_location: window.currentCourseImport?.api_location || null
+    source: importInfo?.source ?? existingCourse?.source ?? 'manual',
+    external_id: importInfo?.external_id ?? existingCourse?.external_id ?? null,
+    api_club_name: importInfo?.api_club_name ?? existingCourse?.api_club_name ?? null,
+    api_location: importInfo?.api_location ?? existingCourse?.api_location ?? null
   };
 
   const query = state.editingCourseId
