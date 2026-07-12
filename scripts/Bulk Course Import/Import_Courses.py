@@ -51,10 +51,11 @@ USAGE
   vars -- see the "INPUT YOUR VALUES HERE" section.)
 
 OPTIONS
-  --limit N          Max real API calls to make this run (default: 50,
-                      just a self-imposed safety cap -- the script
-                      also bails immediately on an actual 429
-                      regardless of this number).
+  --limit N          Optional cap on real API calls to make this run.
+                      Omit it to run uncapped -- the script relies on
+                      an actual 429 response from the API to know
+                      when to stop, and bails immediately when that
+                      happens.
   --seed path         Path to the seed JSON file
                       (default: scripts/course_seed_list.json).
   --dry-run           Look everything up and print what would happen,
@@ -109,7 +110,7 @@ HARDCODED_GOLF_COURSE_API_KEY = None
 # ---------------------------------------------------------
 def parse_args():
     p = argparse.ArgumentParser(description="Import golf courses from GolfCourseAPI into Supabase.")
-    p.add_argument("--limit", type=int, default=50, help="Self-imposed cap on API calls this run (default: 50).")
+    p.add_argument("--limit", type=int, default=None, help="Optional cap on API calls this run. Omit to run uncapped and rely on 429 to stop.")
     p.add_argument("--seed", type=str, default=None, help="Path to seed JSON file.")
     p.add_argument("--dry-run", action="store_true", help="Don't write to Supabase.")
     p.add_argument("--retry-failed", action="store_true", help="Re-attempt previously failed/not-found entries.")
@@ -136,7 +137,11 @@ API_BASE_URL = env(
 SEED_PATH = Path(ARGS.seed).resolve() if ARGS.seed else DEFAULT_SEED_PATH
 DRY_RUN = ARGS.dry_run
 RETRY_FAILED = ARGS.retry_failed
-CALL_LIMIT = ARGS.limit
+CALL_LIMIT = ARGS.limit  # None means uncapped -- only an actual 429 stops the run
+
+
+def limit_reached(calls_used):
+    return CALL_LIMIT is not None and calls_used >= CALL_LIMIT
 
 
 # ---------------------------------------------------------
@@ -338,7 +343,8 @@ def main():
     calls_used = 0
     summary = {"imported": 0, "updated": 0, "not_found": 0, "skipped_terms": 0, "skipped_courses": 0, "errors": 0}
 
-    print(f"Self-imposed call cap this run: {CALL_LIMIT}{' (dry run — nothing will be written)' if DRY_RUN else ''}\n")
+    cap_msg = f"Call cap this run: {CALL_LIMIT}" if CALL_LIMIT is not None else "No call cap this run — will run until done or the API returns 429"
+    print(f"{cap_msg}{' (dry run — nothing will be written)' if DRY_RUN else ''}\n")
 
     try:
         for term in terms:
@@ -348,7 +354,7 @@ def main():
                 summary["skipped_terms"] += 1
                 continue
 
-            if calls_used >= CALL_LIMIT:
+            if limit_reached(calls_used):
                 print(f"\nCall cap reached ({calls_used}/{CALL_LIMIT}) — stopping. Re-run later to continue.")
                 save_progress(progress)
                 print_summary(calls_used, summary)
@@ -384,7 +390,7 @@ def main():
                 detail = course
 
                 if not holes:
-                    if calls_used >= CALL_LIMIT:
+                    if limit_reached(calls_used):
                         print(f"    (skipping detail fetch for \"{name}\" — call cap reached)")
                         continue
                     detail = api_get_course(ext_id)
