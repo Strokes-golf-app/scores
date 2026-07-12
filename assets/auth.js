@@ -85,6 +85,8 @@ async function afterAuthSuccess() {
     state.pendingSignupName = null;
   }
 
+  await refreshDrawerName();
+
   if (state.pendingJoinCode) {
     const code = state.pendingJoinCode;
     state.pendingJoinCode = null;
@@ -121,6 +123,7 @@ async function checkAuthOnLoad() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     document.getElementById('auth-user-email').textContent = session.user.email;
+    await refreshDrawerName();
     return true;
   }
   return false;
