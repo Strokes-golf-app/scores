@@ -38,6 +38,34 @@ function updateStartRoundButtonState() {
   document.getElementById('btn-save-course-start-round').disabled = !allFilled;
 }
 
+// Looks up a course already cached locally by its Golf Course API id, so
+// we can skip re-fetching full hole details (get-golf-course) for a
+// course that's already been imported — by this user or anyone else,
+// since API-sourced courses are shared across users.
+async function findCachedApiCourse(externalId) {
+  if (!externalId) return null;
+  const { data, error } = await supabaseClient
+    .from('courses')
+    .select('*')
+    .eq('external_id', externalId)
+    .maybeSingle();
+  if (error) {
+    console.error(error);
+    return null;
+  }
+  return data || null;
+}
+
+// Drops API search results we've already cached locally (matched by
+// external_id), so an already-imported course doesn't show up twice —
+// once under "YOUR COURSES" and again under "GOLF COURSE API".
+function filterCachedApiResults(apiResults, localResults) {
+  const cachedIds = new Set(
+    localResults.filter(c => c.external_id != null).map(c => String(c.external_id))
+  );
+  return apiResults.filter(c => !cachedIds.has(String(c.external_id)));
+}
+
 function initializeCourseSearch() {
   const searchInput = document.getElementById('course-search');
   const resultsEl = document.getElementById('course-search-results');
@@ -72,23 +100,29 @@ async function searchCourses(query) {
   const localResults = await searchLocalCourses(trimmed);
   let apiResults = [];
   if (localResults.length < 5) {
-    apiResults = await searchApiCourses(trimmed);
+    apiResults = filterCachedApiResults(await searchApiCourses(trimmed), localResults);
   }
   displayCourseSearchResults(localResults, apiResults);
 }
 
-// Searches the shared course library. Every course is visible to every
-// user here regardless of who made it or how (manual entry, API import,
-// or anything added later) — ownership only matters for edit/delete,
-// which is enforced separately (see startEditingCourse / deleteCourse
-// and the courses RLS policies), not for search visibility.
 async function searchLocalCourses(query) {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return [];
+
   const search = query.trim();
 
   const { data, error } = await supabaseClient
     .from('courses')
     .select('*')
-    .or(`name.ilike.%${search}%,location.ilike.%${search}%`)
+    .or(
+      [
+        // API courses are visible to everyone
+        `and(source.eq.api,or(name.ilike.%${search}%,location.ilike.%${search}%))`,
+
+        // Manual courses are only shown if they belong to this user
+        `and(source.eq.manual,user_id.eq.${user.id},or(name.ilike.%${search}%,location.ilike.%${search}%))`
+      ].join(',')
+    )
     .order('name', { ascending: true })
     .limit(25);
 
@@ -134,7 +168,7 @@ function displayCourseSearchResults(localResults, apiResults) {
 
   const combined = [];
   if (localResults.length > 0) {
-    combined.push({ label: 'SAVED COURSES', items: localResults.map(course => ({ ...course, source: 'local' })) });
+    combined.push({ label: 'YOUR COURSES', items: localResults.map(course => ({ ...course, source: 'local' })) });
   }
   if (apiResults.length > 0) {
     combined.push({ label: 'GOLF COURSE API', items: apiResults });
@@ -211,6 +245,21 @@ async function importApiCourse(course) {
   try {
     const searchInput = document.getElementById('course-search');
     const originalValue = searchInput?.value || '';
+
+    // Already imported by someone — reuse it instead of burning another
+    // get-golf-course call.
+    const cached = await findCachedApiCourse(course.external_id);
+    if (cached) {
+      hideCourseSearchResults();
+      if (searchInput) searchInput.value = '';
+      state.myCourses = [
+        ...(state.myCourses || []).filter(c => c.id !== cached.id),
+        cached
+      ];
+      populateFormWithCourse(cached);
+      return;
+    }
+
     if (searchInput) {
       searchInput.disabled = true;
       searchInput.value = 'Loading course details...';
@@ -357,10 +406,6 @@ function validateCourseHoles(holeCount, pars, strokeIndex) {
   return null;
 }
 
-// Duplicate check now runs against the full shared library (state.myCourses
-// already holds every course, not just this user's), since courses are
-// global — nobody should be able to create a second "Pebble Beach" just
-// because someone else made the first one.
 function isDuplicateCourse(name, location, excludeId) {
   const normalize = s => s.trim().toLowerCase();
   return (state.myCourses || []).some(c =>
@@ -468,12 +513,6 @@ async function saveCourseAndStartRound() {
 // ---------------------------------------------------------
 // Manage (edit/delete) saved courses
 // ---------------------------------------------------------
-// Lists every course in the shared library. Edit/delete controls only
-// show for the course's own creator (isOwner) — enforced both here in
-// the UI and by the courses RLS policies, so this isn't just cosmetic.
-// Courses whose creator's account has since been deleted (user_id is
-// null) show with no edit/delete controls for anyone, since they no
-// longer have an owner — they just keep working, permanently.
 async function renderCourseManageList() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   const courses = await loadMyCourses();
@@ -533,10 +572,6 @@ async function deleteCourse(courseId) {
   await renderCourseManageList();
 }
 
-// Loads the full shared course library — every course, from every
-// user, regardless of source. No user_id filter here: courses are a
-// shared resource, not personal data. (Auth is still required just
-// because this is only ever called from screens behind a login.)
 async function loadMyCourses() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return [];

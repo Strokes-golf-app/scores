@@ -22,7 +22,7 @@ function renderParGrid() {
       <span class="par-cell-sublabel">Par</span>
       <input type="number" class="par-input" data-hole="${h}" min="2" max="6" placeholder="4" inputmode="numeric">
       <span class="par-cell-sublabel">Hcp</span>
-      <input type="number" class="hole-hcp-input" data-hole="${h}" min="1" max="${holeCount}" inputmode="numeric">
+      <span class="hole-hcp-display" data-hole="${h}"></span>
     `;
     grid.appendChild(cell);
   }
@@ -203,7 +203,7 @@ async function searchSetupCourseResults(query) {
   const localResults = await searchLocalCourses(trimmed);
   let apiResults = [];
   if (localResults.length < 5) {
-    apiResults = await searchApiCourses(trimmed);
+    apiResults = filterCachedApiResults(await searchApiCourses(trimmed), localResults);
   }
   displaySetupCourseSearchResults(localResults, apiResults);
 }
@@ -370,6 +370,21 @@ async function findOrSaveApiCourse({
 async function importSetupApiCourse(course) {
   const searchInput = document.getElementById('setup-course-search');
   const originalValue = searchInput?.value || '';
+
+  // Already imported by someone — reuse it instead of burning another
+  // get-golf-course call.
+  const cached = await findCachedApiCourse(course.external_id || course.id);
+  if (cached) {
+    hideSetupCourseSearchResults();
+    if (searchInput) searchInput.value = '';
+    state.myCourses = [
+      ...(state.myCourses || []).filter(c => c.id !== cached.id),
+      cached
+    ];
+    populateSetupCourseFields(cached);
+    return;
+  }
+
   if (searchInput) {
     searchInput.disabled = true;
     searchInput.value = 'Loading course details...';
@@ -544,9 +559,9 @@ function applyCourseToGrid(course, nine) {
     inp.value = pars[h];
   });
 
-  document.querySelectorAll('.hole-hcp-input').forEach(inp => {
-    const h = Number(inp.dataset.hole) - 1;
-    inp.value = strokeIndex && strokeIndex[h] != null ? strokeIndex[h] : '';
+  document.querySelectorAll('.hole-hcp-display').forEach(el => {
+    const h = Number(el.dataset.hole) - 1;
+    el.textContent = strokeIndex ? strokeIndex[h] : '';
   });
 
   state.selectedCourseStrokeIndex = strokeIndex ? Golf.toRelativeStrokeIndex(strokeIndex) : null;
@@ -576,25 +591,6 @@ function collectPars() {
   return pars;
 }
 
-// Reads the per-hole Hcp inputs. Returns { strokeIndex, partial }:
-// strokeIndex is the relative stroke index when every hole has a
-// value, otherwise null; partial flags a half-filled grid so the
-// caller can warn that the values were skipped.
-function collectStrokeIndex() {
-  const holeCount = Number(document.getElementById('hole-count').value);
-  const raw = new Array(holeCount).fill(null);
-  document.querySelectorAll('.hole-hcp-input').forEach(inp => {
-    const h = Number(inp.dataset.hole) - 1;
-    const v = Number(inp.value);
-    if (inp.value !== '' && v >= 1 && v <= holeCount) raw[h] = v;
-  });
-  const filled = raw.filter(v => v != null).length;
-  return {
-    strokeIndex: filled === holeCount ? Golf.toRelativeStrokeIndex(raw) : null,
-    partial: filled > 0 && filled < holeCount
-  };
-}
-
 function collectModes() {
   return Array.from(document.querySelectorAll('#mode-grid input[name="mode"]:checked')).map(cb => cb.value);
 }
@@ -607,8 +603,6 @@ async function createRound() {
   const holeCount = Number(document.getElementById('hole-count').value);
   const pars = collectPars();
   const modes = collectModes();
-  const { strokeIndex, partial: hcpPartial } = collectStrokeIndex();
-  if (hcpPartial) showToast('Hole handicaps skipped — fill every hole or leave them all blank');
   const validPlayers = state.setupPlayers.filter(p => p.name.trim().length > 0);
 
   if (validPlayers.length === 0) {
@@ -652,7 +646,7 @@ async function createRound() {
         started: false,
         ended: false,
         host_user_id: currentUser.id,
-        stroke_index: strokeIndex,
+        stroke_index: state.selectedCourseStrokeIndex || null,
         hole_offset: state.selectedCourseNine === 'back' ? 9 : 0,
       });
 
