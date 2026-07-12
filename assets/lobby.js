@@ -115,18 +115,31 @@ async function joinRound(code) {
   }
 }
 
-function renderIdentifyList(round) {
+async function renderIdentifyList(round) {
   const list = document.getElementById('identify-player-list');
   list.innerHTML = '';
+
+  // Who we are on this device — so a returning player whose row is already
+  // claimed *by them* (new device, cleared local session) can still tap
+  // their own name to rejoin. selectIdentity already skips the claim RPC
+  // when the row's user_id matches the current user, so this is safe.
+  const { data: { user: currentUser } } = await supabaseClient.auth.getUser();
+
   round.players.forEach(p => {
     const row = document.createElement('div');
-    const claimed = !!p.user_id;
+    const claimedByOther = !!p.user_id && p.user_id !== currentUser?.id;
+    const claimedByMe = !!p.user_id && p.user_id === currentUser?.id;
     row.className = 'player-row';
+    const rightLabel = claimedByOther
+      ? 'Already joined'
+      : claimedByMe
+      ? 'Tap to rejoin'
+      : 'HCP ' + p.handicap;
     row.innerHTML = `
       <span class="player-chip-name">${escapeHtml(p.name)}</span>
-      <span class="player-chip-hcp">${claimed ? 'Already joined' : 'HCP ' + p.handicap}</span>
+      <span class="player-chip-hcp">${rightLabel}</span>
     `;
-    if (!claimed) {
+    if (!claimedByOther) {
       row.addEventListener('click', () => selectIdentity(p.id));
     }
     list.appendChild(row);

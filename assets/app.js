@@ -235,6 +235,19 @@ function init() {
       return;
     }
 
+    // If we're already a member of a round on this device, resume it —
+    // even though the URL still carries the ?code= we joined through.
+    // Without this, a mid-round refresh re-runs the join flow and dumps us
+    // on the identify screen, where our own name reads "Already joined" and
+    // can't be re-selected. Resume wins unless the URL code is for a
+    // *different* round, and unless a pending email-invite join is waiting.
+    const resumable = loadSession();
+    if (!loadPendingJoin() && resumable && resumable.roundCode &&
+        (!codeFromUrl || codeFromUrl.toUpperCase() === resumable.roundCode)) {
+      resumeSession(resumable);
+      return;
+    }
+
     if (codeFromUrl) {
       showScreen('screen-home');
       joinRound(codeFromUrl);
