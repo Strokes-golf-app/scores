@@ -41,8 +41,15 @@ async function handleAuthSubmit(e) {
     // and log in for the first time (no session exists yet to do it now).
     state.pendingSignupName = name;
     // If they're signing up from a round invite, remember the code across
-    // the email verification round-trip so we can rejoin them afterward.
-    if (state.pendingJoinCode) savePendingJoin(state.pendingJoinCode);
+    // the email verification round-trip so we can rejoin them afterward —
+    // invited users go straight into that round and skip profile setup.
+    // Everyone else is flagged (with their name) so we can drop them on
+    // the profile screen to finish setting up once they verify.
+    if (state.pendingJoinCode) {
+      savePendingJoin(state.pendingJoinCode);
+    } else {
+      savePendingProfileSetup(name);
+    }
     document.getElementById('verify-email-display').textContent = email;
     state.pendingVerifyEmail = email;
     document.getElementById('form-auth').reset();
