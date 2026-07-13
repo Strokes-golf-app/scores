@@ -269,6 +269,17 @@ function init() {
       return;
     }
 
+    // A non-invited user who just verified their email: send them to the
+    // profile screen to finish setup (name pre-filled from signup). The
+    // invite branch above already returned, so this never fires for anyone
+    // who signed up from a round code.
+    const pendingProfile = loadPendingProfileSetup();
+    if (pendingProfile !== null) {
+      clearPendingProfileSetup();
+      await beginProfileOnboarding(pendingProfile);
+      return;
+    }
+
     const session = loadSession();
     if (session && session.roundCode) {
       resumeSession(session);

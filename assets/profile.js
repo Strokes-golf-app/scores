@@ -148,3 +148,29 @@ async function refreshDrawerName() {
   el.textContent = name;
   el.hidden = !name;
 }
+
+// First-run onboarding: called once, right after a NON-invited user
+// verifies their email. Seeds the profile row with the name they gave at
+// signup (so the screen pre-fills it), then drops them on the profile
+// screen to add handicap and home city/state. Invited users never reach
+// here — they're routed straight into their round instead.
+async function beginProfileOnboarding(name) {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user || user.is_anonymous) {
+    await resetSetupScreen();
+    showScreen('screen-home');
+    return;
+  }
+
+  // The profile row won't exist yet on this path, so upsert to create it
+  // with the signup name. openProfileScreen then reads it back to pre-fill.
+  // Only display_name is set, so any later city/state stays untouched.
+  if (name) {
+    await supabaseClient
+      .from('user_profiles')
+      .upsert({ id: user.id, display_name: name });
+  }
+
+  await refreshDrawerName();
+  await openProfileScreen();
+}

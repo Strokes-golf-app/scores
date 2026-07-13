@@ -33,6 +33,7 @@ const state = {
 
 const LS_KEY = 'fairwaylive_session';
 const PENDING_JOIN_KEY = 'fairwaylive_pending_join';
+const PENDING_PROFILE_KEY = 'fairwaylive_pending_profile';
 
 // Display labels for each game mode, keyed by the value stored in
 // rounds.modes. Shared by the lobby chips and the leaderboard mode
@@ -109,6 +110,20 @@ function loadPendingJoin() {
 }
 function clearPendingJoin() {
   try { localStorage.removeItem(PENDING_JOIN_KEY); } catch (e) { /* ignore */ }
+}
+
+// Set right after a NON-invited signup (value = the name they entered)
+// so that, once they verify their email and return, we can drop them on
+// the profile screen to finish setup. Invited signups use the pending
+// join above instead and skip onboarding, heading straight to their round.
+function savePendingProfileSetup(name) {
+  try { localStorage.setItem(PENDING_PROFILE_KEY, name || ''); } catch (e) { /* ignore */ }
+}
+function loadPendingProfileSetup() {
+  try { return localStorage.getItem(PENDING_PROFILE_KEY); } catch (e) { return null; }
+}
+function clearPendingProfileSetup() {
+  try { localStorage.removeItem(PENDING_PROFILE_KEY); } catch (e) { /* ignore */ }
 }
 
 function escapeHtml(str) {
