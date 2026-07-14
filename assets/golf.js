@@ -151,38 +151,61 @@ const Golf = (() => {
   }
 
   /**
-   * Skins: for each hole where ALL players in the list have entered a score,
-   * the player with the lowest net score wins a skin. Ties push (no winner).
+   * Skins with carryover. Holes are settled in order; each hole is worth
+   * one skin. When a hole is tied, its skin carries to the next hole, so
+   * the pot grows until a hole is won outright. The winner of a hole
+   * collects the whole pot (1 for the hole plus everything carried in).
+   *
+   * Because the pot at any hole depends on how earlier holes were settled,
+   * resolution stops at the first hole where not everyone has entered a
+   * score yet — every hole from there on is left pending until the gap
+   * fills. In normal play that gap is just the holes not yet played.
+   *
+   * Returns { skinsByPlayer, log, carry } where `carry` is the number of
+   * skins still in the pot, unclaimed (e.g. the last settled hole tied).
    */
   function computeSkins(summaries, holeCount) {
     const skinsByPlayer = {};
     summaries.forEach(s => { skinsByPlayer[s.playerId] = 0; });
     const log = [];
 
+    let carry = 0;       // skins carried forward from earlier tied holes
+    let stopped = false; // once a hole isn't fully scored, everything after is undetermined
+
     for (let h = 0; h < holeCount; h++) {
+      if (stopped) {
+        log.push({ hole: h + 1, winnerId: null, value: 0, carriedIn: 0, pending: true });
+        continue;
+      }
+
       const entries = summaries
         .map(s => ({ playerId: s.playerId, net: s.holes[h] ? s.holes[h].net : null }))
         .filter(e => e.net != null);
 
-      if (entries.length < summaries.length || entries.length === 0) {
-        log.push({ hole: h + 1, winnerId: null, pending: entries.length < summaries.length });
+      const everyoneScored = entries.length === summaries.length && entries.length > 0;
+      if (!everyoneScored) {
+        log.push({ hole: h + 1, winnerId: null, value: 0, carriedIn: carry, pending: true });
+        stopped = true;
         continue;
       }
 
+      const pot = carry + 1;
       const minNet = Math.min(...entries.map(e => e.net));
       const winners = entries.filter(e => e.net === minNet);
 
       if (winners.length === 1) {
-        skinsByPlayer[winners[0].playerId] += 1;
-        log.push({ hole: h + 1, winnerId: winners[0].playerId, pending: false });
+        skinsByPlayer[winners[0].playerId] += pot;
+        log.push({ hole: h + 1, winnerId: winners[0].playerId, value: pot, carriedIn: carry, pending: false });
+        carry = 0;
       } else {
-        log.push({ hole: h + 1, winnerId: null, pending: false });
+        // Tie — the whole pot rolls forward to the next hole.
+        log.push({ hole: h + 1, winnerId: null, value: 0, carriedIn: carry, pending: false });
+        carry = pot;
       }
     }
 
-    return { skinsByPlayer, log };
+    return { skinsByPlayer, log, carry };
   }
-
   // Best-ball score for one team on one hole: the lowest individual
   // score among that team's members. Returns null if anyone on the
   // team hasn't entered a score for this hole yet — until they do,
