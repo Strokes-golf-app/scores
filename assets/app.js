@@ -77,6 +77,16 @@ function init() {
 
   document.getElementById('btn-create-round').addEventListener('click', createRound);
 
+  document.getElementById('bets-enabled').addEventListener('change', e => {
+    state.setupBetsEnabled = e.target.checked;
+    document.getElementById('set-stakes-field').hidden = !e.target.checked;
+  });
+  document.getElementById('btn-set-stakes').addEventListener('click', () => openStakesScreen('setup'));
+  document.getElementById('btn-stakes-back').addEventListener('click', () => {
+    showScreen(state.stakesContext === 'lobby' ? 'screen-lobby' : 'screen-setup');
+  });
+  document.getElementById('btn-stakes-save').addEventListener('click', saveStakesScreen);
+
   document.getElementById('btn-lobby-leave').addEventListener('click', goHome);
   document.getElementById('btn-copy-code').addEventListener('click', async () => {
     const link = makeJoinLink(state.roundCode);
@@ -90,6 +100,7 @@ function init() {
   document.getElementById('btn-lobby-add-player').addEventListener('click', () => {
     addPlayerToRound(state.roundId);
   });
+  document.getElementById('btn-edit-stakes').addEventListener('click', () => openStakesScreen('lobby'));
   document.getElementById('btn-start-round').addEventListener('click', async () => {
     if (!state.round || state.round.players.length === 0) {
       showToast('Add at least one player before starting');
