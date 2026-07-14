@@ -1328,6 +1328,43 @@ input::placeholder {
   font-family: var(--font-mono);
   color: var(--fairway);
 }
+.lb-score.money-up { color: var(--fairway); }
+.lb-score.money-down { color: var(--flag); }
+.money-settle {
+  margin-top: 1rem;
+  border-top: 1.5px solid var(--line);
+  padding-top: 0.85rem;
+}
+.money-settle-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 0.6rem;
+}
+.money-settle-empty {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.money-settle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.money-arrow {
+  color: var(--ink-faint);
+  font-style: normal;
+}
+.money-settle-amt {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  color: var(--fairway);
+}
 /* ---------- Lobby code card ---------- */
 .code-card {
   background: var(--fairway);
