@@ -418,6 +418,22 @@
     </div>
 
     <div class="field">
+      <div class="bet-toggle-card">
+        <div>
+          <span class="bet-toggle-title">Bets</span>
+          <span class="bet-toggle-sub">Play this round for money</span>
+        </div>
+        <label class="bet-switch">
+          <input type="checkbox" id="bets-enabled">
+          <span class="bet-track"></span>
+        </label>
+      </div>
+      <div class="field" id="set-stakes-field" hidden>
+        <button type="button" class="btn btn-secondary btn-block" id="btn-set-stakes">Set stakes →</button>
+      </div>
+    </div>
+
+    <div class="field">
       <span class="field-label">Game modes for this round</span>
       <p class="field-hint">Pick as many as you're playing. The leaderboard will show a tab for each.</p>
       <div class="mode-grid" id="mode-grid">
@@ -470,6 +486,21 @@
   </div>
 </section>
 
+<!-- ============ SCREEN: PLACE BETS (STAKES) ============ -->
+<section id="screen-stakes" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-stakes-back" aria-label="Back">←</button>
+    <h2 class="topbar-title">Place your bets</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
+  <div class="screen-body">
+    <p class="field-hint">Set a dollar amount for each game you're playing this round.</p>
+    <div id="stakes-list" class="stakes-list"></div>
+    <button class="btn btn-primary btn-lg btn-block" id="btn-stakes-save">Save stakes</button>
+  </div>
+</section>
+
 <!-- ============ SCREEN: LOBBY ============ -->
 <section id="screen-lobby" class="screen">
   <header class="topbar">
@@ -498,6 +529,12 @@
     <div class="field">
       <span class="field-label">Game modes</span>
       <div class="chip-row" id="lobby-modes"></div>
+    </div>
+
+    <div class="field" id="lobby-stakes-field" hidden>
+      <span class="field-label">Stakes</span>
+      <div id="lobby-stakes-list" class="lobby-stakes-list"></div>
+      <button type="button" class="btn btn-secondary btn-block" id="btn-edit-stakes">Edit stakes</button>
     </div>
 
     <button class="btn btn-primary btn-lg btn-block" id="btn-start-round">Start round</button>
