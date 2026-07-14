@@ -20,6 +20,9 @@ const state = {
   activeTab: 'card',
   activeModeTab: null,
   setupPlayers: [],
+  setupBetsEnabled: false,          // whether the setup screen's Bets toggle is on
+  setupStakes: {},                  // { mode: dollars } entered on the stakes screen before a round exists
+  stakesContext: 'setup',           // 'setup' or 'lobby' — where the stakes screen was opened from
   myCourses: [],                    // saved course library, loaded when the setup screen opens
   selectedCourseStrokeIndex: null,  // handicap-ranking array from a selected saved course, or null for manual/hole-order default
   editingCourseId: null,            // set while the upload screen is editing an existing course, instead of creating a new one
