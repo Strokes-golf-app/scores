@@ -1365,6 +1365,47 @@ input::placeholder {
   font-family: var(--font-mono);
   color: var(--fairway);
 }
+.money-breakdown {
+  margin-top: 1rem;
+  border-top: 1.5px solid var(--line);
+  padding-top: 0.85rem;
+}
+.money-mode {
+  margin-bottom: 0.9rem;
+}
+.money-mode:last-child {
+  margin-bottom: 0;
+}
+.money-mode-head {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+}
+.money-mode-rule {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  line-height: 1.45;
+  margin: 2px 0 7px;
+}
+.money-mode-nets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.money-chip {
+  font-size: 12.5px;
+  background: var(--sand-light);
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: var(--ink-soft);
+}
+.money-chip b {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.money-chip-up b { color: var(--fairway); }
+.money-chip-down b { color: var(--flag); }
 /* ---------- Lobby code card ---------- */
 .code-card {
   background: var(--fairway);
