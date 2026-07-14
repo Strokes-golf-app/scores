@@ -78,12 +78,16 @@ function renderLeaderboardTab() {
 function renderSkinsBoard(summaries, r) {
   const metaEl = document.getElementById('board-meta');
   const boardEl = document.getElementById('leaderboard');
-  const { skinsByPlayer, log } = Golf.computeSkins(summaries, r.holeCount);
+  const { skinsByPlayer, log, carry } = Golf.computeSkins(summaries, r.holeCount);
   const pendingCount = log.filter(l => l.pending).length;
 
-  metaEl.textContent = pendingCount > 0
-    ? `Skins won so far. ${pendingCount} hole(s) still waiting on everyone's score.`
-    : 'Skins won. Lowest net score on a hole takes it; ties push.';
+  if (pendingCount > 0) {
+    metaEl.textContent = `Skins won so far. Ties carry to the next hole. ${pendingCount} hole(s) still waiting on everyone's score.`;
+  } else if (carry > 0) {
+    metaEl.textContent = `Skins won. Ties carry to the next hole. ${carry} skin(s) still in the pot, unclaimed.`;
+  } else {
+    metaEl.textContent = 'Skins won. Lowest net on a hole takes the pot; ties carry to the next hole.';
+  }
 
   const ranked = Object.entries(skinsByPlayer)
     .map(([playerId, count]) => ({ playerId, count, name: summaries.find(s => s.playerId === playerId)?.name || '?' }))
