@@ -1203,6 +1203,131 @@ input::placeholder {
   accent-color: var(--fairway);
 }
 
+/* ---------- Bets toggle + stakes ---------- */
+.bet-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 0.9rem;
+}
+.bet-toggle-title {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+}
+.bet-toggle-sub {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+.bet-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex: none;
+  cursor: pointer;
+}
+.bet-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.bet-track {
+  position: absolute;
+  inset: 0;
+  background: var(--line);
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+.bet-track::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--white);
+  transition: transform 0.15s ease;
+}
+.bet-switch input:checked + .bet-track {
+  background: var(--fairway);
+}
+.bet-switch input:checked + .bet-track::before {
+  transform: translateX(20px);
+}
+
+.stakes-list, .lobby-stakes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.stakes-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.8rem;
+}
+.stakes-row-name {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+}
+.stakes-row-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 1px;
+}
+.stakes-amount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.stakes-amount .cur {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink-faint);
+}
+.stakes-amount input {
+  width: 74px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  padding: 0.4rem 0.5rem;
+}
+.lobby-stakes-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+}
+.lobby-stakes-amt {
+  font-family: var(--font-mono);
+  color: var(--fairway);
+}
 /* ---------- Lobby code card ---------- */
 .code-card {
   background: var(--fairway);
