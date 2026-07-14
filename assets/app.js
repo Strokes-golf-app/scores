@@ -41,6 +41,7 @@ function init() {
     await resetCourseUploadScreen();
     showScreen('screen-course-upload');
   });
+  document.getElementById('btn-course-detail-back').addEventListener('click', () => showScreen('screen-course-manage'));
 
   document.getElementById('form-join').addEventListener('submit', e => {
     e.preventDefault();
