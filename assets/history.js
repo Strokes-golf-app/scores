@@ -167,6 +167,8 @@ function reconstructRound(row) {
     matchTeamA: snap.match_team_a || null,
     matchTeamB: snap.match_team_b || null,
     matchUseHandicap: snap.match_use_handicap !== false,
+    betsEnabled: snap.bets_enabled === true,
+    stakes: snap.stakes || {},
     players,
     endedAt: row.ended_at,
   };
@@ -180,7 +182,7 @@ function renderHistoryDetail() {
   document.getElementById('history-detail-meta').textContent =
     `${formatHistoryDate(round.endedAt)} · ${round.holeCount} holes`;
 
-  const modes = round.modes;
+  const modes = roundBoardModes(round);
   const activeMode = modes[0];
   const tabRow = document.getElementById('history-mode-row');
   tabRow.innerHTML = modes.map(m =>
@@ -216,6 +218,7 @@ function renderHistoryDetailBoard(mode) {
 
   if (mode === 'skins') return renderHistoryDetailSkins(summaries, round, metaEl, boardEl);
   if (mode === 'match') return renderHistoryDetailMatch(summaries, round, metaEl, boardEl);
+  if (mode === 'money') return renderHistoryDetailMoney(summaries, round, metaEl, boardEl);
 
   metaEl.textContent = mode === 'stableford'
     ? 'Points scored per hole, summed. Higher is better.'
@@ -249,6 +252,42 @@ function renderHistoryDetailBoard(mode) {
     `;
     boardEl.appendChild(rowEl);
   });
+}
+
+function renderHistoryDetailMoney(summaries, round, metaEl, boardEl) {
+  const { byPlayer, transactions } = Golf.computeMoney(summaries, {
+    modes: round.modes,
+    stakes: round.stakes,
+    holeCount: round.holeCount,
+    matchTeamA: round.matchTeamA,
+    matchTeamB: round.matchTeamB,
+    matchUseHandicap: round.matchUseHandicap,
+  });
+  metaEl.textContent = 'Final money across every bet this round.';
+
+  const nameById = {};
+  summaries.forEach(s => { nameById[s.playerId] = s.name; });
+
+  const rows = Object.entries(byPlayer)
+    .map(([id, net]) => ({ id, net, name: nameById[id] || '?' }))
+    .sort((a, b) => b.net - a.net);
+
+  boardEl.innerHTML = '';
+  rows.forEach((p, i) => {
+    const cls = p.net > 0 ? 'money-up' : (p.net < 0 ? 'money-down' : '');
+    const meMark = isDetailMe(round, p.id) ? ' (you)' : '';
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (i === 0 && p.net > 0 ? ' leader' : '');
+    row.innerHTML = `
+      <span class="lb-rank">${i + 1}</span>
+      <span class="lb-name-wrap"><span class="lb-name">${escapeHtml(p.name)}${meMark}</span></span>
+      <span class="lb-detail"></span>
+      <span class="lb-score ${cls}">${Golf.formatMoney(p.net)}</span>
+    `;
+    boardEl.appendChild(row);
+  });
+
+  boardEl.insertAdjacentHTML('beforeend', moneySettleHtml(transactions, nameById));
 }
 
 function renderHistoryDetailSkins(summaries, round, metaEl, boardEl) {
