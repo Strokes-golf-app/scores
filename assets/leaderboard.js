@@ -40,6 +40,10 @@ function renderLeaderboardTab() {
     renderMatchBoard(summaries, r);
     return;
   }
+  if (mode === 'money') {
+    renderMoneyBoard(summaries, r);
+    return;
+  }
 
   metaEl.textContent = mode === 'stableford'
     ? 'Points scored per hole, summed. Higher is better.'
@@ -73,6 +77,56 @@ function renderLeaderboardTab() {
     `;
     boardEl.appendChild(row);
   });
+}
+
+function renderMoneyBoard(summaries, r) {
+  const metaEl = document.getElementById('board-meta');
+  const boardEl = document.getElementById('leaderboard');
+
+  const { byPlayer, transactions } = Golf.computeMoney(summaries, {
+    modes: r.modes,
+    stakes: r.stakes,
+    holeCount: r.holeCount,
+    matchTeamA: r.matchTeamA,
+    matchTeamB: r.matchTeamB,
+    matchUseHandicap: r.matchUseHandicap,
+  });
+
+  metaEl.textContent = 'Net across every bet this round. Provisional until all scores are in.';
+
+  const nameById = {};
+  summaries.forEach(s => { nameById[s.playerId] = s.name; });
+
+  const rows = Object.entries(byPlayer)
+    .map(([id, net]) => ({ id, net, name: nameById[id] || '?' }))
+    .sort((a, b) => b.net - a.net);
+
+  boardEl.innerHTML = '';
+  rows.forEach((p, i) => {
+    const cls = p.net > 0 ? 'money-up' : (p.net < 0 ? 'money-down' : '');
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (i === 0 && p.net > 0 ? ' leader' : '');
+    row.innerHTML = `
+      <span class="lb-rank">${i + 1}</span>
+      <span class="lb-name-wrap"><span class="lb-name">${escapeHtml(p.name)}</span></span>
+      <span class="lb-detail"></span>
+      <span class="lb-score ${cls}">${Golf.formatMoney(p.net)}</span>
+    `;
+    boardEl.appendChild(row);
+  });
+
+  boardEl.insertAdjacentHTML('beforeend', moneySettleHtml(transactions, nameById));
+}
+
+function moneySettleHtml(transactions, nameById) {
+  if (!transactions || !transactions.length) {
+    return '<div class="money-settle"><div class="money-settle-title">Settle up</div><div class="money-settle-empty">All square — nothing owed yet.</div></div>';
+  }
+  const rows = transactions.map(t => {
+    const amt = Number.isInteger(t.amount) ? t.amount : t.amount.toFixed(2);
+    return `<div class="money-settle-row"><span>${escapeHtml(nameById[t.from] || '?')}</span><i class="money-arrow">→</i><span>${escapeHtml(nameById[t.to] || '?')}</span><span class="money-settle-amt">$${amt}</span></div>`;
+  }).join('');
+  return `<div class="money-settle"><div class="money-settle-title">Settle up</div>${rows}</div>`;
 }
 
 function renderSkinsBoard(summaries, r) {
