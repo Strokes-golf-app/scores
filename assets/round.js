@@ -51,7 +51,9 @@ function mapRoundRow(row, players) {
     matchTeamA: row.match_team_a || null, matchTeamB: row.match_team_b || null,
     matchUseHandicap: row.match_use_handicap !== false,
     hostId: row.host_player_id, started: row.started, ended: row.ended,
-    holeOffset: row.hole_offset || 0, players,
+    holeOffset: row.hole_offset || 0,
+    betsEnabled: row.bets_enabled === true, stakes: row.stakes || {},
+    players,
   };
 }
 
