@@ -293,6 +293,123 @@ const Golf = (() => {
     return result;
   }
 
+  /**
+   * Money settlement across every betting mode in a round. Pure: it
+   * takes the same summaries the leaderboard already builds plus the
+   * round's stakes/teams, and returns per-mode nets, a combined
+   * per-player net, and a minimal who-pays-whom list.
+   *
+   * Models (matching the stakes-screen sublabels):
+   * - gross/net/stableford: ante pot. Everyone antes the stake; the
+   *   mode leader(s) take the pot, split on ties.
+   * - skins: every OTHER player pays the skin winner the per-skin
+   *   stake, so carried skins scale naturally. Zero-sum.
+   * - match: the losing side pays the stake, split within each team.
+   */
+  function computeMoney(summaries, opts) {
+    const { modes = [], stakes = {}, holeCount,
+            matchTeamA, matchTeamB, matchUseHandicap = true } = opts || {};
+    const playerIds = summaries.map(s => s.playerId);
+    const N = playerIds.length;
+    const byMode = {};
+    const byPlayer = {};
+    playerIds.forEach(id => { byPlayer[id] = 0; });
+
+    const addNet = (mode, netMap) => {
+      byMode[mode] = netMap;
+      playerIds.forEach(id => { byPlayer[id] += (netMap[id] || 0); });
+    };
+
+    // Ante pots for the stroke-play modes.
+    ['gross', 'net', 'stableford'].forEach(mode => {
+      const stake = Number(stakes[mode]) || 0;
+      if (!modes.includes(mode) || stake <= 0 || N < 2) return;
+      if (!summaries.some(s => s.thru > 0)) return; // nobody's played yet
+      const ranked = rankPlayers(summaries, mode);
+      const winners = ranked.filter(s => s.rank === 1);
+      if (!winners.length) return;
+      const pot = N * stake;
+      const share = pot / winners.length;
+      const winnerSet = new Set(winners.map(w => w.playerId));
+      const netMap = {};
+      playerIds.forEach(id => { netMap[id] = (winnerSet.has(id) ? share : 0) - stake; });
+      addNet(mode, netMap);
+    });
+
+    // Skins — each skin is paid to its winner by every other player.
+    const skinsStake = Number(stakes.skins) || 0;
+    if (modes.includes('skins') && skinsStake > 0 && N >= 2) {
+      const { skinsByPlayer } = computeSkins(summaries, holeCount);
+      const totalAwarded = Object.values(skinsByPlayer).reduce((a, b) => a + b, 0);
+      if (totalAwarded > 0) {
+        const netMap = {};
+        playerIds.forEach(id => {
+          const own = skinsByPlayer[id] || 0;
+          netMap[id] = own * (N - 1) * skinsStake - (totalAwarded - own) * skinsStake;
+        });
+        addNet('skins', netMap);
+      }
+    }
+
+    // Match play — team pot, split within the winning and losing sides.
+    const matchStake = Number(stakes.match) || 0;
+    if (modes.includes('match') && matchStake > 0 &&
+        matchTeamA && matchTeamB && matchTeamA.length && matchTeamB.length) {
+      const byId = {};
+      summaries.forEach(s => { byId[s.playerId] = s; });
+      const teamA = matchTeamA.map(id => byId[id]).filter(Boolean);
+      const teamB = matchTeamB.map(id => byId[id]).filter(Boolean);
+      if (teamA.length && teamB.length) {
+        const m = computeMatchPlay(teamA, teamB, holeCount, matchUseHandicap);
+        if (m.winner) {
+          const winners = m.winner === 'A' ? matchTeamA : matchTeamB;
+          const losers = m.winner === 'A' ? matchTeamB : matchTeamA;
+          const netMap = {};
+          playerIds.forEach(id => { netMap[id] = 0; });
+          winners.forEach(id => { if (netMap[id] != null) netMap[id] += matchStake / winners.length; });
+          losers.forEach(id => { if (netMap[id] != null) netMap[id] -= matchStake / losers.length; });
+          addNet('match', netMap);
+        }
+      }
+    }
+
+    return { byMode, byPlayer, transactions: settleTransactions(byPlayer) };
+  }
+
+  // Greedy minimal settle-up: match the biggest debtor against the
+  // biggest creditor until everyone's square.
+  function settleTransactions(byPlayer) {
+    const eps = 0.005;
+    const creditors = [];
+    const debtors = [];
+    Object.entries(byPlayer).forEach(([id, amt]) => {
+      if (amt > eps) creditors.push({ id, amt });
+      else if (amt < -eps) debtors.push({ id, amt: -amt });
+    });
+    creditors.sort((a, b) => b.amt - a.amt);
+    debtors.sort((a, b) => b.amt - a.amt);
+    const tx = [];
+    let i = 0, j = 0;
+    while (i < debtors.length && j < creditors.length) {
+      const pay = Math.min(debtors[i].amt, creditors[j].amt);
+      tx.push({ from: debtors[i].id, to: creditors[j].id, amount: Math.round(pay * 100) / 100 });
+      debtors[i].amt -= pay;
+      creditors[j].amt -= pay;
+      if (debtors[i].amt <= eps) i++;
+      if (creditors[j].amt <= eps) j++;
+    }
+    return tx;
+  }
+
+  function formatMoney(n) {
+    const v = Math.round((n + Number.EPSILON) * 100) / 100;
+    const abs = Math.abs(v);
+    const str = Number.isInteger(abs) ? String(abs) : abs.toFixed(2);
+    if (v > 0) return `+$${str}`;
+    if (v < 0) return `-$${str}`;
+    return '$0';
+  }
+
   return {
     allocateStrokes,
    toRelativeStrokeIndex,
@@ -302,7 +419,9 @@ const Golf = (() => {
     rankPlayers,
     computeSkins,
     computeMatchPlay,
+    computeMoney,
     formatToPar,
+    formatMoney,
     findMissingScores,
   };
 })();

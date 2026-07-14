@@ -203,7 +203,7 @@ function renderScoringSelector() {
 }
 
 function populateModeTabs() {
-  const modes = state.round.modes && state.round.modes.length ? state.round.modes : ['gross'];
+  const modes = roundBoardModes(state.round);
   state.activeModeTab = modes[0];
   const row = document.getElementById('modetab-row');
   row.innerHTML = modes.map(m =>

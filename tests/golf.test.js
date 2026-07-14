@@ -301,3 +301,75 @@ describe('findMissingScores', () => {
     expect(missing).toEqual([{ name: 'NewGuy', missingHoles: [1, 2] }]);
   });
 });
+
+describe('computeMoney', () => {
+  const pars = [4, 4, 4];
+  const player = (id, scores, handicap = 0) =>
+    Golf.summarizePlayer({ id, name: id, handicap }, scores, pars, null, 3);
+
+  it('gross ante pot: winner takes all, everyone else is down their ante', () => {
+    const a = player('a', { 1: 4, 2: 4, 3: 4 });
+    const b = player('b', { 1: 5, 2: 5, 3: 5 });
+    const { byMode, byPlayer } = Golf.computeMoney([a, b], {
+      modes: ['gross'], stakes: { gross: 5 }, holeCount: 3,
+    });
+    expect(byMode.gross.a).toBe(5);
+    expect(byMode.gross.b).toBe(-5);
+    expect(byPlayer.a + byPlayer.b).toBe(0);
+  });
+
+  it('splits the pot among tied winners', () => {
+    const a = player('a', { 1: 4, 2: 4, 3: 4 });
+    const b = player('b', { 1: 4, 2: 4, 3: 4 });
+    const c = player('c', { 1: 5, 2: 5, 3: 5 });
+    const { byPlayer } = Golf.computeMoney([a, b, c], {
+      modes: ['gross'], stakes: { gross: 10 }, holeCount: 3,
+    });
+    expect(byPlayer.a).toBe(5);  // pot 30 / 2 winners = 15, minus 10 ante
+    expect(byPlayer.b).toBe(5);
+    expect(byPlayer.c).toBe(-10);
+  });
+
+  it('skins: every other player pays the winner per skin, zero-sum', () => {
+    const a = player('a', { 1: 4, 2: 5, 3: 3 }); // wins hole 1, then the carried pot on 3
+    const b = player('b', { 1: 5, 2: 5, 3: 4 });
+    const { byPlayer } = Golf.computeMoney([a, b], {
+      modes: ['skins'], stakes: { skins: 2 }, holeCount: 3,
+    });
+    expect(byPlayer.a).toBe(6);  // 3 skins × $2 from Bob
+    expect(byPlayer.b).toBe(-6);
+  });
+
+  it('match play: losing side pays the team pot', () => {
+    const a = player('a', { 1: 3, 2: 3, 3: 3 });
+    const b = player('b', { 1: 5, 2: 5, 3: 5 });
+    const { byPlayer } = Golf.computeMoney([a, b], {
+      modes: ['match'], stakes: { match: 20 }, holeCount: 3,
+      matchTeamA: ['a'], matchTeamB: ['b'],
+    });
+    expect(byPlayer.a).toBe(20);
+    expect(byPlayer.b).toBe(-20);
+  });
+
+  it('sums multiple bets and returns a balanced settle-up', () => {
+    const a = player('a', { 1: 4, 2: 4, 3: 4 });
+    const b = player('b', { 1: 5, 2: 5, 3: 5 });
+    const { byPlayer, transactions } = Golf.computeMoney([a, b], {
+      modes: ['gross', 'skins'], stakes: { gross: 5, skins: 2 }, holeCount: 3,
+    });
+    expect(byPlayer.a).toBe(11); // +5 gross, +6 skins
+    expect(byPlayer.b).toBe(-11);
+    expect(transactions).toEqual([{ from: 'b', to: 'a', amount: 11 }]);
+  });
+
+  it('moves no money for a mode with no stake set', () => {
+    const a = player('a', { 1: 4, 2: 4, 3: 4 });
+    const b = player('b', { 1: 5, 2: 5, 3: 5 });
+    const { byMode, byPlayer } = Golf.computeMoney([a, b], {
+      modes: ['gross'], stakes: {}, holeCount: 3,
+    });
+    expect(byMode.gross).toBeUndefined();
+    expect(byPlayer.a).toBe(0);
+    expect(byPlayer.b).toBe(0);
+  });
+});
