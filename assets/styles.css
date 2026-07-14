@@ -419,6 +419,47 @@ h1, h2, h3 {
   font-size: 14px;
   padding: 2rem 1rem;
 }
+.course-manage-row {
+  cursor: pointer;
+}
+.course-manage-info:focus-visible {
+  outline: 2px solid var(--fairway);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.course-manage-chevron {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-faint);
+  padding: 0 0.15rem;
+}
+
+/* ---------- Course detail (read-only) ---------- */
+.course-detail-header {
+  margin-bottom: 1rem;
+}
+.course-detail-name {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--ink);
+}
+.course-detail-meta {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.course-detail-scorecard {
+  margin-top: 0.5rem;
+}
+.sc-summarycol {
+  background: var(--cream);
+  font-weight: 700;
+}
 .btn-block {
   width: 100%;
 }
