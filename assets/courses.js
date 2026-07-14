@@ -675,60 +675,53 @@ function renderCourseDetail(course) {
   };
 
   const is18 = holeCount === 18;
-  const frontEnd = is18 ? 9 : holeCount;
 
-  let headHoles = '', parHoles = '', hcpHoles = '';
-  for (let i = 0; i < frontEnd; i++) {
-    headHoles += `<th class="sc-score"><span class="sc-holenum">${i + 1}</span></th>`;
-    parHoles += `<td class="sc-score">${parCell(i)}</td>`;
-    hcpHoles += `<td class="sc-score">${hcpCell(i)}</td>`;
-  }
-
-  let headOut = '', parOut = '', hcpOut = '';
-  let headBack = '', parBack = '', hcpBack = '';
-  let headIn = '', parIn = '', hcpIn = '';
-  if (is18) {
-    headOut = '<th class="sc-score sc-summarycol">OUT</th>';
-    parOut = `<td class="sc-score sc-summarycol">${sumPars(0, 9)}</td>`;
-    hcpOut = '<td class="sc-score sc-summarycol">—</td>';
-
-    for (let i = 9; i < 18; i++) {
-      headBack += `<th class="sc-score"><span class="sc-holenum">${i + 1}</span></th>`;
-      parBack += `<td class="sc-score">${parCell(i)}</td>`;
-      hcpBack += `<td class="sc-score">${hcpCell(i)}</td>`;
+  // Builds one nine (or a partial course) as its own table, so the two
+  // nines stack vertically instead of running off the side and needing a
+  // horizontal scroll. `from`/`to` are 0-based hole indices; `summaryLabel`
+  // heads the trailing sum column (OUT / IN / TOT).
+  const buildNine = (from, to, summaryLabel) => {
+    let headHoles = '', parHoles = '', hcpHoles = '';
+    for (let i = from; i < to; i++) {
+      headHoles += `<th class="sc-score"><span class="sc-holenum">${i + 1}</span></th>`;
+      parHoles += `<td class="sc-score">${parCell(i)}</td>`;
+      hcpHoles += `<td class="sc-score">${hcpCell(i)}</td>`;
     }
+    return `
+      <div class="scorecard-scroll">
+        <table class="scorecard-table">
+          <thead>
+            <tr>
+              <th class="sc-rowhead sc-corner">Hole</th>
+              ${headHoles}
+              <th class="sc-score sc-summarycol">${summaryLabel}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="sc-subrow">
+              <td class="sc-rowhead">Par</td>
+              ${parHoles}
+              <td class="sc-score sc-summarycol">${sumPars(from, to)}</td>
+            </tr>
+            <tr>
+              <td class="sc-rowhead">Hcp</td>
+              ${hcpHoles}
+              <td class="sc-score sc-summarycol">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
 
-    headIn = '<th class="sc-score sc-summarycol">IN</th>';
-    parIn = `<td class="sc-score sc-summarycol">${sumPars(9, 18)}</td>`;
-    hcpIn = '<td class="sc-score sc-summarycol">—</td>';
+  if (is18) {
+    wrap.innerHTML =
+      buildNine(0, 9, 'OUT') +
+      buildNine(9, 18, 'IN') +
+      `<div class="course-detail-total">Total par <strong>${sumPars(0, 18)}</strong></div>`;
+  } else {
+    wrap.innerHTML = buildNine(0, holeCount, 'TOT');
   }
-
-  const headTot = '<th class="sc-score sc-summarycol">TOT</th>';
-  const parTot = `<td class="sc-score sc-summarycol">${sumPars(0, holeCount)}</td>`;
-  const hcpTot = '<td class="sc-score sc-summarycol">—</td>';
-
-  wrap.innerHTML = `
-    <div class="scorecard-scroll">
-      <table class="scorecard-table">
-        <thead>
-          <tr>
-            <th class="sc-rowhead sc-corner">Hole</th>
-            ${headHoles}${headOut}${headBack}${headIn}${headTot}
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="sc-subrow">
-            <td class="sc-rowhead">Par</td>
-            ${parHoles}${parOut}${parBack}${parIn}${parTot}
-          </tr>
-          <tr>
-            <td class="sc-rowhead">Hcp</td>
-            ${hcpHoles}${hcpOut}${hcpBack}${hcpIn}${hcpTot}
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  `;
 }
 
 async function deleteCourse(courseId) {
