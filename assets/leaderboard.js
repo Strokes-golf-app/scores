@@ -83,7 +83,7 @@ function renderMoneyBoard(summaries, r) {
   const metaEl = document.getElementById('board-meta');
   const boardEl = document.getElementById('leaderboard');
 
-  const { byPlayer, transactions } = Golf.computeMoney(summaries, {
+  const { byMode, byPlayer, transactions } = Golf.computeMoney(summaries, {
     modes: r.modes,
     stakes: r.stakes,
     holeCount: r.holeCount,
@@ -116,6 +116,46 @@ function renderMoneyBoard(summaries, r) {
   });
 
   boardEl.insertAdjacentHTML('beforeend', moneySettleHtml(transactions, nameById));
+  boardEl.insertAdjacentHTML('beforeend', moneyBreakdownHtml(byMode, r.stakes, nameById));
+}
+
+// Per-mode explainer under the Money board: the rule for each bet that
+// moved money (the "why") plus each player's net within it (the "how").
+function moneyBreakdownHtml(byMode, stakes, nameById) {
+  const modes = STAKE_ORDER.filter(m => byMode[m]);
+  if (!modes.length) return '';
+
+  const ruleFor = (m) => {
+    const s = stakes && stakes[m] != null ? stakes[m] : '';
+    switch (m) {
+      case 'gross': return `Everyone antes $${s}. Lowest gross takes the whole pot.`;
+      case 'net': return `Everyone antes $${s}. Lowest net takes the whole pot.`;
+      case 'stableford': return `Everyone antes $${s}. Most points takes the whole pot.`;
+      case 'skins': return `Each skin is worth $${s}, paid to its winner by every other player. Tied holes carry to the next.`;
+      case 'match': return `The losing side pays $${s}, split across the winning team.`;
+      default: return '';
+    }
+  };
+
+  const blocks = modes.map(m => {
+    const nets = byMode[m];
+    const chips = Object.entries(nets)
+      .filter(([, v]) => Math.abs(v) > 0.005)
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, v]) => {
+        const dir = v > 0 ? 'money-chip-up' : 'money-chip-down';
+        return `<span class="money-chip ${dir}">${escapeHtml(nameById[id] || '?')} <b>${Golf.formatMoney(v)}</b></span>`;
+      })
+      .join('');
+    return `
+      <div class="money-mode">
+        <div class="money-mode-head">${escapeHtml(MODE_NAMES[m] || m)}</div>
+        <div class="money-mode-rule">${ruleFor(m)}</div>
+        <div class="money-mode-nets">${chips}</div>
+      </div>`;
+  }).join('');
+
+  return `<div class="money-breakdown"><div class="money-settle-title">How it breaks down</div>${blocks}</div>`;
 }
 
 function moneySettleHtml(transactions, nameById) {
