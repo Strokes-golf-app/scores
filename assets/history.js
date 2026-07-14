@@ -252,8 +252,10 @@ function renderHistoryDetailBoard(mode) {
 }
 
 function renderHistoryDetailSkins(summaries, round, metaEl, boardEl) {
-  const { skinsByPlayer } = Golf.computeSkins(summaries, round.holeCount);
-  metaEl.textContent = 'Skins won. Lowest net score on a hole takes it; ties push.';
+  const { skinsByPlayer, carry } = Golf.computeSkins(summaries, round.holeCount);
+  metaEl.textContent = carry > 0
+    ? `Skins won. Ties carry to the next hole. ${carry} skin(s) went unclaimed.`
+    : 'Skins won. Lowest net on a hole takes the pot; ties carry to the next hole.';
 
   const ranked = Object.entries(skinsByPlayer)
     .map(([playerId, count]) => ({
