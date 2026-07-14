@@ -158,6 +158,33 @@ describe('computeSkins', () => {
     expect(skinsByPlayer.a).toBe(0);
     expect(skinsByPlayer.b).toBe(0);
   });
+
+  it('accumulates a multi-hole carry and pays the full pot to the next winner', () => {
+    const pars = [4, 4, 4, 4];
+    // Holes 1 and 2 tie; hole 3 Alice wins outright and takes 1+1+1 = 3.
+    const a = Golf.summarizePlayer({ id: 'a', name: 'Alice', handicap: 0 }, { 1: 4, 2: 4, 3: 3, 4: 5 }, pars, null, 4);
+    const b = Golf.summarizePlayer({ id: 'b', name: 'Bob', handicap: 0 }, { 1: 4, 2: 4, 3: 4, 4: 4 }, pars, null, 4);
+
+    const { skinsByPlayer, log, carry } = Golf.computeSkins([a, b], 4);
+
+    expect(log[2].value).toBe(3);    // hole 3 pays the two carried skins plus its own
+    expect(skinsByPlayer.a).toBe(3); // hole 4 goes to Bob
+    expect(skinsByPlayer.b).toBe(1);
+    expect(carry).toBe(0);
+  });
+
+  it('reports skins left in the pot when the final hole is tied', () => {
+    const pars = [4, 4];
+    // Both holes tie, so the pot ends unclaimed.
+    const a = Golf.summarizePlayer({ id: 'a', name: 'Alice', handicap: 0 }, { 1: 4, 2: 4 }, pars, null, 2);
+    const b = Golf.summarizePlayer({ id: 'b', name: 'Bob', handicap: 0 }, { 1: 4, 2: 4 }, pars, null, 2);
+
+    const { skinsByPlayer, carry } = Golf.computeSkins([a, b], 2);
+
+    expect(skinsByPlayer.a).toBe(0);
+    expect(skinsByPlayer.b).toBe(0);
+    expect(carry).toBe(2); // both holes rolled forward with no winner
+  });
 });
 
 describe('computeMatchPlay', () => {
