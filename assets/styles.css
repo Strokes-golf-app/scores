@@ -460,6 +460,19 @@ h1, h2, h3 {
   background: var(--cream);
   font-weight: 700;
 }
+.course-detail-scorecard .scorecard-scroll + .scorecard-scroll {
+  margin-top: 0.85rem;
+}
+.course-detail-total {
+  margin-top: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink-soft);
+  text-align: right;
+}
+.course-detail-total strong {
+  color: var(--ink);
+}
 .btn-block {
   width: 100%;
 }
