@@ -267,12 +267,33 @@
   </header>
 
   <div class="screen-body">
+    <div class="screen-body">
+    <div class="course-filter-wrap">
+      <input type="text" id="course-filter-input" class="course-filter-input" placeholder="Search saved courses" autocomplete="off">
+    </div>
     <div id="course-manage-list" class="course-manage-list"></div>
     <button class="btn btn-secondary btn-block" id="btn-manage-add-course" type="button">+ Upload a course</button>
   </div>
 </section>
 
-<!-- ============ SCREEN: MANAGE PROFILE ============ -->
+<!-- ============ SCREEN: COURSE DETAIL (read-only) ============ -->
+<section id="screen-course-detail" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-course-detail-back" aria-label="Back">←</button>
+    <h2 class="topbar-title">Course</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
+  <div class="screen-body">
+    <div class="course-detail-header">
+      <span class="course-detail-name" id="course-detail-name"></span>
+      <span class="course-detail-meta" id="course-detail-meta"></span>
+    </div>
+    <div class="course-detail-scorecard" id="course-detail-scorecard"></div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: ROUND HISTORY ============ -->
 <section id="screen-profile" class="screen">
   <header class="topbar">
     <button class="icon-btn" id="btn-profile-back" aria-label="Back">←</button>
