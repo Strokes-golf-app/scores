@@ -76,6 +76,11 @@ async function afterAuthSuccess() {
   document.getElementById('auth-user-email').textContent = user ? user.email : '';
   document.getElementById('form-auth').reset();
 
+  // Name from signup: in memory if they logged in in the same tab, or —
+  // after the email round-trip — only in the pending-profile flag. Also
+  // tells us whether this is a fresh non-invited signup to onboard below.
+  const pendingProfileName = loadPendingProfileSetup();
+
   if (user) {
     const { data: existingProfile } = await supabaseClient
       .from('user_profiles')
@@ -86,13 +91,23 @@ async function afterAuthSuccess() {
     if (!existingProfile) {
       await supabaseClient.from('user_profiles').insert({
         id: user.id,
-        display_name: state.pendingSignupName || user.email,
+        display_name: state.pendingSignupName || pendingProfileName || user.email,
       });
     }
     state.pendingSignupName = null;
   }
 
   await refreshDrawerName();
+
+  // A non-invited new user who just verified and logged in: send them to
+  // the profile screen to add handicap + home city/state. One-shot flag,
+  // so returning users never hit this. Invited users don't have the flag
+  // (they carry a pending join code instead), so they fall through below.
+  if (pendingProfileName !== null) {
+    clearPendingProfileSetup();
+    await beginProfileOnboarding(pendingProfileName);
+    return;
+  }
 
   if (state.pendingJoinCode) {
     const code = state.pendingJoinCode;
