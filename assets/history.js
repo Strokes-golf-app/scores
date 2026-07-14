@@ -252,7 +252,7 @@ function renderHistoryDetailBoard(mode) {
 }
 
 function renderHistoryDetailSkins(summaries, round, metaEl, boardEl) {
-  const { skinsByPlayer, carry } = Golf.computeSkins(summaries, round.holeCount);
+  const { skinsByPlayer, carry, log } = Golf.computeSkins(summaries, round.holeCount);
   metaEl.textContent = carry > 0
     ? `Skins won. Ties carry to the next hole. ${carry} skin(s) went unclaimed.`
     : 'Skins won. Lowest net on a hole takes the pot; ties carry to the next hole.';
@@ -277,6 +277,8 @@ function renderHistoryDetailSkins(summaries, round, metaEl, boardEl) {
     `;
     boardEl.appendChild(rowEl);
   });
+
+  boardEl.insertAdjacentHTML('beforeend', skinsStripHtml(log, summaries, round.holeOffset));
 }
 
 function renderHistoryDetailMatch(summaries, round, metaEl, boardEl) {
