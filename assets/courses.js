@@ -537,14 +537,48 @@ async function renderCourseManageList() {
   const addBtn = document.getElementById('btn-manage-add-course');
   if (addBtn) addBtn.style.display = isAdmin ? '' : 'none';
 
+  // Stash the admin flag so renderCourseManageRows() can re-render on every
+  // keystroke of the filter without another getUser() round-trip.
+  state.isCourseAdmin = isAdmin;
+
   const courses = await loadMyCourses();
   state.myCourses = courses;
 
+  // Client-side filter box: no button, no round-trip. It only ever searches
+  // courses already saved (state.myCourses) — the list loaded just above.
+  const filterInput = document.getElementById('course-filter-input');
+  if (filterInput) {
+    filterInput.value = '';
+    if (filterInput.dataset.initialized !== 'true') {
+      filterInput.dataset.initialized = 'true';
+      filterInput.addEventListener('input', () => {
+        renderCourseManageRows(filterCoursesByQuery(state.myCourses || [], filterInput.value));
+      });
+    }
+  }
+
+  renderCourseManageRows(courses);
+}
+
+// Case-insensitive match against name + location. Empty query returns all.
+function filterCoursesByQuery(courses, query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) return courses;
+  return courses.filter(c =>
+    `${c.name || ''} ${c.location || ''}`.toLowerCase().includes(q)
+  );
+}
+
+// Renders whatever list it's handed — the full set on open, or a filtered
+// subset while searching. Reads the admin flag off state (set above).
+function renderCourseManageRows(courses) {
+  const isAdmin = state.isCourseAdmin === true;
   const list = document.getElementById('course-manage-list');
   list.innerHTML = '';
 
-  if (courses.length === 0) {
-    list.innerHTML = '<div class="course-manage-empty">No saved courses yet.</div>';
+  if (!courses || courses.length === 0) {
+    const noneSaved = (state.myCourses || []).length === 0;
+    list.innerHTML = `<div class="course-manage-empty">${noneSaved ? 'No saved courses yet.' : 'No courses match your search.'}</div>`;
     return;
   }
 
