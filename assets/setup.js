@@ -138,6 +138,10 @@ async function resetSetupScreen() {
   });
   document.getElementById('match-players-field').hidden = true;
   document.getElementById('match-use-handicap').checked = true;
+  state.setupBetsEnabled = false;
+  state.setupStakes = {};
+  document.getElementById('bets-enabled').checked = false;
+  document.getElementById('set-stakes-field').hidden = true;
 
   let hostName = '';
   let hostHandicap = 0;
@@ -614,6 +618,81 @@ function collectModes() {
   return Array.from(document.querySelectorAll('#mode-grid input[name="mode"]:checked')).map(cb => cb.value);
 }
 
+// Stakes screen — shared by setup (in-memory, pre-create) and the
+// lobby (writes back to the round). Sublabels encode the settlement
+// model for each mode.
+const STAKE_ORDER = ['gross', 'net', 'stableford', 'skins', 'match'];
+const STAKE_META = {
+  gross: { label: 'Gross', sub: 'Ante per player' },
+  net: { label: 'Net', sub: 'Ante per player' },
+  stableford: { label: 'Stableford', sub: 'Ante per player' },
+  skins: { label: 'Skins', sub: 'Per skin won' },
+  match: { label: 'Match play', sub: 'Team A vs Team B' },
+};
+
+function renderStakesScreen(modes, stakes) {
+  const list = document.getElementById('stakes-list');
+  const ordered = STAKE_ORDER.filter(m => modes.includes(m));
+  if (!ordered.length) {
+    list.innerHTML = '<p class="field-hint">Pick at least one game mode first, then set its stake here.</p>';
+    return;
+  }
+  list.innerHTML = ordered.map(m => {
+    const meta = STAKE_META[m];
+    const val = stakes && stakes[m] != null ? stakes[m] : '';
+    return `
+      <div class="stakes-row">
+        <div>
+          <span class="stakes-row-name">${meta.label}</span>
+          <span class="stakes-row-sub">${meta.sub}</span>
+        </div>
+        <div class="stakes-amount">
+          <span class="cur">$</span>
+          <input type="number" class="stakes-input" data-mode="${m}" min="0" step="1" inputmode="numeric" placeholder="0" value="${val}">
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function collectStakes() {
+  const stakes = {};
+  document.querySelectorAll('#stakes-list .stakes-input').forEach(inp => {
+    const v = Number(inp.value);
+    if (inp.value !== '' && v > 0) stakes[inp.dataset.mode] = v;
+  });
+  return stakes;
+}
+
+function openStakesScreen(context) {
+  state.stakesContext = context;
+  if (context === 'lobby') {
+    const r = state.round;
+    renderStakesScreen(r.modes || ['gross'], r.stakes || {});
+  } else {
+    renderStakesScreen(collectModes(), state.setupStakes || {});
+  }
+  showScreen('screen-stakes');
+}
+
+async function saveStakesScreen() {
+  const stakes = collectStakes();
+  if (state.stakesContext === 'lobby') {
+    const { error } = await supabaseClient
+      .from('rounds')
+      .update({ stakes, bets_enabled: true })
+      .eq('id', state.roundId);
+    if (error) { console.error(error); showToast('Could not save stakes — try again'); return; }
+    await loadRound(state.roundId);
+    showScreen('screen-lobby');
+    renderLobby();
+    showToast('Stakes updated');
+  } else {
+    state.setupStakes = stakes;
+    showScreen('screen-setup');
+    showToast('Stakes saved');
+  }
+}
+
 // ---------------------------------------------------------
 // Round creation
 // ---------------------------------------------------------
@@ -668,6 +747,8 @@ async function createRound() {
         host_user_id: currentUser.id,
         stroke_index: strokeIndex,
         hole_offset: state.selectedCourseNine === 'back' ? 9 : 0,
+        bets_enabled: state.setupBetsEnabled === true,
+        stakes: state.setupBetsEnabled ? (state.setupStakes || {}) : {},
       });
 
     if (roundErr) throw roundErr;

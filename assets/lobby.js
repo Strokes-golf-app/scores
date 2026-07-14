@@ -33,9 +33,37 @@ function renderLobby() {
   document.getElementById('lobby-modes').innerHTML =
     (r.modes || ['gross']).map(m => `<span class="chip">${MODE_NAMES[m] || m}</span>`).join('');
 
+  renderLobbyStakes();
+
   document.getElementById('btn-start-round').hidden = !isHost();
 
   if (r.started) enterRound();
+}
+
+// Shows current stakes in the lobby. The host always sees this block
+// (so they can add or edit stakes even if bets were left off at
+// setup); everyone else sees it only once real stakes exist.
+function renderLobbyStakes() {
+  const r = state.round;
+  const field = document.getElementById('lobby-stakes-field');
+  const hasStakes = r.stakes && Object.keys(r.stakes).some(k => r.stakes[k] > 0);
+
+  if (!((r.betsEnabled && hasStakes) || isHost())) { field.hidden = true; return; }
+  field.hidden = false;
+
+  const list = document.getElementById('lobby-stakes-list');
+  if (hasStakes) {
+    list.innerHTML = STAKE_ORDER.filter(m => r.stakes[m] > 0).map(m => {
+      const unit = m === 'skins' ? '/skin' : '';
+      return `<div class="lobby-stakes-row"><span>${MODE_NAMES[m] || m}</span><span class="lobby-stakes-amt">$${r.stakes[m]}${unit}</span></div>`;
+    }).join('');
+  } else {
+    list.innerHTML = '<p class="field-hint">No stakes set yet.</p>';
+  }
+
+  const editBtn = document.getElementById('btn-edit-stakes');
+  editBtn.hidden = !isHost();
+  editBtn.textContent = hasStakes ? 'Edit stakes' : 'Add stakes';
 }
 
 async function addPlayerToRound(roundId) {
