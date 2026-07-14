@@ -131,18 +131,21 @@ describe('rankPlayers', () => {
 });
 
 describe('computeSkins', () => {
-  it('awards a skin to the lowest net score, pushing on ties', () => {
+  it('awards the pot to the lowest net score, carrying ties to the next hole', () => {
     const pars = [4, 4, 4];
     const a = Golf.summarizePlayer({ id: 'a', name: 'Alice', handicap: 0 }, { 1: 4, 2: 5, 3: 3 }, pars, null, 3);
     const b = Golf.summarizePlayer({ id: 'b', name: 'Bob', handicap: 0 }, { 1: 5, 2: 5, 3: 4 }, pars, null, 3);
 
-    const { skinsByPlayer, log } = Golf.computeSkins([a, b], 3);
+    const { skinsByPlayer, log, carry } = Golf.computeSkins([a, b], 3);
 
-    expect(skinsByPlayer.a).toBe(2); // holes 1 and 3
+    // Hole 1: Alice wins (1). Hole 2: tied, skin carries. Hole 3: Alice
+    // wins the carried pot (1 + 1 = 2), ending with 3 total.
+    expect(skinsByPlayer.a).toBe(3);
     expect(skinsByPlayer.b).toBe(0);
-    expect(log[1].winnerId).toBeNull(); // hole 2 tied, no winner
+    expect(log[1].winnerId).toBeNull(); // hole 2 tied, pot carried
+    expect(log[2].value).toBe(2);       // hole 3 paid out the carried pot
+    expect(carry).toBe(0);
   });
-
   it('marks a hole pending when not everyone has entered a score yet', () => {
     const pars = [4, 4];
     const a = Golf.summarizePlayer({ id: 'a', name: 'Alice', handicap: 0 }, { 1: 4, 2: 5 }, pars, null, 2);
