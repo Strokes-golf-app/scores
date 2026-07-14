@@ -255,7 +255,7 @@ function renderHistoryDetailBoard(mode) {
 }
 
 function renderHistoryDetailMoney(summaries, round, metaEl, boardEl) {
-  const { byPlayer, transactions } = Golf.computeMoney(summaries, {
+  const { byMode, byPlayer, transactions } = Golf.computeMoney(summaries, {
     modes: round.modes,
     stakes: round.stakes,
     holeCount: round.holeCount,
@@ -288,6 +288,7 @@ function renderHistoryDetailMoney(summaries, round, metaEl, boardEl) {
   });
 
   boardEl.insertAdjacentHTML('beforeend', moneySettleHtml(transactions, nameById));
+  boardEl.insertAdjacentHTML('beforeend', moneyBreakdownHtml(byMode, round.stakes, nameById));
 }
 
 function renderHistoryDetailSkins(summaries, round, metaEl, boardEl) {
