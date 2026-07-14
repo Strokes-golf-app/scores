@@ -586,8 +586,12 @@ function renderCourseManageRows(courses) {
     const row = document.createElement('div');
     row.className = 'course-manage-row';
     const canManage = isAdmin;
+    // Whole row opens the read-only detail view (all users). The info area
+    // carries role="button" + a keydown handler so keyboard users get the
+    // same target; the row-level click covers mouse/touch. Edit/delete stop
+    // propagation so they don't also fire the detail open.
     row.innerHTML = `
-      <div class="course-manage-info">
+      <div class="course-manage-info" role="button" tabindex="0" data-id="${c.id}">
         <span class="course-manage-name">${escapeHtml(c.name)} - ${escapeHtml(c.location)}</span>
         <span class="course-manage-meta">${c.hole_count} holes</span>
       </div>
@@ -596,20 +600,135 @@ function renderCourseManageRows(courses) {
           <button class="icon-btn" data-action="edit" data-id="${c.id}" aria-label="Edit course">✏️</button>
           <button class="icon-btn" data-action="delete" data-id="${c.id}" aria-label="Delete course">🗑️</button>
         ` : ''}
+        <span class="course-manage-chevron" aria-hidden="true">›</span>
       </div>
     `;
+    row.addEventListener('click', () => openCourseDetail(c.id));
+    row.querySelector('.course-manage-info').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openCourseDetail(c.id);
+      }
+    });
     list.appendChild(row);
   });
 
   list.querySelectorAll('[data-action="edit"]').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       await startEditingCourse(btn.dataset.id);
       showScreen('screen-course-upload');
     });
   });
   list.querySelectorAll('[data-action="delete"]').forEach(btn => {
-    btn.addEventListener('click', () => deleteCourse(btn.dataset.id));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteCourse(btn.dataset.id);
+    });
   });
+}
+
+// Opens the read-only detail view for a saved course. Available to all
+// users (unlike edit/delete). Pulls the course from the already-loaded
+// state.myCourses — no extra fetch.
+async function openCourseDetail(courseId) {
+  const course = (state.myCourses || []).find(c => String(c.id) === String(courseId));
+  if (!course) {
+    showToast('Could not open that course');
+    return;
+  }
+  renderCourseDetail(course);
+  showScreen('screen-course-detail');
+}
+
+// Builds a read-only scorecard grid (Hole / Par / Hcp) for a course,
+// reusing the .scorecard-table styles from the round-history view. 18-hole
+// courses get OUT / IN / TOT par totals; 9-hole courses get a single TOT
+// column. Handicap has no meaningful total, so those summary cells em-dash.
+function renderCourseDetail(course) {
+  document.getElementById('course-detail-name').textContent =
+    `${course.name || 'Course'}${course.location ? ` - ${course.location}` : ''}`;
+
+  const pars = Array.isArray(course.pars) ? course.pars : [];
+  const si = Array.isArray(course.stroke_index) ? course.stroke_index : [];
+  const holeCount = course.hole_count || pars.length || 0;
+
+  document.getElementById('course-detail-meta').textContent =
+    holeCount ? `${holeCount} holes` : '';
+
+  const wrap = document.getElementById('course-detail-scorecard');
+
+  if (!holeCount) {
+    wrap.innerHTML = '<div class="course-manage-empty">No hole data saved for this course.</div>';
+    return;
+  }
+
+  const parCell = i => (pars[i] != null && pars[i] !== '') ? pars[i] : '—';
+  const hcpCell = i => (si[i] != null && si[i] !== '') ? si[i] : '—';
+  const sumPars = (from, to) => {
+    let total = 0;
+    for (let i = from; i < to; i++) {
+      const p = Number(pars[i]);
+      if (Number.isFinite(p)) total += p;
+    }
+    return total;
+  };
+
+  const is18 = holeCount === 18;
+  const frontEnd = is18 ? 9 : holeCount;
+
+  let headHoles = '', parHoles = '', hcpHoles = '';
+  for (let i = 0; i < frontEnd; i++) {
+    headHoles += `<th class="sc-score"><span class="sc-holenum">${i + 1}</span></th>`;
+    parHoles += `<td class="sc-score">${parCell(i)}</td>`;
+    hcpHoles += `<td class="sc-score">${hcpCell(i)}</td>`;
+  }
+
+  let headOut = '', parOut = '', hcpOut = '';
+  let headBack = '', parBack = '', hcpBack = '';
+  let headIn = '', parIn = '', hcpIn = '';
+  if (is18) {
+    headOut = '<th class="sc-score sc-summarycol">OUT</th>';
+    parOut = `<td class="sc-score sc-summarycol">${sumPars(0, 9)}</td>`;
+    hcpOut = '<td class="sc-score sc-summarycol">—</td>';
+
+    for (let i = 9; i < 18; i++) {
+      headBack += `<th class="sc-score"><span class="sc-holenum">${i + 1}</span></th>`;
+      parBack += `<td class="sc-score">${parCell(i)}</td>`;
+      hcpBack += `<td class="sc-score">${hcpCell(i)}</td>`;
+    }
+
+    headIn = '<th class="sc-score sc-summarycol">IN</th>';
+    parIn = `<td class="sc-score sc-summarycol">${sumPars(9, 18)}</td>`;
+    hcpIn = '<td class="sc-score sc-summarycol">—</td>';
+  }
+
+  const headTot = '<th class="sc-score sc-summarycol">TOT</th>';
+  const parTot = `<td class="sc-score sc-summarycol">${sumPars(0, holeCount)}</td>`;
+  const hcpTot = '<td class="sc-score sc-summarycol">—</td>';
+
+  wrap.innerHTML = `
+    <div class="scorecard-scroll">
+      <table class="scorecard-table">
+        <thead>
+          <tr>
+            <th class="sc-rowhead sc-corner">Hole</th>
+            ${headHoles}${headOut}${headBack}${headIn}${headTot}
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="sc-subrow">
+            <td class="sc-rowhead">Par</td>
+            ${parHoles}${parOut}${parBack}${parIn}${parTot}
+          </tr>
+          <tr>
+            <td class="sc-rowhead">Hcp</td>
+            ${hcpHoles}${hcpOut}${hcpBack}${hcpIn}${hcpTot}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 async function deleteCourse(courseId) {
