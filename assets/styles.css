@@ -1493,6 +1493,76 @@ input::placeholder {
   border-width: 2px;
 }
 
+/* ---------- Skins hole-by-hole strip ---------- */
+.skins-strip-wrap {
+  margin-top: 0.9rem;
+}
+.skins-strip-label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.4rem;
+}
+.skins-strip {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+}
+.skins-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 2px;
+  min-height: 48px;
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--ink-faint);
+}
+.skins-cell-num {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+}
+.skins-cell-main {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+.skins-cell-sub {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.skins-cell.won {
+  background: var(--fairway-light);
+  border-color: var(--fairway-light);
+  color: var(--white);
+}
+.skins-cell.carry {
+  background: var(--sand);
+  border-color: var(--sand);
+  color: var(--ink);
+}
+.skins-cell.pending {
+  border-style: dashed;
+}
+
 /* ---------- Leaderboard tab ---------- */
 .modetab-row {
   display: flex;

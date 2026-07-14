@@ -78,12 +78,16 @@ function renderLeaderboardTab() {
 function renderSkinsBoard(summaries, r) {
   const metaEl = document.getElementById('board-meta');
   const boardEl = document.getElementById('leaderboard');
-  const { skinsByPlayer, log } = Golf.computeSkins(summaries, r.holeCount);
+  const { skinsByPlayer, log, carry } = Golf.computeSkins(summaries, r.holeCount);
   const pendingCount = log.filter(l => l.pending).length;
 
-  metaEl.textContent = pendingCount > 0
-    ? `Skins won so far. ${pendingCount} hole(s) still waiting on everyone's score.`
-    : 'Skins won. Lowest net score on a hole takes it; ties push.';
+  if (pendingCount > 0) {
+    metaEl.textContent = `Skins won so far. Ties carry to the next hole. ${pendingCount} hole(s) still waiting on everyone's score.`;
+  } else if (carry > 0) {
+    metaEl.textContent = `Skins won. Ties carry to the next hole. ${carry} skin(s) still in the pot, unclaimed.`;
+  } else {
+    metaEl.textContent = 'Skins won. Lowest net on a hole takes the pot; ties carry to the next hole.';
+  }
 
   const ranked = Object.entries(skinsByPlayer)
     .map(([playerId, count]) => ({ playerId, count, name: summaries.find(s => s.playerId === playerId)?.name || '?' }))
@@ -101,6 +105,36 @@ function renderSkinsBoard(summaries, r) {
     `;
     boardEl.appendChild(row);
   });
+
+  boardEl.insertAdjacentHTML('beforeend', skinsStripHtml(log, summaries, r.holeOffset));
+}
+
+// Builds the hole-by-hole skins strip: one cell per hole. Green cells are
+// holes won outright (main number is the pot that landed, sub is the
+// winner); sand cells are ties where the pot rolled forward (main number
+// is the skins now riding); dashed cells are holes still pending. Shared
+// by the live leaderboard and the history detail view — defined here
+// because leaderboard.js loads before history.js.
+function skinsStripHtml(log, summaries, holeOffset) {
+  const nameById = {};
+  summaries.forEach(s => { nameById[s.playerId] = s.name; });
+  const off = holeOffset || 0;
+
+  const cells = log.map(entry => {
+    const num = entry.hole + off;
+    if (entry.pending) {
+      return `<div class="skins-cell pending"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">·</span></div>`;
+    }
+    if (entry.winnerId) {
+      const first = escapeHtml((nameById[entry.winnerId] || '?').split(' ')[0]);
+      return `<div class="skins-cell won"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">${entry.value}</span><span class="skins-cell-sub">${first}</span></div>`;
+    }
+    // Tied — the pot (what carried in, plus this hole) rolls forward.
+    const rolling = (entry.carriedIn || 0) + 1;
+    return `<div class="skins-cell carry"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">${rolling}</span><span class="skins-cell-sub">carry</span></div>`;
+  }).join('');
+
+  return `<div class="skins-strip-wrap"><p class="skins-strip-label">Hole by hole</p><div class="skins-strip">${cells}</div></div>`;
 }
 
 function renderMatchBoard(summaries, r) {
