@@ -160,13 +160,10 @@ function displayCourseSearchResults(localResults, apiResults) {
 
   resultsEl.innerHTML = '';
 
-  const combined = [];
-  if (localResults.length > 0) {
-    combined.push({ label: 'SAVED COURSES', items: localResults.map(course => ({ ...course, source: 'local' })) });
-  }
-  if (apiResults.length > 0) {
-    combined.push({ label: 'GOLF COURSE API', items: apiResults });
-  }
+  const combined = [
+    ...localResults.map(course => ({ ...course, source: 'local' })),
+    ...apiResults
+  ];
 
   if (combined.length === 0) {
     resultsEl.innerHTML = '<div class="search-result-empty">No matches found</div>';
@@ -174,19 +171,12 @@ function displayCourseSearchResults(localResults, apiResults) {
     return;
   }
 
-  combined.forEach(group => {
-    const label = document.createElement('div');
-    label.className = 'search-result-label';
-    label.textContent = group.label;
-    resultsEl.appendChild(label);
-
-    group.items.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `search-result-item ${item.source === 'api' ? 'api' : 'local'}`;
-      row.textContent = `${item.name || item.course_name || 'Course'}${item.location ? ` - ${item.location}` : ''}`;
-      row.addEventListener('click', () => selectCourseFromSearch(item));
-      resultsEl.appendChild(row);
-    });
+  combined.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'search-result-item';
+    row.textContent = `${item.name || item.course_name || 'Course'}${item.location ? ` - ${item.location}` : ''}`;
+    row.addEventListener('click', () => selectCourseFromSearch(item));
+    resultsEl.appendChild(row);
   });
 
   resultsEl.hidden = false;

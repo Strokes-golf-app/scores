@@ -218,19 +218,17 @@ function displaySetupCourseSearchResults(localResults, apiResults) {
 
   resultsEl.innerHTML = '';
 
-  const combined = [];
-  if (localResults.length > 0) {
-    combined.push({ label: 'YOUR COURSES', items: localResults.map(course => ({ ...course, source: 'local' })) });
-  }
-  if (apiResults.length > 0) {
-    combined.push({ label: 'GOLF COURSE API', items: apiResults });
-  }
+  // One flat list — local (saved) results first, then API results.
+  // No labels, no visual distinction between the two sources.
+  const combined = [
+    ...localResults.map(course => ({ ...course, source: 'local' })),
+    ...apiResults
+  ];
 
   if (combined.length === 0) {
-    resultsEl.innerHTML = '';
     const empty = document.createElement('div');
     empty.className = 'search-result-empty';
-    empty.textContent = 'No saved or API matches.';
+    empty.textContent = 'No matches found.';
     resultsEl.appendChild(empty);
 
     const manualRow = document.createElement('div');
@@ -243,19 +241,12 @@ function displaySetupCourseSearchResults(localResults, apiResults) {
     return;
   }
 
-  combined.forEach(group => {
-    const label = document.createElement('div');
-    label.className = 'search-result-label';
-    label.textContent = group.label;
-    resultsEl.appendChild(label);
-
-    group.items.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `search-result-item ${item.source === 'api' ? 'api' : 'local'}`;
-      row.textContent = `${item.name || item.course_name || 'Course'}${item.location ? ` - ${item.location}` : ''}`;
-      row.addEventListener('click', () => selectSetupCourseResult(item));
-      resultsEl.appendChild(row);
-    });
+  combined.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'search-result-item';
+    row.textContent = `${item.name || item.course_name || 'Course'}${item.location ? ` - ${item.location}` : ''}`;
+    row.addEventListener('click', () => selectSetupCourseResult(item));
+    resultsEl.appendChild(row);
   });
 
   resultsEl.hidden = false;

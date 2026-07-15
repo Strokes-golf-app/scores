@@ -197,26 +197,9 @@ h1, h2, h3 {
   background: var(--cream);
 }
 
-.search-result-item.local {
-  border-left: 3px solid var(--fairway-light);
-}
-
-.search-result-item.api {
-  border-left: 3px solid var(--flag);
-}
-
 .search-result-item.manual {
   border-left: 3px solid var(--line);
   font-weight: 600;
-}
-
-.search-result-label {
-  padding: 0.5rem 0.9rem 0.25rem;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
 }
 
 .search-result-empty {
