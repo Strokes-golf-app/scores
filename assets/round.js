@@ -31,6 +31,16 @@ function mapPlayerScores(scoreRows, playerId) {
   return scores;
 }
 
+// Builds the per-hole { "1": putts, ... } object for one player.
+// Putts are optional, so holes without a recorded count are simply absent.
+function mapPlayerPutts(scoreRows, playerId) {
+  const putts = {};
+  scoreRows
+    .filter(s => s.player_id === playerId)
+    .forEach(s => { if (s.putts != null) putts[String(s.hole)] = s.putts; });
+  return putts;
+}
+
 // Turns raw player rows + score rows into the player objects the app
 // uses (handicap coerced to a number, scores keyed by hole).
 function mapPlayers(playerRows, scoreRows) {
@@ -38,6 +48,7 @@ function mapPlayers(playerRows, scoreRows) {
     ...p,
     handicap: Number(p.handicap) || 0,
     scores: mapPlayerScores(scoreRows, p.id),
+    putts: mapPlayerPutts(scoreRows, p.id),
   }));
 }
 
