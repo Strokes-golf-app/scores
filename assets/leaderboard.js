@@ -17,6 +17,14 @@ function buildSummaries() {
   );
 }
 
+// Total recorded putts for a player across every hole. Holes with no putt
+// count recorded are simply skipped. Used on the gross board.
+function playerPuttsTotal(playerId) {
+  const p = (state.round.players || []).find(pl => pl.id === playerId);
+  if (!p || !p.putts) return 0;
+  return Object.values(p.putts).reduce((sum, v) => sum + (Number(v) || 0), 0);
+}
+
 function renderLeaderboardTab() {
   const r = state.round;
   if (!r) return;
@@ -70,7 +78,7 @@ function renderLeaderboardTab() {
       <span class="lb-rank">${s.rank || '–'}</span>
       <span class="lb-name-wrap">
         <span class="lb-name">${escapeHtml(s.name)}</span>
-        <span class="lb-thru">${s.thru > 0 ? 'thru ' + s.thru : 'not started'}</span>
+        <span class="lb-thru">${s.thru > 0 ? 'thru ' + s.thru + (mode === 'gross' ? ' · ' + playerPuttsTotal(s.playerId) + ' putts' : '') : 'not started'}</span>
       </span>
       <span class="lb-detail">${s.thru > 0 ? detail : ''}</span>
       <span class="lb-score ${scoreClass}">${scoreText}</span>

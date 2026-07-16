@@ -86,6 +86,8 @@ function renderScorecardTab() {
 
   document.getElementById('end-round-wrap').hidden = !(isHost() && !r.ended && h === r.holeCount);
 
+  renderPuttsRow(player, r, h, gross);
+
   if (h === 15) {
     showFifteenthHoleReminder();
   }
@@ -147,6 +149,65 @@ function renderMiniHoles(player, r) {
   }
 }
 
+// The putts chip row (0–5+) under the stroke entry. Shown only once the
+// hole has a stroke score and only when entering your own card; the seeded
+// default of 2 renders as the selected chip until the player adjusts it.
+function renderPuttsRow(player, r, h, gross) {
+  const wrap = document.getElementById('putts-row');
+  if (!wrap) return;
+
+  const editingSelf = player.id === state.myPlayerId;
+  if (gross == null || !editingSelf) {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    return;
+  }
+  wrap.style.display = 'flex';
+
+  const current = player.putts && player.putts[String(h)] != null ? Number(player.putts[String(h)]) : 2;
+  const chips = [0, 1, 2, 3, 4, 5];
+  const chipHtml = chips.map(v => {
+    const label = v === 5 ? '5+' : String(v);
+    const active = (v === 5 ? current >= 5 : current === v) ? ' active' : '';
+    const disabled = r.ended ? ' disabled' : '';
+    return `<button type="button" class="putt-chip${active}" data-putts="${v}"${disabled}>${label}</button>`;
+  }).join('');
+
+  wrap.innerHTML = `<span class="putts-label">Putts</span><div class="putts-chips">${chipHtml}</div>`;
+}
+
+async function setPutts(value) {
+  const r = state.round;
+  if (r.ended) {
+    showToast('This round has ended');
+    return;
+  }
+  const player = scoringPlayer();
+  if (!player) return;
+  const h = state.currentHole;
+
+  // Putts only make sense once a stroke score exists for the hole.
+  if (!player.scores || player.scores[String(h)] == null) return;
+
+  const putts = Math.max(0, Math.min(10, Number(value)));
+  if (!player.putts) player.putts = {};
+  player.putts[String(h)] = putts;
+  renderScorecardTab();
+
+  const strokes = Number(player.scores[String(h)]);
+  const editingSelf = player.id === state.myPlayerId;
+  const { error } = editingSelf
+    ? await supabaseClient
+        .from('scores')
+        .upsert({ player_id: player.id, hole: h, strokes, putts }, { onConflict: 'player_id,hole' })
+    : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: strokes });
+
+  if (error) {
+    console.error(error);
+    showToast('Could not save putts — check your connection');
+  }
+}
+
 async function setStroke(delta) {
   const r = state.round;
   if (r.ended) {
@@ -162,13 +223,20 @@ async function setStroke(delta) {
   next = Math.max(1, Math.min(15, next));
 
   player.scores[String(h)] = next;
+
+  // First score on this hole seeds putts with the default of 2 so the chip
+  // row shows a real, saved value the player can adjust down or up.
+  if (!player.putts) player.putts = {};
+  if (player.putts[String(h)] == null) player.putts[String(h)] = 2;
+  const putts = player.putts[String(h)];
+
   renderScorecardTab();
 
   const editingSelf = player.id === state.myPlayerId;
   const { error } = editingSelf
     ? await supabaseClient
         .from('scores')
-        .upsert({ player_id: player.id, hole: h, strokes: next }, { onConflict: 'player_id,hole' })
+        .upsert({ player_id: player.id, hole: h, strokes: next, putts }, { onConflict: 'player_id,hole' })
     : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: next });
 
   if (error) {
