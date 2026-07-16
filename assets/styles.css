@@ -1389,6 +1389,60 @@ input::placeholder {
 }
 .money-chip-up b { color: var(--fairway); }
 .money-chip-down b { color: var(--flag); }
+
+/* ---------- Stakes info link + dialog ---------- */
+.stakes-info-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 2px 0 0;
+  margin-top: 1px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--fairway);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.stakes-info-icon {
+  font-size: 12px;
+  text-decoration: none;
+}
+.bet-info-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 20, 16, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1100;
+}
+.bet-info-card {
+  width: min(100%, 340px);
+  background: var(--cream);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.bet-info-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--fairway-dark);
+}
+.bet-info-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
 /* ---------- Lobby code card ---------- */
 .code-card {
   display: flex;

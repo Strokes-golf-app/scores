@@ -621,6 +621,43 @@ const STAKE_META = {
   match: { label: 'Match play', sub: 'Team A vs Team B' },
 };
 
+// Plain-language "what this bet is" for the info dialog on the stakes
+// screen. Kept next to STAKE_META so the two stay in sync.
+const BET_EXPLAINERS = {
+  gross: {
+    title: 'Gross — winner takes the pot',
+    body: 'Everyone antes the same amount into one pot. Whoever posts the lowest total strokes for the round — no handicap applied — takes the whole pot. If players tie for the low score, they split it evenly.',
+  },
+  net: {
+    title: 'Net — winner takes the pot',
+    body: "Same as gross, but each player's handicap is applied first to level the field. Everyone antes; the lowest net total wins the entire pot, and ties split it evenly.",
+  },
+  stableford: {
+    title: 'Stableford — winner takes the pot',
+    body: 'Everyone antes into one pot. You earn points on each hole — more points for better scores — and whoever finishes with the most points wins the whole pot. Ties split evenly.',
+  },
+  skins: {
+    title: 'Skins — win holes, get paid',
+    body: 'Every hole is worth one skin. Win a hole outright and each of the other players pays you the skin value. Tie a hole and its skin carries to the next, so a single hole can be worth several stacked skins. Any skins still carrying at the end pay no one.',
+  },
+  match: {
+    title: 'Match play — team vs team',
+    body: 'The two sides play head-to-head, hole by hole. Whoever is ahead when the match can no longer be caught wins it. The losing side pays the match stake, split across the winning team. A tied (halved) match pays nothing.',
+  },
+};
+
+function openBetInfo(mode) {
+  const info = BET_EXPLAINERS[mode];
+  if (!info) return;
+  document.getElementById('bet-info-title').textContent = info.title;
+  document.getElementById('bet-info-body').textContent = info.body;
+  document.getElementById('bet-info-modal').hidden = false;
+}
+
+function closeBetInfo() {
+  document.getElementById('bet-info-modal').hidden = true;
+}
+
 function renderStakesScreen(modes, stakes) {
   const list = document.getElementById('stakes-list');
   const ordered = STAKE_ORDER.filter(m => modes.includes(m));
@@ -635,7 +672,7 @@ function renderStakesScreen(modes, stakes) {
       <div class="stakes-row">
         <div>
           <span class="stakes-row-name">${meta.label}</span>
-          <span class="stakes-row-sub">${meta.sub}</span>
+          <button type="button" class="stakes-row-sub stakes-info-link" data-mode="${m}" aria-label="What ${meta.label} means">${meta.sub}<span class="stakes-info-icon" aria-hidden="true">ⓘ</span></button>
         </div>
         <div class="stakes-amount">
           <span class="cur">$</span>
