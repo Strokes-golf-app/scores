@@ -152,30 +152,29 @@ function renderMiniHoles(player, r) {
 // The putts chip row (0–5+) under the stroke entry. Shown only once the
 // hole has a stroke score and only when entering your own card; the seeded
 // default of 2 renders as the selected chip until the player adjusts it.
+// The putts stepper (−/+, default 2) under the stroke entry. Always visible
+// while scoring — including before a stroke is entered — so the count is
+// always adjustable. Putts only persist once a stroke score exists for the
+// hole (scores.strokes is NOT NULL); until then the value is held in memory
+// and saved alongside the first stroke.
 function renderPuttsRow(player, r, h, gross) {
   const wrap = document.getElementById('putts-row');
   if (!wrap) return;
-
-  if (gross == null) {
-    wrap.style.display = 'none';
-    wrap.innerHTML = '';
-    return;
-  }
   wrap.style.display = 'flex';
 
   const current = player.putts && player.putts[String(h)] != null ? Number(player.putts[String(h)]) : 2;
-  const chips = [0, 1, 2, 3, 4, 5];
-  const chipHtml = chips.map(v => {
-    const label = v === 5 ? '5+' : String(v);
-    const active = (v === 5 ? current >= 5 : current === v) ? ' active' : '';
-    const disabled = r.ended ? ' disabled' : '';
-    return `<button type="button" class="putt-chip${active}" data-putts="${v}"${disabled}>${label}</button>`;
-  }).join('');
+  const disabled = r.ended ? ' disabled' : '';
 
-  wrap.innerHTML = `<span class="putts-label">Putts</span><div class="putts-chips">${chipHtml}</div>`;
+  wrap.innerHTML = `
+    <span class="putts-label">Putts</span>
+    <div class="putts-entry">
+      <button type="button" class="putts-btn putts-minus" data-delta="-1" aria-label="Decrease putts"${disabled}>−</button>
+      <span class="putts-number">${current}</span>
+      <button type="button" class="putts-btn putts-plus" data-delta="1" aria-label="Increase putts"${disabled}>+</button>
+    </div>`;
 }
 
-async function setPutts(value) {
+async function setPutts(delta) {
   const r = state.round;
   if (r.ended) {
     showToast('This round has ended');
@@ -185,13 +184,16 @@ async function setPutts(value) {
   if (!player) return;
   const h = state.currentHole;
 
-  // Putts only make sense once a stroke score exists for the hole.
-  if (!player.scores || player.scores[String(h)] == null) return;
-
-  const putts = Math.max(0, Math.min(10, Number(value)));
   if (!player.putts) player.putts = {};
+  const current = player.putts[String(h)] != null ? Number(player.putts[String(h)]) : 2;
+  const putts = Math.max(0, Math.min(10, current + delta));
   player.putts[String(h)] = putts;
   renderScorecardTab();
+
+  // Can't persist putts without a stroke score — scores.strokes is NOT NULL.
+  // Hold the value in memory; setStroke saves it with the first stroke.
+  const hasScore = player.scores && player.scores[String(h)] != null;
+  if (!hasScore) return;
 
   const strokes = Number(player.scores[String(h)]);
   const editingSelf = player.id === state.myPlayerId;
