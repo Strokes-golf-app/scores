@@ -22,7 +22,10 @@ function buildSummaries() {
 function playerPuttsTotal(playerId) {
   const p = (state.round.players || []).find(pl => pl.id === playerId);
   if (!p || !p.putts) return 0;
-  return Object.values(p.putts).reduce((sum, v) => sum + (Number(v) || 0), 0);
+  return Object.keys(p.putts).reduce((sum, hole) => {
+    const hasScore = p.scores && p.scores[hole] != null;
+    return sum + (hasScore ? (Number(p.putts[hole]) || 0) : 0);
+  }, 0);
 }
 
 function renderLeaderboardTab() {
