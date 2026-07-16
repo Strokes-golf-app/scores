@@ -1679,11 +1679,11 @@ input::placeholder {
   margin-top: 0.3rem;
 }
 
-/* ---------- Putts chip row ---------- */
+/* ---------- Putts stepper ---------- */
 .putts-row {
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   padding: 0 0 1.25rem;
 }
 .putts-label {
@@ -1693,33 +1693,34 @@ input::placeholder {
   text-transform: uppercase;
   color: var(--ink-soft);
 }
-.putts-chips {
+.putts-entry {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
 }
-.putt-chip {
-  min-width: 40px;
-  height: 40px;
-  border-radius: 20px;
-  border: 1.5px solid var(--line);
-  background: var(--white);
-  color: var(--ink-soft);
-  font-family: var(--font-mono);
-  font-size: 15px;
+.putts-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  font-size: 24px;
   font-weight: 700;
   cursor: pointer;
-}
-.putt-chip:active {
-  transform: scale(0.94);
-}
-.putt-chip.active {
-  border-color: var(--fairway);
-  background: var(--fairway);
   color: var(--white);
 }
-.putt-chip:disabled {
-  opacity: 0.5;
-  cursor: default;
+.putts-minus { background: var(--ink-faint); }
+.putts-plus { background: var(--fairway); }
+.putts-btn:active { transform: scale(0.94); }
+.putts-btn:disabled { opacity: 0.5; cursor: default; }
+.putts-number {
+  font-family: var(--font-mono);
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  min-width: 56px;
+  text-align: center;
 }
 
 .end-round-wrap {
