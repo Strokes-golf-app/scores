@@ -885,6 +885,14 @@ h1, h2, h3 {
   font-size: 12px;
   color: var(--ink-faint);
 }
+.sc-putt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fairway-light);
+  vertical-align: super;
+  margin-left: 1px;
+}
 
 /* ---------- Fields ---------- */
 .field {
