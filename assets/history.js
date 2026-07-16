@@ -143,10 +143,15 @@ function reconstructRound(row) {
   const scoresSnap = row.scores_snapshot || [];
 
   const scoresByPlayer = {};
-  playersSnap.forEach(p => { scoresByPlayer[p.id] = {}; });
+  const puttsByPlayer = {};
+  playersSnap.forEach(p => { scoresByPlayer[p.id] = {}; puttsByPlayer[p.id] = {}; });
   scoresSnap.forEach(s => {
     if (!scoresByPlayer[s.player_id]) scoresByPlayer[s.player_id] = {};
     scoresByPlayer[s.player_id][String(s.hole)] = s.strokes;
+    if (s.putts != null) {
+      if (!puttsByPlayer[s.player_id]) puttsByPlayer[s.player_id] = {};
+      puttsByPlayer[s.player_id][String(s.hole)] = s.putts;
+    }
   });
 
   const players = playersSnap.map(p => ({
@@ -155,6 +160,7 @@ function reconstructRound(row) {
     handicap: p.handicap || 0,
     user_id: p.user_id,
     scores: scoresByPlayer[p.id] || {},
+    putts: puttsByPlayer[p.id] || {},
   }));
 
   return {
@@ -378,7 +384,7 @@ function firstName(name) {
 }
 
 // One score cell, marked by result relative to par.
-function scoreCell(gross, par, isMe) {
+function scoreCell(gross, par, isMe, putts) {
   const meCls = isMe ? ' sc-me' : '';
   if (gross == null) return `<td class="sc-score${meCls}">–</td>`;
   const diff = Number(gross) - par;
@@ -387,7 +393,8 @@ function scoreCell(gross, par, isMe) {
   else if (diff === -1) mark = ' sc-birdie';
   else if (diff === 1) mark = ' sc-bogey';
   else if (diff >= 2) mark = ' sc-double';
-  return `<td class="sc-score${meCls}"><span class="sc-mark${mark}">${gross}</span></td>`;
+  const puttTag = putts != null ? `<span class="sc-putt">${putts}</span>` : '';
+  return `<td class="sc-score${meCls}"><span class="sc-mark${mark}">${gross}</span>${puttTag}</td>`;
 }
 
 function renderHistoryScorecard(round) {
@@ -412,7 +419,7 @@ function renderHistoryScorecard(round) {
   const holeRow = (h) => {
     const par = pars[h - 1] || 4;
     let cells = `<th class="sc-rowhead"><span class="sc-holenum">${h + offset}</span><span class="sc-holepar">par ${par}</span></th>`;
-    players.forEach(p => { cells += scoreCell(p.scores[String(h)], par, isMe(p)); });
+    players.forEach(p => { cells += scoreCell(p.scores[String(h)], par, isMe(p), p.putts ? p.putts[String(h)] : null); });
     rows.push(`<tr>${cells}</tr>`);
   };
 
@@ -421,12 +428,15 @@ function renderHistoryScorecard(round) {
     for (let h = from; h <= to; h++) parSum += (pars[h - 1] || 4);
     let cells = `<th class="sc-rowhead"><span class="sc-holenum">${label}</span><span class="sc-holepar">par ${parSum}</span></th>`;
     players.forEach(p => {
-      let total = 0, any = false;
+      let total = 0, any = false, puttTotal = 0, anyPutt = false;
       for (let h = from; h <= to; h++) {
         const g = p.scores[String(h)];
         if (g != null) { total += Number(g); any = true; }
+        const pt = p.putts ? p.putts[String(h)] : null;
+        if (pt != null) { puttTotal += Number(pt); anyPutt = true; }
       }
-      cells += `<td class="sc-sub${isMe(p) ? ' sc-me' : ''}">${any ? total : '–'}</td>`;
+      const puttTag = anyPutt ? `<span class="sc-putt">${puttTotal}</span>` : '';
+      cells += `<td class="sc-sub${isMe(p) ? ' sc-me' : ''}">${any ? total : '–'}${puttTag}</td>`;
     });
     rows.push(`<tr class="sc-subrow">${cells}</tr>`);
   };
@@ -450,6 +460,6 @@ function renderHistoryScorecard(round) {
         <tbody>${rows.join('')}</tbody>
       </table>
     </div>
-    <p class="scorecard-key">Gross strokes · ○ under par · □ over par</p>
+    <p class="scorecard-key">Gross strokes · <span class="sc-putt">putts</span> · ○ under par · □ over par</p>
   `;
 }
