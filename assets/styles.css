@@ -1671,6 +1671,49 @@ input::placeholder {
   margin-top: 0.3rem;
 }
 
+/* ---------- Putts chip row ---------- */
+.putts-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0 1.25rem;
+}
+.putts-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.putts-chips {
+  display: flex;
+  gap: 8px;
+}
+.putt-chip {
+  min-width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.putt-chip:active {
+  transform: scale(0.94);
+}
+.putt-chip.active {
+  border-color: var(--fairway);
+  background: var(--fairway);
+  color: var(--white);
+}
+.putt-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .end-round-wrap {
   padding: 0.25rem 0 0.5rem;
 }
