@@ -180,6 +180,13 @@ function init() {
 
   document.getElementById('btn-stroke-minus').addEventListener('click', () => setStroke(-1));
   document.getElementById('btn-stroke-plus').addEventListener('click', () => setStroke(1));
+
+  document.getElementById('putts-row').addEventListener('click', e => {
+    const chip = e.target.closest('.putt-chip');
+    if (!chip || chip.disabled) return;
+    setPutts(Number(chip.dataset.putts));
+  });
+
   document.getElementById('btn-end-round').addEventListener('click', endRound);
 
   document.getElementById('auth-tab-login').addEventListener('click', () => setAuthMode('login'));
