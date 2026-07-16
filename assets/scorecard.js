@@ -156,8 +156,7 @@ function renderPuttsRow(player, r, h, gross) {
   const wrap = document.getElementById('putts-row');
   if (!wrap) return;
 
-  const editingSelf = player.id === state.myPlayerId;
-  if (gross == null || !editingSelf) {
+  if (gross == null) {
     wrap.style.display = 'none';
     wrap.innerHTML = '';
     return;
@@ -200,7 +199,7 @@ async function setPutts(value) {
     ? await supabaseClient
         .from('scores')
         .upsert({ player_id: player.id, hole: h, strokes, putts }, { onConflict: 'player_id,hole' })
-    : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: strokes });
+    : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: strokes, p_putts: putts });
 
   if (error) {
     console.error(error);
@@ -237,7 +236,7 @@ async function setStroke(delta) {
     ? await supabaseClient
         .from('scores')
         .upsert({ player_id: player.id, hole: h, strokes: next, putts }, { onConflict: 'player_id,hole' })
-    : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: next });
+    : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: next, p_putts: putts });
 
   if (error) {
     console.error(error);
