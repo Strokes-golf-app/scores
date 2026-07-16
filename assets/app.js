@@ -87,6 +87,17 @@ function init() {
   });
   document.getElementById('btn-stakes-save').addEventListener('click', saveStakesScreen);
 
+  // Stakes rows are rebuilt on each open, so delegate the info-link taps
+  // to the stable container.
+  document.getElementById('stakes-list').addEventListener('click', (e) => {
+    const link = e.target.closest('.stakes-info-link');
+    if (link) openBetInfo(link.dataset.mode);
+  });
+  document.getElementById('btn-bet-info-close').addEventListener('click', closeBetInfo);
+  document.getElementById('bet-info-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'bet-info-modal') closeBetInfo();
+  });
+
   document.getElementById('btn-lobby-leave').addEventListener('click', goHome);
   document.getElementById('btn-copy-code').addEventListener('click', async () => {
     const link = makeJoinLink(state.roundCode);
