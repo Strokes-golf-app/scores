@@ -630,7 +630,7 @@ const BET_EXPLAINERS = {
   },
   net: {
     title: 'Net — winner takes the pot',
-    body: "Same as gross, but each player's handicap is applied first to level the field. Everyone antes; the lowest net total wins the entire pot, and ties split it evenly.",
+    body: "Everyone antes the same amount into one pot. Each player's handicap is subtracted from their strokes first, so players of different skill levels compete on even footing. Whoever has the lowest net total takes the whole pot, and ties split it evenly.",
   },
   stableford: {
     title: 'Stableford — winner takes the pot',
