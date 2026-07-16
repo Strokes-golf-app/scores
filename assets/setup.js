@@ -625,23 +625,23 @@ const STAKE_META = {
 // screen. Kept next to STAKE_META so the two stay in sync.
 const BET_EXPLAINERS = {
   gross: {
-    title: 'Gross — winner takes the pot',
-    body: 'Everyone antes the same amount into one pot. Whoever posts the lowest total strokes for the round — no handicap applied — takes the whole pot. If players tie for the low score, they split it evenly.',
+    title: 'Gross: winner takes the pot',
+    body: 'Everyone antes the same amount into one pot. Whoever posts the lowest total strokes for the round with no handicap applied takes the whole pot. If players tie for the low score, they split it evenly.',
   },
   net: {
-    title: 'Net — winner takes the pot',
+    title: 'Net: winner takes the pot',
     body: "Everyone antes the same amount into one pot. Each player's handicap is subtracted from their strokes first, so players of different skill levels compete on even footing. Whoever has the lowest net total takes the whole pot, and ties split it evenly.",
   },
   stableford: {
-    title: 'Stableford — winner takes the pot',
-    body: 'Everyone antes into one pot. You earn points on each hole — more points for better scores — and whoever finishes with the most points wins the whole pot. Ties split evenly.',
+    title: 'Stableford: winner takes the pot',
+    body: 'Everyone antes into one pot. You earn points on each hole. More points are given for better scores, and whoever finishes with the most points wins the whole pot. Ties split evenly.',
   },
   skins: {
-    title: 'Skins — win holes, get paid',
+    title: 'Skins: win holes, get paid',
     body: 'Every hole is worth one skin. Win a hole outright and each of the other players pays you the skin value. Tie a hole and its skin carries to the next, so a single hole can be worth several stacked skins. Any skins still carrying at the end pay no one.',
   },
   match: {
-    title: 'Match play — team vs team',
+    title: 'Match play: team vs team',
     body: 'The two sides play head-to-head, hole by hole. Whoever is ahead when the match can no longer be caught wins it. The losing side pays the match stake, split across the winning team. A tied (halved) match pays nothing.',
   },
 };
