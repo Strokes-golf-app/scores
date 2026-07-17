@@ -100,7 +100,7 @@ async function saveProfile(e) {
   // Username is optional (older accounts may not have one yet), but if
   // provided it must match the DB format check: 3–20 chars, lowercase
   // letters / numbers / underscore. We lowercase for them so "HunterB" works.
-  const usernameRaw = document.getElementById('profile-username').value.trim().toLowerCase();
+  const usernameRaw = document.getElementById('profile-username').value.trim().replace(/^@+/, '').toLowerCase();
   if (usernameRaw && !/^[a-z0-9_]{3,20}$/.test(usernameRaw)) {
     errorEl.textContent = 'Username must be 3–20 characters: lowercase letters, numbers, or underscores.';
     errorEl.hidden = false;
