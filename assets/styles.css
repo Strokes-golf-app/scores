@@ -2100,6 +2100,63 @@ input::placeholder {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ---------- Friends ---------- */
+.friends-section { display: flex; flex-direction: column; gap: 0.5rem; }
+.friends-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.friend-search-results { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem; }
+.friend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.75rem;
+}
+.friend-info { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1; }
+.friend-name {
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.friend-handle {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.friend-actions { display: flex; align-items: center; gap: 0.4rem; flex: none; }
+.friend-btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 0.4rem 0.7rem;
+  font-family: var(--font-body);
+}
+.friend-btn-primary { background: var(--fairway); color: var(--cream); }
+.friend-btn-secondary { background: var(--sand-light); color: var(--ink); }
+.friend-btn-muted { background: none; color: var(--ink-faint); }
+.friend-remove {
+  background: none;
+  border: none;
+  color: var(--flag);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 0.3rem;
+}
+.friends-empty {
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 14px;
+  padding: 1.25rem 1rem;
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .btn, .toast { transition: none; }
