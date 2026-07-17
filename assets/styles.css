@@ -943,6 +943,38 @@ input::placeholder {
   color: var(--ink-faint);
 }
 
+/* ---------- Username field (@ prefix) ---------- */
+/* The wrapper carries the border/focus so the @ and the input read as
+   one control. The stored value is the bare handle — the @ is display only. */
+.username-input {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 0 0.85rem;
+  width: 100%;
+}
+.username-input:focus-within {
+  outline: 2px solid var(--fairway-light);
+  outline-offset: 1px;
+}
+.username-at {
+  color: var(--ink-faint);
+  font-size: 15px;
+  font-weight: 600;
+  padding-right: 0.1rem;
+  user-select: none;
+}
+.username-input input[type="text"] {
+  border: none;
+  background: transparent;
+  padding: 0.7rem 0;
+}
+.username-input input[type="text"]:focus {
+  outline: none;
+}
+
 #join-code {
   text-transform: uppercase;
   font-family: var(--font-mono);
