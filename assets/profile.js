@@ -62,11 +62,12 @@ async function openProfileScreen() {
 
   const { data: profile } = await supabaseClient
     .from('user_profiles')
-    .select('display_name, default_handicap, city, state')
+    .select('display_name, username, default_handicap, city, state')
     .eq('id', user.id)
     .maybeSingle();
 
   document.getElementById('profile-name').value = profile?.display_name || '';
+  document.getElementById('profile-username').value = profile?.username || '';
   document.getElementById('profile-handicap').value =
     (profile && profile.default_handicap != null) ? profile.default_handicap : '';
   document.getElementById('profile-city').value = profile?.city || '';
