@@ -184,6 +184,10 @@
       <img src="Strokes_Golf_Logo_Transparent.png" alt="STROKES GOLF" class="drawer-logo">
       <p class="drawer-user-name" id="drawer-user-name" hidden></p>
     </div>
+    <div class="drawer-nudge" id="drawer-username-nudge" hidden>
+      <button class="drawer-nudge-text" id="btn-username-nudge" type="button">Pick a username so friends can find you</button>
+      <button class="drawer-nudge-dismiss" id="btn-username-nudge-dismiss" type="button" aria-label="Dismiss">×</button>
+    </div>
     <nav class="drawer-nav">
       <button class="drawer-item" id="btn-friends" type="button">
         <span class="drawer-item-icon">👥</span> Friends
@@ -376,6 +380,17 @@
   </div>
 </section>
 
+<!-- Friend picker (used by round setup) -->
+<div class="friend-picker-modal" id="friend-picker-modal" hidden>
+  <div class="friend-picker-card" role="dialog" aria-modal="true" aria-labelledby="friend-picker-title">
+    <div class="friend-picker-head">
+      <p class="friend-picker-title" id="friend-picker-title">Add from friends</p>
+      <button class="icon-btn" id="btn-friend-picker-close" aria-label="Close">×</button>
+    </div>
+    <div class="friend-picker-list" id="friend-picker-list"></div>
+  </div>
+</div>
+
 <!-- ============ SCREEN: ROUND HISTORY ============ -->
 <section id="screen-history" class="screen">
   <header class="topbar">
@@ -521,6 +536,7 @@
       <p class="field-hint">Add everyone now, or just yourself — others can join with the round code and add themselves.</p>
       <div id="player-list" class="player-list"></div>
       <button class="btn btn-secondary btn-block" id="btn-add-player" type="button">+ Add a player</button>
+      <button class="btn btn-secondary btn-block" id="btn-add-from-friends" type="button">+ From friends</button>
     </div>
 
     <button class="btn btn-primary btn-lg btn-block" id="btn-create-round">Create round &amp; get code</button>

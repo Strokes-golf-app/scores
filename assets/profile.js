@@ -150,6 +150,8 @@ async function refreshDrawerName() {
   const el = document.getElementById('drawer-user-name');
   if (!el) return;
 
+  if (typeof refreshUsernameNudge === 'function') await refreshUsernameNudge();
+
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user || user.is_anonymous) {
     el.textContent = '';
