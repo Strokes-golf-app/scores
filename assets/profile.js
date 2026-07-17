@@ -62,11 +62,12 @@ async function openProfileScreen() {
 
   const { data: profile } = await supabaseClient
     .from('user_profiles')
-    .select('display_name, default_handicap, city, state')
+    .select('display_name, username, default_handicap, city, state')
     .eq('id', user.id)
     .maybeSingle();
 
   document.getElementById('profile-name').value = profile?.display_name || '';
+  document.getElementById('profile-username').value = profile?.username || '';
   document.getElementById('profile-handicap').value =
     (profile && profile.default_handicap != null) ? profile.default_handicap : '';
   document.getElementById('profile-city').value = profile?.city || '';
@@ -96,25 +97,43 @@ async function saveProfile(e) {
     return;
   }
 
+  // Username is optional (older accounts may not have one yet), but if
+  // provided it must match the DB format check: 3–20 chars, lowercase
+  // letters / numbers / underscore. We lowercase for them so "HunterB" works.
+  const usernameRaw = document.getElementById('profile-username').value.trim().toLowerCase();
+  if (usernameRaw && !/^[a-z0-9_]{3,20}$/.test(usernameRaw)) {
+    errorEl.textContent = 'Username must be 3–20 characters: lowercase letters, numbers, or underscores.';
+    errorEl.hidden = false;
+    return;
+  }
+
   const hcpRaw = document.getElementById('profile-handicap').value;
   const handicap = hcpRaw === '' ? 0 : parseHandicap(hcpRaw);
 
   const city = document.getElementById('profile-city').value.trim() || null;
   const state = document.getElementById('profile-state').value || null;
 
+  const payload = {
+    id: user.id,
+    display_name: name,
+    default_handicap: handicap,
+    city,
+    state,
+  };
+  // Only touch username when they typed one, so clearing the field never
+  // silently wipes an existing handle.
+  if (usernameRaw) payload.username = usernameRaw;
+
   const { error } = await supabaseClient
     .from('user_profiles')
-    .upsert({
-      id: user.id,
-      display_name: name,
-      default_handicap: handicap,
-      city,
-      state,
-    });
+    .upsert(payload);
 
   if (error) {
     console.error(error);
-    errorEl.textContent = 'Could not save — check your connection and try again.';
+    // 23505 = unique_violation: the handle's already taken.
+    errorEl.textContent = error.code === '23505'
+      ? 'That username is taken — try another.'
+      : 'Could not save — check your connection and try again.';
     errorEl.hidden = false;
     return;
   }
