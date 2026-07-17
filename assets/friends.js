@@ -184,4 +184,133 @@ function initFriends() {
   if (search) search.addEventListener('input', handleFriendSearchInput);
   const screen = document.getElementById('screen-friends');
   if (screen) screen.addEventListener('click', handleFriendsClick);
+
+  // Round-setup friend picker.
+  const addFromFriends = document.getElementById('btn-add-from-friends');
+  if (addFromFriends) addFromFriends.addEventListener('click', openFriendPicker);
+  const pickerClose = document.getElementById('btn-friend-picker-close');
+  if (pickerClose) pickerClose.addEventListener('click', closeFriendPicker);
+  const pickerList = document.getElementById('friend-picker-list');
+  if (pickerList) pickerList.addEventListener('click', handleFriendPickerClick);
+  const pickerModal = document.getElementById('friend-picker-modal');
+  if (pickerModal) pickerModal.addEventListener('click', e => {
+    if (e.target === pickerModal) closeFriendPicker();  // tap the backdrop to close
+  });
+
+  // Drawer username nudge.
+  const nudgeBtn = document.getElementById('btn-username-nudge');
+  if (nudgeBtn) nudgeBtn.addEventListener('click', handleUsernameNudgeClick);
+  const nudgeDismiss = document.getElementById('btn-username-nudge-dismiss');
+  if (nudgeDismiss) nudgeDismiss.addEventListener('click', dismissUsernameNudge);
+}
+
+/* ---------- Round-setup friend picker ---------- */
+// Adding a friend here creates a named placeholder in state.setupPlayers
+// (name + their default handicap), identical to typing one in — the
+// friend still joins with the round code and claims their name.
+
+let pickerFriends = [];
+
+async function openFriendPicker() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user || user.is_anonymous) {
+    showToast('Log in to add friends');
+    return;
+  }
+  const modal = document.getElementById('friend-picker-modal');
+  const list = document.getElementById('friend-picker-list');
+  list.innerHTML = '<div class="friends-empty">Loading…</div>';
+  modal.hidden = false;
+
+  const { data, error } = await supabaseClient.rpc('get_my_friends');
+  if (error) {
+    console.error(error);
+    list.innerHTML = '<div class="friends-empty">Could not load friends.</div>';
+    return;
+  }
+  pickerFriends = data || [];
+  renderFriendPicker();
+}
+
+function renderFriendPicker() {
+  const list = document.getElementById('friend-picker-list');
+  if (!pickerFriends.length) {
+    list.innerHTML = '<div class="friends-empty">No friends yet. Add some from the Friends menu first.</div>';
+    return;
+  }
+  // Mark friends already in the setup list (matched by name).
+  const existing = new Set((state.setupPlayers || []).map(p => (p.name || '').trim().toLowerCase()));
+  list.innerHTML = pickerFriends.map(f => {
+    const already = existing.has((f.display_name || '').trim().toLowerCase());
+    const action = already
+      ? '<span class="friend-btn friend-btn-muted">✓ Added</span>'
+      : `<button class="friend-btn friend-btn-primary" data-picker-add="${f.id}">Add</button>`;
+    return `
+      <div class="friend-row">
+        <div class="friend-info">
+          <span class="friend-name">${escapeHtml(f.display_name || '')}</span>
+          <span class="friend-handle">${escapeHtml(atHandle(f.username))}</span>
+        </div>
+        <div class="friend-actions">${action}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function handleFriendPickerClick(e) {
+  const btn = e.target.closest('[data-picker-add]');
+  if (!btn) return;
+  const f = pickerFriends.find(x => x.id === btn.dataset.pickerAdd);
+  if (!f) return;
+
+  state.setupPlayers.push({
+    id: uid('p'),
+    name: f.display_name || '',
+    handicap: Number(f.default_handicap) || 0,
+  });
+  if (typeof renderSetupPlayerList === 'function') renderSetupPlayerList();
+  renderFriendPicker();   // reflects the new "✓ Added" state
+  showToast('Added to round');
+}
+
+function closeFriendPicker() {
+  const modal = document.getElementById('friend-picker-modal');
+  if (modal) modal.hidden = true;
+}
+
+/* ---------- Drawer username nudge ---------- */
+// Shown when a signed-in account has no handle yet, so older accounts
+// know to claim one and become searchable. Dismissal is browser-local,
+// matching how the profile-onboarding prompt behaves.
+
+const USERNAME_NUDGE_DISMISS_KEY = 'strokes_username_nudge_dismissed';
+
+async function refreshUsernameNudge() {
+  const el = document.getElementById('drawer-username-nudge');
+  if (!el) return;
+
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user || user.is_anonymous) { el.hidden = true; return; }
+  if (localStorage.getItem(USERNAME_NUDGE_DISMISS_KEY) === '1') { el.hidden = true; return; }
+
+  const { data: profile } = await supabaseClient
+    .from('user_profiles')
+    .select('username')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  el.hidden = !!(profile && profile.username);
+}
+
+function handleUsernameNudgeClick() {
+  // Not a .drawer-item, so close the drawer ourselves before navigating.
+  document.getElementById('app-drawer')?.classList.remove('open');
+  document.getElementById('drawer-overlay')?.classList.remove('open');
+  openProfileScreen();
+}
+
+function dismissUsernameNudge() {
+  try { localStorage.setItem(USERNAME_NUDGE_DISMISS_KEY, '1'); } catch (e) {}
+  const el = document.getElementById('drawer-username-nudge');
+  if (el) el.hidden = true;
 }
