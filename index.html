@@ -185,6 +185,9 @@
       <p class="drawer-user-name" id="drawer-user-name" hidden></p>
     </div>
     <nav class="drawer-nav">
+      <button class="drawer-item" id="btn-friends" type="button">
+        <span class="drawer-item-icon">👥</span> Friends
+      </button>
       <button class="drawer-item" id="btn-round-history" type="button">
         <span class="drawer-item-icon">🏌️</span> Round history
       </button>
@@ -342,6 +345,34 @@
         <span class="btn-label">Save profile</span>
       </button>
     </form>
+  </div>
+</section>
+
+<!-- ============ SCREEN: FRIENDS ============ -->
+<section id="screen-friends" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-friends-back" aria-label="Back">←</button>
+    <h2 class="topbar-title">Friends</h2>
+    <span class="topbar-spacer"></span>
+  </header>
+
+  <div class="screen-body">
+    <div class="field">
+      <label class="field-label" for="friend-search">Add a friend</label>
+      <input type="text" id="friend-search" placeholder="Search by @username or name"
+             autocomplete="off" autocapitalize="none" spellcheck="false">
+      <div id="friend-search-results" class="friend-search-results"></div>
+    </div>
+
+    <div class="friends-section" id="friend-requests-section" hidden>
+      <p class="field-label">Requests</p>
+      <div id="friend-requests-list" class="friends-list"></div>
+    </div>
+
+    <div class="friends-section">
+      <p class="field-label">Your friends</p>
+      <div id="friends-list" class="friends-list"></div>
+    </div>
   </div>
 </section>
 
@@ -677,6 +708,7 @@
 <script src="assets/leaderboard.js"></script>
 <script src="assets/history.js"></script>
 <script src="assets/profile.js"></script>
+<script src="assets/friends.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
