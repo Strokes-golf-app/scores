@@ -115,3 +115,68 @@ async function resumeInProgressRound(round) {
         renderLobby();
     }
 }
+
+// ===========================================================
+// "In Progress Rounds" tab — View Rounds screen (history.js).
+// Unlike the Start-a-round prompt above, this lets the user browse
+// their in-progress rounds directly and confirms before jumping into
+// whichever one they tap, instead of surfacing just one automatically.
+// ===========================================================
+
+let pendingRoundToResume = null; // set while resume-list-confirm-modal is open
+
+async function loadInProgressRoundsTab() {
+    const listEl = document.getElementById('inprogress-list');
+    listEl.innerHTML = '<div class="history-empty">Loading your rounds…</div>';
+
+    const rounds = await getInProgressRounds();
+
+    if (!rounds || rounds.length === 0) {
+        listEl.innerHTML = '<div class="history-empty">No rounds in progress. Start a round to see it here.</div>';
+        return;
+    }
+
+    listEl.innerHTML = '';
+    rounds.forEach(round => listEl.appendChild(buildInProgressRoundCard(round)));
+}
+
+function buildInProgressRoundCard(round) {
+    const card = document.createElement('div');
+    card.className = 'history-card';
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.innerHTML = `
+    <div class="history-card-main">
+      <span class="history-card-course">${escapeHtml(round.course_name)}</span>
+      ${round.course_location ? `<span class="history-card-meta">${escapeHtml(round.course_location)}</span>` : ''}
+      <span class="history-card-meta">${formatHistoryDate(round.created_at)} · code ${escapeHtml(round.code)}</span>
+    </div>
+    <span class="history-card-chevron" aria-hidden="true">›</span>
+  `;
+    const open = () => promptResumeFromList(round);
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+    return card;
+}
+
+function promptResumeFromList(round) {
+    pendingRoundToResume = round;
+    document.getElementById('resume-list-confirm-modal').hidden = false;
+}
+
+// "No" — closes the popup and leaves the person on the list.
+function cancelResumeFromList() {
+    pendingRoundToResume = null;
+    document.getElementById('resume-list-confirm-modal').hidden = true;
+}
+
+// "Yes" — same jump-in logic the Start-a-round prompt uses above.
+async function confirmResumeFromList() {
+    const round = pendingRoundToResume;
+    document.getElementById('resume-list-confirm-modal').hidden = true;
+    pendingRoundToResume = null;
+    if (!round) return;
+    await resumeInProgressRound(round);
+}

@@ -65,6 +65,12 @@ function init() {
   document.getElementById('btn-resume-rounds-close').addEventListener('click', () => {
     showScreen('screen-home');
   });
+
+  document.querySelectorAll('#view-rounds-tab-row .modetab').forEach(btn => {
+    btn.addEventListener('click', () => setViewRoundsTab(btn.dataset.viewRoundsTab));
+  });
+  document.getElementById('btn-resume-list-confirm-yes').addEventListener('click', confirmResumeFromList);
+  document.getElementById('btn-resume-list-confirm-no').addEventListener('click', cancelResumeFromList);
   document.getElementById('btn-course-detail-back').addEventListener('click', () => showScreen('screen-course-manage'));
 
   document.getElementById('form-join').addEventListener('submit', e => {

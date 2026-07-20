@@ -19,6 +19,7 @@ const state = {
   hasShownHole15Reminder: false,
   activeTab: 'card',
   activeModeTab: null,
+  activeViewRoundsTab: 'completed', // 'completed' or 'inprogress' — which tab is showing on the View Rounds screen
   setupPlayers: [],
   setupBetsEnabled: false,          // whether the setup screen's Bets toggle is on
   setupStakes: {},                  // { mode: dollars } entered on the stakes screen before a round exists
