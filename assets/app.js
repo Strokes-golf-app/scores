@@ -19,8 +19,13 @@ function init() {
   }
 
   document.getElementById('btn-new-round').addEventListener('click', async () => {
-    await resetSetupScreen();
-    showScreen('screen-setup');
+    const inProgressRounds = await getInProgressRounds();
+    if (inProgressRounds.length > 0) {
+      showResumePrompt(inProgressRounds);
+    } else {
+      await resetSetupScreen();
+      showScreen('screen-setup');
+    }
   });
 
   document.getElementById('btn-course-upload-back').addEventListener('click', () => showScreen('screen-home'));
@@ -44,6 +49,21 @@ function init() {
   document.getElementById('btn-manage-add-course').addEventListener('click', async () => {
     await resetCourseUploadScreen();
     showScreen('screen-course-upload');
+  });
+  document.getElementById('btn-resume-prompt-yes').addEventListener('click', () => {
+    hideResumePrompt();
+    renderResumeRoundsList(state.pendingResumeRounds || []);
+    showScreen('screen-resume-rounds');
+  });
+
+  document.getElementById('btn-resume-prompt-no').addEventListener('click', async () => {
+    hideResumePrompt();
+    await resetSetupScreen();
+    showScreen('screen-setup');
+  });
+
+  document.getElementById('btn-resume-rounds-close').addEventListener('click', () => {
+    showScreen('screen-home');
   });
   document.getElementById('btn-course-detail-back').addEventListener('click', () => showScreen('screen-course-manage'));
 
@@ -281,7 +301,7 @@ function init() {
     // *different* round, and unless a pending email-invite join is waiting.
     const resumable = loadSession();
     if (!loadPendingJoin() && resumable && resumable.roundCode &&
-        (!codeFromUrl || codeFromUrl.toUpperCase() === resumable.roundCode)) {
+      (!codeFromUrl || codeFromUrl.toUpperCase() === resumable.roundCode)) {
       resumeSession(resumable);
       return;
     }
