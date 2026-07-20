@@ -767,6 +767,7 @@ async function createRound() {
         id: roundId,
         code,
         course_name: courseName,
+        course_location: state.selectedFullCourse?.location || null,
         hole_count: holeCount,
         pars,
         modes,

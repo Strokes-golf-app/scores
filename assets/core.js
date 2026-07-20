@@ -32,6 +32,7 @@ const state = {
   pendingJoinCode: null, // round code from a ?code= deep link, applied after auth
   pendingVerifyEmail: null, // email awaiting verification, for the resend button
   pendingSignupName: null,  // name captured at signup, written to profile on first real login
+  pendingResumeRounds: [], // NEW: rounds shown on the resume-round screen
 };
 
 const LS_KEY = 'fairwaylive_session';
