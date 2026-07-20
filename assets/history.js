@@ -18,7 +18,26 @@
 
 async function openRoundHistory() {
   showScreen('screen-history');
-  await loadRoundHistory();
+  await setViewRoundsTab('completed');
+}
+
+// Switches between the "Completed Rounds" and "In Progress Rounds" tabs
+// on the View Rounds screen, loading whichever tab it lands on.
+// loadInProgressRoundsTab() lives in resume.js, which already owns the
+// in-progress-rounds query and the resume flow it reuses here.
+async function setViewRoundsTab(tab) {
+  state.activeViewRoundsTab = tab;
+  document.querySelectorAll('#view-rounds-tab-row .modetab').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.viewRoundsTab === tab)
+  );
+  document.getElementById('tab-completed-rounds').hidden = tab !== 'completed';
+  document.getElementById('tab-inprogress-rounds').hidden = tab !== 'inprogress';
+
+  if (tab === 'completed') {
+    await loadRoundHistory();
+  } else {
+    await loadInProgressRoundsTab();
+  }
 }
 
 async function loadRoundHistory() {

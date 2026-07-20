@@ -214,7 +214,7 @@
           <span class="drawer-item-icon">👥</span> Friends
         </button>
         <button class="drawer-item" id="btn-round-history" type="button">
-          <span class="drawer-item-icon">🏌️</span> Round history
+          <span class="drawer-item-icon">🏌️</span> View Rounds
         </button>
         <button class="drawer-item" id="btn-manage-courses" type="button">
           <span class="drawer-item-icon">⛳</span> View courses
@@ -430,18 +430,40 @@
     </div>
   </div>
 
-  <!-- ============ SCREEN: ROUND HISTORY ============ -->
+  <!-- ============ SCREEN: VIEW ROUNDS ============ -->
   <section id="screen-history" class="screen">
     <header class="topbar">
       <button class="icon-btn" id="btn-history-back" aria-label="Back">←</button>
-      <h2 class="topbar-title">Round history</h2>
+      <h2 class="topbar-title">View Rounds</h2>
       <span class="topbar-spacer"></span>
     </header>
 
     <div class="screen-body">
-      <div id="history-list" class="history-list"></div>
+      <nav class="modetab-row" id="view-rounds-tab-row">
+        <button class="modetab active" data-view-rounds-tab="completed" type="button">Completed Rounds</button>
+        <button class="modetab" data-view-rounds-tab="inprogress" type="button">In Progress Rounds</button>
+      </nav>
+
+      <div id="tab-completed-rounds">
+        <div id="history-list" class="history-list"></div>
+      </div>
+
+      <div id="tab-inprogress-rounds" hidden>
+        <div id="inprogress-list" class="history-list"></div>
+      </div>
     </div>
   </section>
+
+  <!-- Confirm popup for resuming a round tapped from the In Progress Rounds list -->
+  <div class="hole15-modal" id="resume-list-confirm-modal" hidden>
+    <div class="hole15-modal-card" role="dialog" aria-modal="true" aria-labelledby="resume-list-confirm-title">
+      <p class="hole15-modal-title" id="resume-list-confirm-title">Do you want to resume this round?</p>
+      <div class="resume-prompt-actions">
+        <button class="btn btn-secondary" id="btn-resume-list-confirm-no" type="button">No</button>
+        <button class="btn btn-primary" id="btn-resume-list-confirm-yes" type="button">Yes</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ============ SCREEN: ROUND HISTORY DETAIL ============ -->
   <section id="screen-history-detail" class="screen">
