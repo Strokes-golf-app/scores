@@ -73,6 +73,14 @@ function init() {
   document.getElementById('btn-resume-list-confirm-no').addEventListener('click', cancelResumeFromList);
   document.getElementById('btn-course-detail-back').addEventListener('click', () => showScreen('screen-course-manage'));
 
+  document.getElementById('btn-cancel-round-lobby').addEventListener('click', () => promptCancelRound(state.roundId));
+  document.getElementById('btn-cancel-round').addEventListener('click', () => promptCancelRound(state.roundId));
+  document.getElementById('btn-cancel-round-confirm-yes').addEventListener('click', confirmCancelRound);
+  document.getElementById('btn-cancel-round-confirm-no').addEventListener('click', dismissCancelRoundPrompt);
+  document.getElementById('cancel-round-confirm-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'cancel-round-confirm-modal') dismissCancelRoundPrompt();
+  });
+
   document.getElementById('form-join').addEventListener('submit', e => {
     e.preventDefault();
     joinRound(document.getElementById('join-code').value);

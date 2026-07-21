@@ -36,6 +36,7 @@ function renderLobby() {
   renderLobbyStakes();
 
   document.getElementById('btn-start-round').hidden = !isHost();
+  document.getElementById('btn-cancel-round-lobby').hidden = !isHost();
 
   if (r.started) enterRound();
 }

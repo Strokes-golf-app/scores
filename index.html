@@ -465,6 +465,18 @@
     </div>
   </div>
 
+  <!-- Confirm popup for cancelling a round early (lobby, live round, or the In Progress list) -->
+  <div class="hole15-modal" id="cancel-round-confirm-modal" hidden>
+    <div class="hole15-modal-card" role="dialog" aria-modal="true" aria-labelledby="cancel-round-confirm-title">
+      <p class="hole15-modal-title" id="cancel-round-confirm-title">Cancel this round? Scores entered so far are saved
+        to your history, but the round can't be resumed.</p>
+      <div class="resume-prompt-actions">
+        <button class="btn btn-secondary" id="btn-cancel-round-confirm-no" type="button">Keep round</button>
+        <button class="btn btn-danger" id="btn-cancel-round-confirm-yes" type="button">Cancel round</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ SCREEN: ROUND HISTORY DETAIL ============ -->
   <section id="screen-history-detail" class="screen">
     <header class="topbar">
@@ -671,6 +683,8 @@
       </div>
 
       <button class="btn btn-primary btn-lg btn-block" id="btn-start-round">Start round</button>
+      <button class="btn btn-secondary btn-block btn-danger-outline" id="btn-cancel-round-lobby" type="button"
+        hidden>Cancel round</button>
     </div>
   </section>
 
@@ -701,6 +715,10 @@
         <button class="icon-btn icon-btn-labeled" id="btn-round-share" aria-label="Share round">
           <span class="icon-btn-icon">📋</span>
           <span class="icon-btn-label">Share round</span>
+        </button>
+        <button class="icon-btn icon-btn-labeled" id="btn-cancel-round" aria-label="Cancel round" hidden>
+          <span class="icon-btn-icon">🚫</span>
+          <span class="icon-btn-label">Cancel</span>
         </button>
       </header>
 

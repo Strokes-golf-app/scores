@@ -125,6 +125,13 @@ function subscribeToRound(roundId) {
     .channel('round-' + roundId)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rounds', filter: `id=eq.${roundId}` },
       (payload) => {
+        // Caught the moment the host cancels the round — everyone else
+        // gets sent home with a heads-up, since there's no finished
+        // leaderboard to show for a round that was cut short.
+        if (payload.new && payload.new.cancelled === true) {
+          handleRoundCancelledRemotely();
+          return;
+        }
         // Caught the moment the host ends the round — jump straight to
         // the final leaderboard instead of doing a normal reload, since
         // the round is about to be archived and deleted out from under us.
@@ -235,6 +242,7 @@ function renderRoundHeader() {
   document.getElementById('round-meta').textContent = r.ended
     ? `${r.holeCount} holes · Final results`
     : `${r.holeCount} holes · code ${r.code}`;
+  document.getElementById('btn-cancel-round').hidden = !isHost() || r.ended;
 }
 
 // ---------------------------------------------------------
@@ -292,6 +300,79 @@ async function endRound() {
     if (archiveErr) console.error(archiveErr);
     state.endingRound = false;
   }, 2000);
+}
+
+// ---------------------------------------------------------
+// Cancelling a round early (host-only) — reachable from the lobby,
+// the live round screen, and the View Rounds > In Progress list.
+// Unlike endRound(), this never checks for missing scores and works
+// whether or not the round has started yet.
+// ---------------------------------------------------------
+
+// Fires on every OTHER connected client the instant the host cancels
+// the round. There's no finished leaderboard to show, so this just
+// unsubscribes and sends them home with a toast.
+function handleRoundCancelledRemotely() {
+  if (state.realtimeChannel) {
+    supabaseClient.removeChannel(state.realtimeChannel);
+    state.realtimeChannel = null;
+  }
+  showToast('The host cancelled this round');
+  goHome();
+}
+
+// Cancels a round by id. Works whether or not that round is the one
+// currently loaded into state — callers from the resume list pass an
+// id for a round that was never loaded on this device at all.
+async function cancelRoundById(roundId) {
+  const { error } = await supabaseClient.rpc('cancel_round', { p_round_id: roundId });
+  if (error) {
+    console.error(error);
+    showToast('Could not cancel the round — check your connection');
+    return false;
+  }
+
+  showToast('Round cancelled');
+
+  // If we were actually inside this round, back out of it cleanly —
+  // same cleanup goHome() already does (unsubscribe, clear session).
+  if (state.roundId === roundId) {
+    goHome();
+  }
+
+  return true;
+}
+
+// Confirmation modal plumbing, shared by the lobby, the live round
+// screen, and the resume-rounds "In Progress" list.
+let pendingCancelRoundId = null;
+
+function promptCancelRound(roundId) {
+  if (!roundId) return;
+  pendingCancelRoundId = roundId;
+  document.getElementById('cancel-round-confirm-modal').hidden = false;
+}
+
+function dismissCancelRoundPrompt() {
+  pendingCancelRoundId = null;
+  document.getElementById('cancel-round-confirm-modal').hidden = true;
+}
+
+async function confirmCancelRound() {
+  const roundId = pendingCancelRoundId;
+  document.getElementById('cancel-round-confirm-modal').hidden = true;
+  pendingCancelRoundId = null;
+  if (!roundId) return;
+
+  const cancelled = await cancelRoundById(roundId);
+  if (!cancelled) return;
+
+  // If the "In Progress Rounds" tab is what's currently on screen,
+  // refresh it so the cancelled round disappears from the list.
+  const tab = document.getElementById('tab-inprogress-rounds');
+  if (tab && !tab.hidden) {
+    await loadInProgressRoundsTab();
+  }
 }
 
 // ---------------------------------------------------------
