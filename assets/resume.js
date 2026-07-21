@@ -24,7 +24,7 @@ async function getInProgressRounds() {
 
     const { data, error } = await supabaseClient
         .from('players')
-        .select('round_id, rounds!inner(id, code, course_name, course_location, created_at, started, ended)')
+        .select('round_id, rounds!inner(id, code, course_name, course_location, created_at, started, ended, host_user_id)')
         .eq('user_id', user.id)
         .eq('rounds.ended', false)
         .gte('rounds.created_at', cutoff);
@@ -129,7 +129,11 @@ async function loadInProgressRoundsTab() {
     const listEl = document.getElementById('inprogress-list');
     listEl.innerHTML = '<div class="history-empty">Loading your rounds…</div>';
 
-    const rounds = await getInProgressRounds();
+    const [rounds, userResult] = await Promise.all([
+        getInProgressRounds(),
+        supabaseClient.auth.getUser(),
+    ]);
+    const currentUserId = userResult?.data?.user?.id || null;
 
     if (!rounds || rounds.length === 0) {
         listEl.innerHTML = '<div class="history-empty">No rounds in progress. Start a round to see it here.</div>';
@@ -137,20 +141,29 @@ async function loadInProgressRoundsTab() {
     }
 
     listEl.innerHTML = '';
-    rounds.forEach(round => listEl.appendChild(buildInProgressRoundCard(round)));
+    rounds.forEach(round => listEl.appendChild(buildInProgressRoundCard(round, currentUserId)));
 }
 
-function buildInProgressRoundCard(round) {
+function buildInProgressRoundCard(round, currentUserId) {
     const card = document.createElement('div');
     card.className = 'history-card';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
+
+    // Cancelling is host-only, same as everywhere else in the app —
+    // only show the control if this viewer is that round's host.
+    const isRoundHost = !!currentUserId && round.host_user_id === currentUserId;
+    const cancelBtn = isRoundHost
+        ? `<button class="icon-btn history-card-cancel" data-cancel-round-id="${round.id}" aria-label="Cancel round" title="Cancel round">🗑️</button>`
+        : '';
+
     card.innerHTML = `
     <div class="history-card-main">
       <span class="history-card-course">${escapeHtml(round.course_name)}</span>
       ${round.course_location ? `<span class="history-card-meta">${escapeHtml(round.course_location)}</span>` : ''}
       <span class="history-card-meta">${formatHistoryDate(round.created_at)} · code ${escapeHtml(round.code)}</span>
     </div>
+    ${cancelBtn}
     <span class="history-card-chevron" aria-hidden="true">›</span>
   `;
     const open = () => promptResumeFromList(round);
@@ -158,6 +171,15 @@ function buildInProgressRoundCard(round) {
     card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
     });
+
+    const cancelEl = card.querySelector('[data-cancel-round-id]');
+    if (cancelEl) {
+        cancelEl.addEventListener('click', (e) => {
+            e.stopPropagation(); // don't also trigger the resume-confirm open
+            promptCancelRound(round.id);
+        });
+    }
+
     return card;
 }
 

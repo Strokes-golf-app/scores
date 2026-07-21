@@ -81,6 +81,7 @@ function buildHistoryCard(row, userId) {
   const snap = row.round_snapshot || {};
   const players = row.players_snapshot || [];
   const scores = row.scores_snapshot || [];
+  const isCancelled = row.status === 'cancelled';
 
   const mePlayer = players.find(p => p.user_id === userId);
   const holeCount = snap.hole_count || (snap.pars ? snap.pars.length : 18);
@@ -101,7 +102,9 @@ function buildHistoryCard(row, userId) {
 
     const toParClass = summary.toParGross < 0 ? 'neg' : (summary.toParGross > 0 ? 'pos' : '');
     playerLine = `<span class="history-card-player">${escapeHtml(mePlayer.name)}</span>`;
-    scoreHtml = `
+    scoreHtml = isCancelled
+      ? `<div class="history-card-score"><span class="history-card-cancelled-badge">Cancelled</span></div>`
+      : `
       <div class="history-card-score">
         <span class="history-card-gross">${summary.grossTotal}</span>
         <span class="history-card-topar ${toParClass}">${Golf.formatToPar(summary.toParGross)}</span>
@@ -115,7 +118,7 @@ function buildHistoryCard(row, userId) {
   card.innerHTML = `
     <div class="history-card-main">
       <span class="history-card-course">${escapeHtml(row.course_name || snap.course_name || 'Round')}</span>
-      <span class="history-card-meta">${formatHistoryDate(row.ended_at)} · ${holeCount} holes</span>
+      <span class="history-card-meta">${formatHistoryDate(row.ended_at)} · ${holeCount} holes${isCancelled ? ' · Cancelled' : ''}</span>
       ${playerLine}
     </div>
     ${scoreHtml}
@@ -126,6 +129,26 @@ function buildHistoryCard(row, userId) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHistoryDetail(row, userId); }
   });
   return card;
+}
+
+const card = document.createElement('div');
+card.className = 'history-card';
+card.setAttribute('role', 'button');
+card.setAttribute('tabindex', '0');
+card.innerHTML = `
+    <div class="history-card-main">
+      <span class="history-card-course">${escapeHtml(row.course_name || snap.course_name || 'Round')}</span>
+      <span class="history-card-meta">${formatHistoryDate(row.ended_at)} · ${holeCount} holes</span>
+      ${playerLine}
+    </div>
+    ${scoreHtml}
+    <span class="history-card-chevron" aria-hidden="true">›</span>
+  `;
+card.addEventListener('click', () => openHistoryDetail(row, userId));
+card.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHistoryDetail(row, userId); }
+});
+return card;
 }
 
 // "Jun 29, 2026" — empty string on a missing/bad date.
@@ -194,6 +217,7 @@ function reconstructRound(row) {
     matchUseHandicap: snap.match_use_handicap !== false,
     betsEnabled: snap.bets_enabled === true,
     stakes: snap.stakes || {},
+    status: row.status || 'completed',
     players,
     endedAt: row.ended_at,
   };
@@ -205,7 +229,7 @@ function renderHistoryDetail() {
 
   document.getElementById('history-detail-course').textContent = round.courseName;
   document.getElementById('history-detail-meta').textContent =
-    `${formatHistoryDate(round.endedAt)} · ${round.holeCount} holes`;
+    `${formatHistoryDate(round.endedAt)} · ${round.holeCount} holes${round.status === 'cancelled' ? ' · Cancelled' : ''}`;
 
   const modes = roundBoardModes(round);
   const activeMode = modes[0];
