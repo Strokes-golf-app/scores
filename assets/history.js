@@ -131,26 +131,6 @@ function buildHistoryCard(row, userId) {
   return card;
 }
 
-const card = document.createElement('div');
-card.className = 'history-card';
-card.setAttribute('role', 'button');
-card.setAttribute('tabindex', '0');
-card.innerHTML = `
-    <div class="history-card-main">
-      <span class="history-card-course">${escapeHtml(row.course_name || snap.course_name || 'Round')}</span>
-      <span class="history-card-meta">${formatHistoryDate(row.ended_at)} · ${holeCount} holes</span>
-      ${playerLine}
-    </div>
-    ${scoreHtml}
-    <span class="history-card-chevron" aria-hidden="true">›</span>
-  `;
-card.addEventListener('click', () => openHistoryDetail(row, userId));
-card.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHistoryDetail(row, userId); }
-});
-return card;
-}
-
 // "Jun 29, 2026" — empty string on a missing/bad date.
 function formatHistoryDate(iso) {
   if (!iso) return '';
