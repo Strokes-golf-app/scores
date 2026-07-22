@@ -232,6 +232,15 @@ function init() {
   document.getElementById('form-auth').addEventListener('submit', handleAuthSubmit);
   document.getElementById('btn-logout').addEventListener('click', handleLogout);
 
+  // ----- Feedback -----
+  document.getElementById('btn-feedback').addEventListener('click', openFeedbackModal);
+  document.getElementById('btn-feedback-close').addEventListener('click', closeFeedbackModal);
+  document.getElementById('feedback-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'feedback-modal') closeFeedbackModal();
+  });
+  document.getElementById('btn-feedback-send').addEventListener('click', sendFeedback);
+  document.getElementById('btn-round-feedback').addEventListener('click', openFeedbackModal);
+
   // ----- Home sidebar drawer -----
   const appDrawer = document.getElementById('app-drawer');
   const drawerOverlay = document.getElementById('drawer-overlay');

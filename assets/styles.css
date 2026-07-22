@@ -2735,3 +2735,63 @@ select:focus-visible {
 [hidden] {
   display: none !important;
 }
+
+/* ---------- Feedback modal ---------- */
+.feedback-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 20, 16, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1100;
+}
+
+.feedback-modal[hidden] {
+  display: none;
+}
+
+.feedback-card {
+  width: min(100%, 360px);
+  background: var(--cream);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.feedback-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.feedback-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--fairway-dark);
+  margin: 0;
+}
+
+.feedback-textarea {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.85rem;
+  font-size: 15px;
+  font-family: var(--font-body);
+  color: var(--ink);
+  resize: vertical;
+  min-height: 120px;
+}
+
+.feedback-textarea:focus {
+  outline: 2px solid var(--fairway-light);
+  outline-offset: 1px;
+}

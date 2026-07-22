@@ -243,6 +243,7 @@ function renderRoundHeader() {
     ? `${r.holeCount} holes · Final results`
     : `${r.holeCount} holes · code ${r.code}`;
   document.getElementById('btn-cancel-round').hidden = !isHost() || r.ended;
+  document.getElementById('btn-round-feedback').hidden = !r.ended;
 }
 
 // ---------------------------------------------------------
