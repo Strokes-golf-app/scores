@@ -4,7 +4,7 @@ This file documents what needs to be done in order to be ready to publish our ap
 ## Must Haves
 1. Branding - Country Club Font, Coloring, etc - make it feel less AI like
 2. ~~Cancel in progress rounds/existing rounds~~
-3. Feedback page or reminder - basically send us an email if you have any issues
+3. ~~Feedback page or reminder - basically send us an email if you have any issues~~
 4. Group play feature - ryder cup style match play for up to 12 players. 12 vs 12 on teams
 5. Test security and functionality of the Friends feature
 ## Nice to Haves

@@ -222,6 +222,9 @@
         <button class="drawer-item" id="btn-manage-profile" type="button">
           <span class="drawer-item-icon">👤</span> Manage profile
         </button>
+        <button class="drawer-item" id="btn-feedback" type="button">
+          <span class="drawer-item-icon">💬</span> Send Feedback
+        </button>
       </nav>
       <div class="drawer-footer">
         <button class="drawer-item drawer-item-muted" id="btn-logout" type="button">
@@ -234,6 +237,20 @@
       </div>
     </aside>
   </section>
+
+  <!-- ============ FEEDBACK MODAL ============ -->
+  <div class="feedback-modal" id="feedback-modal" hidden>
+    <div class="feedback-card" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+      <div class="feedback-head">
+        <h3 class="feedback-title" id="feedback-title">Send feedback</h3>
+        <button class="icon-btn" id="btn-feedback-close" aria-label="Close">×</button>
+      </div>
+      <p class="field-hint">Tell us what's working, what's not, or what you'd like to see. This opens your email app,
+        addressed to strokesadmin@gmail.com with your note filled in — just hit send there.</p>
+      <textarea id="feedback-message" class="feedback-textarea" placeholder="What's on your mind?" rows="6"></textarea>
+      <button class="btn btn-primary btn-block" id="btn-feedback-send" type="button">Open email to send</button>
+    </div>
+  </div>
 
   <!-- ============ SCREEN: RESUME ROUND ============ -->
   <section id="screen-resume-rounds" class="screen">
@@ -791,6 +808,7 @@
       <nav class="modetab-row" id="modetab-row"></nav>
       <div class="board-meta" id="board-meta"></div>
       <div class="leaderboard" id="leaderboard"></div>
+      <button class="link-btn link-btn-center" id="btn-round-feedback" type="button" hidden>Have feedback on this round? Let us know</button>
     </div>
   </section>
 
@@ -809,6 +827,7 @@
   <script src="assets/history.js"></script>
   <script src="assets/profile.js"></script>
   <script src="assets/friends.js"></script>
+  <script src="assets/feedback.js"></script>
   <script src="assets/resume.js"></script>
   <script src="assets/app.js"></script>
 </body>
