@@ -1,7 +1,43 @@
+@font-face {
+  font-family: 'Cinzel';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/cinzel-v26-latin-regular.woff2') format('woff2');
+}
+
+/* Real 500/600/700 cuts. If any of these files goes missing, comment its rule out
+   rather than leaving it declared: a declared @font-face whose file 404s drops that
+   weight to the Georgia fallback instead of synthesising bold from the 400 cut. */
+
+@font-face {
+  font-family: 'Cinzel';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/cinzel-v26-latin-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/cinzel-v26-latin-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/cinzel-v26-latin-700.woff2') format('woff2');
+}
+
 /* ===========================================================
    Fairway Live — visual identity
    Palette: fairway green, bunker sand, scorecard cream, flag red
-   Display: Oswald (condensed scoreboard feel)
+   Display: Cinzel (self-hosted serif capitals)
    Body: Inter
    Numerals: JetBrains Mono (tabular, for score grids)
 =========================================================== */
@@ -21,7 +57,7 @@
   --line: #DDD4BD;
   --white: #FFFFFF;
 
-  --font-display: 'Oswald', sans-serif;
+  --font-display: 'Cinzel', Georgia, serif;
   --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
