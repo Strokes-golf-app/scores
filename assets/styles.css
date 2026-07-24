@@ -37,9 +37,8 @@
 /* ===========================================================
    Fairway Live — visual identity
    Palette: fairway green, bunker sand, scorecard cream, flag red
-   Display: Cinzel (self-hosted serif capitals)
-   Body: Inter
-   Numerals: JetBrains Mono (tabular, for score grids)
+   Type: Cinzel (self-hosted serif capitals) across display, body,
+   and numerals — one --font-* token per role, all pointing at Cinzel
 =========================================================== */
 
 :root {
@@ -58,8 +57,8 @@
   --white: #FFFFFF;
 
   --font-display: 'Cinzel', Georgia, serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-body: 'Cinzel', Georgia, serif;
+  --font-mono: 'Cinzel', Georgia, serif;
 
   --radius-sm: 6px;
   --radius-md: 10px;
