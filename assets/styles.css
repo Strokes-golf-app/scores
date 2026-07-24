@@ -2265,7 +2265,10 @@ input::placeholder {
 
 .skins-strip {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  /* minmax(0, 1fr) lets each column shrink below its content's intrinsic
+     width so a cell can never force the strip wider than the viewport;
+     the winner label (.skins-cell-sub) ellipsizes instead. */
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 4px;
 }
 
@@ -2275,7 +2278,7 @@ input::placeholder {
   align-items: center;
   justify-content: center;
   gap: 1px;
-  padding: 4px 2px;
+  padding: 4px 1px;
   min-height: 48px;
   border: 1.5px solid var(--line);
   border-radius: 6px;
@@ -2304,7 +2307,6 @@ input::placeholder {
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;

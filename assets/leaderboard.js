@@ -231,8 +231,8 @@ function skinsStripHtml(log, summaries, holeOffset) {
       return `<div class="skins-cell pending"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">·</span></div>`;
     }
     if (entry.winnerId) {
-      const first = escapeHtml((nameById[entry.winnerId] || '?').split(' ')[0]);
-      return `<div class="skins-cell won"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">${entry.value}</span><span class="skins-cell-sub">${first}</span></div>`;
+      const who = escapeHtml(initials(nameById[entry.winnerId]));
+      return `<div class="skins-cell won"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">${entry.value}</span><span class="skins-cell-sub">${who}</span></div>`;
     }
     // Tied — the pot (what carried in, plus this hole) rolls forward.
     const rolling = (entry.carriedIn || 0) + 1;

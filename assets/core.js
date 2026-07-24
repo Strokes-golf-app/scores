@@ -149,6 +149,17 @@ function escapeAttr(str) {
   return escapeHtml(str).replace(/"/g, '&quot;');
 }
 
+// Condense a display name to initials for tight spaces (e.g. the skins
+// hole-by-hole strip). "Hunter Jackson" -> "HJ"; a single-word name with
+// no last name -> just its first letter ("Hunter" -> "H"). Falls back to
+// "?" for an empty/blank name.
+function initials(name) {
+  const parts = String(name == null ? '' : name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 // Parse a handicap string, allowing one decimal place (e.g. 10.2).
 // Returns a number rounded to 1 decimal place, clamped 0–54.
 function parseHandicap(val) {
