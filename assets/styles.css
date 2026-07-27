@@ -1,9 +1,17 @@
 @font-face {
-  font-family: 'Cinzel';
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('../fonts/cormorant-garamond-v21-latin-300.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cormorant Garamond';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/cinzel-v26-latin-regular.woff2') format('woff2');
+  src: url('../fonts/cormorant-garamond-v21-latin-regular.woff2') format('woff2');
 }
 
 /* Real 500/600/700 cuts. If any of these files goes missing, comment its rule out
@@ -11,34 +19,34 @@
    weight to the Georgia fallback instead of synthesising bold from the 400 cut. */
 
 @font-face {
-  font-family: 'Cinzel';
+  font-family: 'Cormorant Garamond';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../fonts/cinzel-v26-latin-500.woff2') format('woff2');
+  src: url('../fonts/cormorant-garamond-v21-latin-500.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Cinzel';
+  font-family: 'Cormorant Garamond';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../fonts/cinzel-v26-latin-600.woff2') format('woff2');
+  src: url('../fonts/cormorant-garamond-v21-latin-600.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Cinzel';
+  font-family: 'Cormorant Garamond';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../fonts/cinzel-v26-latin-700.woff2') format('woff2');
+  src: url('../fonts/cormorant-garamond-v21-latin-700.woff2') format('woff2');
 }
 
 /* ===========================================================
    Fairway Live — visual identity
    Palette: fairway green, bunker sand, scorecard cream, flag red
-   Type: Cinzel (self-hosted serif capitals) across display, body,
-   and numerals — one --font-* token per role, all pointing at Cinzel
+   Type: Cormorant Garamond (self-hosted serif) across display, body,
+   and numerals — one --font-* token per role, all pointing at Cormorant Garamond
 =========================================================== */
 
 :root {
@@ -56,9 +64,9 @@
   --line: #DDD4BD;
   --white: #FFFFFF;
 
-  --font-display: 'Cinzel', Georgia, serif;
-  --font-body: 'Cinzel', Georgia, serif;
-  --font-mono: 'Cinzel', Georgia, serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Cormorant Garamond', Georgia, serif;
+  --font-mono: 'Cormorant Garamond', Georgia, serif;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -76,6 +84,10 @@ body {
   background: var(--cream);
   color: var(--ink);
   font-family: var(--font-body);
+  /* Cormorant Garamond defaults to old-style figures, which read as uneven in a
+     scoring UI. Force lining (uniform-height) + tabular (column-aligned) numerals
+     everywhere so scores line up on the scorecard and leaderboard. */
+  font-variant-numeric: lining-nums tabular-nums;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
