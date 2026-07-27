@@ -302,6 +302,44 @@ describe('findMissingScores', () => {
   });
 });
 
+describe('groupThru', () => {
+  it('returns the highest hole every player has completed', () => {
+    const players = [
+      { name: 'Alice', scores: { 1: 4, 2: 5, 3: 3 } },
+      { name: 'Bob', scores: { 1: 5, 2: 4, 3: 4 } },
+    ];
+    expect(Golf.groupThru(players, 18)).toBe(3);
+  });
+
+  it('is limited by the player who has completed the fewest holes', () => {
+    const players = [
+      { name: 'Alice', scores: { 1: 4, 2: 5, 3: 3 } },
+      { name: 'Bob', scores: { 1: 5, 2: 4 } }, // only thru 2
+    ];
+    expect(Golf.groupThru(players, 18)).toBe(2);
+  });
+
+  it('stops at the first hole not everyone has, even if a later hole is filled', () => {
+    const players = [
+      { name: 'Alice', scores: { 1: 4, 2: 5, 3: 3 } },
+      { name: 'Bob', scores: { 1: 5, 3: 4 } }, // missing hole 2
+    ];
+    expect(Golf.groupThru(players, 18)).toBe(1);
+  });
+
+  it('returns 0 when nobody has completed hole 1 for everyone', () => {
+    const players = [
+      { name: 'Alice', scores: { 1: 4 } },
+      { name: 'Bob', scores: {} },
+    ];
+    expect(Golf.groupThru(players, 18)).toBe(0);
+  });
+
+  it('returns 0 for an empty player list', () => {
+    expect(Golf.groupThru([], 18)).toBe(0);
+  });
+});
+
 describe('computeMoney', () => {
   const pars = [4, 4, 4];
   const player = (id, scores, handicap = 0) =>

@@ -294,6 +294,26 @@ const Golf = (() => {
   }
 
   /**
+   * The group's "thru" — the highest hole H such that EVERY player has a gross
+   * score for all of holes 1..H. This is the honest shared progress number:
+   * the whole group has finished through hole H. Returns 0 before anyone has
+   * completed hole 1 for everybody.
+   *
+   * @param {object[]} players - each with a `scores` map (holeNumber -> strokes)
+   * @param {number} holeCount
+   */
+  function groupThru(players, holeCount) {
+    if (!players || !players.length) return 0;
+    let thru = 0;
+    for (let h = 1; h <= holeCount; h++) {
+      const allIn = players.every(p => p.scores && p.scores[String(h)] != null);
+      if (!allIn) break;
+      thru = h;
+    }
+    return thru;
+  }
+
+  /**
    * Money settlement across every betting mode in a round. Pure: it
    * takes the same summaries the leaderboard already builds plus the
    * round's stakes/teams, and returns per-mode nets, a combined
@@ -423,6 +443,7 @@ const Golf = (() => {
     formatToPar,
     formatMoney,
     findMissingScores,
+    groupThru,
   };
 })();
 

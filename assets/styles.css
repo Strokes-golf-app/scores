@@ -774,6 +774,27 @@ h3 {
   width: 36px;
 }
 
+/* Round screen banner: left-aligned and a touch larger than the shared
+   (centered) topbar, matching the design reference. Scoped to #screen-round
+   so the other screens' topbars keep their centered layout. */
+#screen-round .topbar {
+  padding: 1.15rem 1.25rem 1.3rem;
+}
+
+#screen-round .topbar-title-wrap,
+#screen-round .topbar-title {
+  text-align: left;
+}
+
+#screen-round .topbar-title {
+  font-size: 23px;
+}
+
+#screen-round .topbar-sub {
+  font-size: 13.5px;
+  margin-top: 0.15rem;
+}
+
 /* ---------- Home sidebar drawer ---------- */
 .drawer-overlay {
   position: fixed;
@@ -2004,24 +2025,30 @@ input::placeholder {
 .hole-nav {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
+  justify-content: space-between;
+  gap: 1rem;
   background: var(--white);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 1rem;
+  padding: 1.1rem 1.25rem;
 }
 
 .hole-nav .icon-btn {
-  background: var(--sand-light);
+  background: transparent;
+  color: var(--fairway);
   font-size: 22px;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+
+.hole-nav .icon-btn:active {
+  background: var(--sand-light);
 }
 
 .hole-nav-center {
   text-align: center;
-  min-width: 130px;
+  flex: 1;
 }
 
 .hole-nav-label {
@@ -2029,29 +2056,32 @@ input::placeholder {
   font-size: 11px;
   color: var(--ink-faint);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
 .hole-nav-number {
-  margin: 0;
+  margin: 0.1rem 0 0.35rem;
   font-family: var(--font-display);
-  font-size: 38px;
+  font-size: 46px;
+  font-weight: 600;
   color: var(--fairway);
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .hole-nav-meta {
-  margin: 0.15rem 0 0;
+  margin: 0;
   display: flex;
   justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 0.3rem 0.55rem;
+  gap: 0.35rem 1.1rem;
 }
 
 .hole-nav-stat {
   margin: 0;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
+  letter-spacing: 0.3px;
   color: var(--ink-soft);
 }
 
@@ -2074,47 +2104,116 @@ input::placeholder {
 }
 
 .stroke-btn {
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  border: none;
-  font-size: 30px;
-  font-weight: 700;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  font-size: 26px;
+  font-weight: 600;
   cursor: pointer;
-  color: var(--white);
-}
-
-.stroke-minus {
-  background: var(--ink-faint);
-}
-
-.stroke-plus {
-  background: var(--fairway);
+  color: var(--fairway);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .stroke-btn:active {
   transform: scale(0.94);
+  background: var(--sand-light);
+}
+
+.stroke-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .stroke-display {
   text-align: center;
   min-width: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Circular ring badge holding the entered score, echoing the circled number
+   in the design reference. */
+.stroke-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: 2px solid var(--fairway);
+  background: var(--white);
 }
 
 .stroke-number {
   display: block;
   font-family: var(--font-mono);
-  font-size: 64px;
-  font-weight: 700;
-  color: var(--ink);
+  font-size: 46px;
+  font-weight: 600;
+  color: var(--fairway);
   line-height: 1;
 }
 
 .stroke-caption {
   display: block;
   font-size: 12px;
+  letter-spacing: 0.3px;
   color: var(--ink-faint);
-  margin-top: 0.3rem;
+}
+
+/* ---------- Round footer (Back / Share / Cancel) ---------- */
+/* Sits at the bottom of the round screen, after both tab panels, so the
+   controls are reachable from the Scorecard and Leaderboard tabs alike. */
+.round-footer {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 2rem;
+  border-top: 1.5px solid var(--line);
+}
+
+.round-footer-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.7rem 0.5rem;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.round-footer-btn:active {
+  background: var(--sand-light);
+}
+
+.round-footer-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.round-footer-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.round-footer-btn-danger {
+  color: var(--flag);
+  border-color: var(--flag);
 }
 
 /* ---------- Putts stepper ---------- */
