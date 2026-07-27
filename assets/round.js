@@ -241,7 +241,7 @@ function renderRoundHeader() {
   document.getElementById('round-course-name').textContent = r.courseName;
   document.getElementById('round-meta').textContent = r.ended
     ? `${r.holeCount} holes · Final results`
-    : `${r.holeCount} holes · code ${r.code}`;
+    : `${r.holeCount} holes · Thru ${Golf.groupThru(r.players, r.holeCount)}`;
   document.getElementById('btn-cancel-round').hidden = !isHost() || r.ended;
   document.getElementById('btn-round-feedback').hidden = !r.ended;
 }
