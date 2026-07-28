@@ -1976,7 +1976,8 @@ input::placeholder {
 /* ---------- Tab bar (round) ---------- */
 .tabbar {
   display: flex;
-  background: var(--fairway-dark);
+  background: var(--cream);
+  border-bottom: 1px solid var(--line);
 }
 
 .round-sticky-header {
@@ -1989,7 +1990,7 @@ input::placeholder {
   flex: 1;
   border: none;
   background: none;
-  color: var(--sand-light);
+  color: var(--ink-faint);
   font-family: var(--font-display);
   font-size: 14px;
   letter-spacing: 0.5px;
@@ -2000,7 +2001,7 @@ input::placeholder {
 }
 
 .tab.active {
-  color: var(--white);
+  color: var(--ink);
   border-bottom-color: var(--flag);
 }
 
@@ -2027,10 +2028,12 @@ input::placeholder {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  background: var(--white);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-lg);
-  padding: 1.1rem 1.25rem;
+  background: transparent;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 1.1rem 0.5rem;
+  margin: 0 1rem;
 }
 
 .hole-nav .icon-btn {
@@ -2109,8 +2112,8 @@ input::placeholder {
   border-radius: 50%;
   border: 1.5px solid var(--line);
   background: var(--white);
-  font-size: 26px;
-  font-weight: 600;
+  font-size: 34px;
+  font-weight: 700;
   cursor: pointer;
   color: var(--fairway);
   display: flex;
@@ -2139,33 +2142,28 @@ input::placeholder {
   gap: 0.5rem;
 }
 
-/* Circular ring badge holding the entered score, echoing the circled number
-   in the design reference. */
 .stroke-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 92px;
-  height: 92px;
-  border-radius: 50%;
-  border: 2px solid var(--fairway);
-  background: var(--white);
 }
 
 .stroke-number {
   display: block;
   font-family: var(--font-mono);
-  font-size: 46px;
-  font-weight: 600;
+  font-size: 64px;
+  font-weight: 700;
   color: var(--fairway);
   line-height: 1;
 }
 
 .stroke-caption {
   display: block;
-  font-size: 12px;
-  letter-spacing: 0.3px;
-  color: var(--ink-faint);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
 /* ---------- Round footer (Back / Share / Cancel) ---------- */
@@ -2244,18 +2242,18 @@ input::placeholder {
   height: 48px;
   border-radius: 50%;
   border: none;
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 700;
   cursor: pointer;
   color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.putts-minus {
-  background: var(--ink-faint);
-}
-
+.putts-minus,
 .putts-plus {
-  background: var(--fairway);
+  background: var(--ink-faint);
 }
 
 .putts-btn:active {
