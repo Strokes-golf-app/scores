@@ -92,7 +92,16 @@ function init() {
     joinRound(document.getElementById('join-code').value);
   });
 
-  document.getElementById('btn-setup-back').addEventListener('click', () => showScreen('screen-home'));
+  document.getElementById('btn-setup-back').addEventListener('click', () => {
+    if (state.editingRoundId) {
+      state.editingRoundId = null;
+      showScreen('screen-round');
+    } else {
+      showScreen('screen-home');
+    }
+  });
+
+  document.getElementById('btn-edit-round').addEventListener('click', openRoundEditor);
 
   document.getElementById('hole-count').addEventListener('change', () => {
     const course = state.selectedFullCourse;
@@ -119,7 +128,10 @@ function init() {
     });
   });
 
-  document.getElementById('btn-create-round').addEventListener('click', createRound);
+  document.getElementById('btn-create-round').addEventListener('click', () => {
+    if (state.editingRoundId) saveRoundEdits();
+    else createRound();
+  });
 
   document.getElementById('bets-enabled').addEventListener('change', e => {
     state.setupBetsEnabled = e.target.checked;
