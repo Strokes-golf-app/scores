@@ -242,6 +242,41 @@ function skinsStripHtml(log, summaries, holeOffset) {
   return `<div class="skins-strip-wrap"><p class="skins-strip-label">Hole by hole</p><div class="skins-strip">${cells}</div></div>`;
 }
 
+// The match-play equivalent of the skins strip: one cell per hole showing the
+// running match status *after* that hole (e.g. Team A 2 up). Colour marks who
+// leads at that point — Team A (green), Team B (red), all-square (neutral) —
+// and the legend maps those colours to the full team names. Holes not yet
+// played by both teams render as dashed pending cells.
+function matchStripHtml(log, holeCount, holeOffset, teamAName, teamBName, teamAInit, teamBInit) {
+  const off = holeOffset || 0;
+  const cumByHole = {};
+  Golf.matchRunning(log).forEach(e => { cumByHole[e.hole] = e.cum; });
+
+  const cells = [];
+  for (let h = 1; h <= holeCount; h++) {
+    const num = h + off;
+    if (!(h in cumByHole)) {
+      cells.push(`<div class="skins-cell match-cell pending"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">·</span></div>`);
+      continue;
+    }
+    const cum = cumByHole[h];
+    if (cum > 0) {
+      cells.push(`<div class="skins-cell match-cell team-a"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">${cum}</span><span class="skins-cell-sub">${escapeHtml(teamAInit)}</span></div>`);
+    } else if (cum < 0) {
+      cells.push(`<div class="skins-cell match-cell team-b"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">${Math.abs(cum)}</span><span class="skins-cell-sub">${escapeHtml(teamBInit)}</span></div>`);
+    } else {
+      cells.push(`<div class="skins-cell match-cell square"><span class="skins-cell-num">${num}</span><span class="skins-cell-main">AS</span></div>`);
+    }
+  }
+
+  const legend = `<div class="match-legend">` +
+    `<span class="match-legend-item"><span class="match-swatch team-a"></span>${escapeHtml(teamAName)}</span>` +
+    `<span class="match-legend-item"><span class="match-swatch team-b"></span>${escapeHtml(teamBName)}</span>` +
+    `</div>`;
+
+  return `<div class="skins-strip-wrap"><p class="skins-strip-label">Hole by hole</p>${legend}<div class="skins-strip">${cells.join('')}</div></div>`;
+}
+
 function renderMatchBoard(summaries, r) {
   const metaEl = document.getElementById('board-meta');
   const boardEl = document.getElementById('leaderboard');
@@ -259,6 +294,8 @@ function renderMatchBoard(summaries, r) {
   const m = Golf.computeMatchPlay(teamASummaries, teamBSummaries, r.holeCount, r.matchUseHandicap);
   const teamAName = teamASummaries.map(s => s.name).join(' & ');
   const teamBName = teamBSummaries.map(s => s.name).join(' & ');
+  const teamAInit = teamASummaries.map(s => initials(s.name)).join('/');
+  const teamBInit = teamBSummaries.map(s => initials(s.name)).join('/');
 
   metaEl.textContent = r.matchUseHandicap
     ? 'Head-to-head, best-ball net score per hole.'
@@ -282,5 +319,5 @@ function renderMatchBoard(summaries, r) {
       <p class="match-status">${statusText}</p>
       <p class="match-thru">thru ${m.thru} of ${r.holeCount}</p>
     </div>
-  `;
+  ` + matchStripHtml(m.log, r.holeCount, r.holeOffset, teamAName, teamBName, teamAInit, teamBInit);
 }
