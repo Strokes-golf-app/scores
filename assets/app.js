@@ -28,6 +28,12 @@ function init() {
     }
   });
 
+  // Tournaments are not built yet — the button is a placeholder for the
+  // upcoming multi-group flow.
+  document.getElementById('btn-new-tournament').addEventListener('click', () => {
+    showToast('Tournaments coming soon');
+  });
+
   document.getElementById('btn-course-upload-back').addEventListener('click', () => showScreen('screen-home'));
   document.getElementById('course-hole-count').addEventListener('change', renderCourseHoleGrid);
   document.getElementById('btn-save-course').addEventListener('click', saveCourse);

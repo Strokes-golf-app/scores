@@ -259,6 +259,38 @@ describe('computeMatchPlay — teams and best ball', () => {
   });
 });
 
+describe('matchRunning', () => {
+  it('accumulates the running differential after each hole', () => {
+    const log = [
+      { hole: 1, result: 'A' },
+      { hole: 2, result: 'A' },
+      { hole: 3, result: 'halved' },
+      { hole: 4, result: 'B' },
+    ];
+    expect(Golf.matchRunning(log)).toEqual([
+      { hole: 1, cum: 1 }, // A 1up
+      { hole: 2, cum: 2 }, // A 2up
+      { hole: 3, cum: 2 }, // halved — no change
+      { hole: 4, cum: 1 }, // A back to 1up
+    ]);
+  });
+
+  it('goes negative when Team B is ahead and returns to square', () => {
+    const log = [
+      { hole: 1, result: 'B' },
+      { hole: 2, result: 'B' },
+      { hole: 3, result: 'A' },
+      { hole: 4, result: 'A' },
+    ];
+    expect(Golf.matchRunning(log).map(e => e.cum)).toEqual([-1, -2, -1, 0]);
+  });
+
+  it('returns an empty array for an empty or missing log', () => {
+    expect(Golf.matchRunning([])).toEqual([]);
+    expect(Golf.matchRunning(undefined)).toEqual([]);
+  });
+});
+
 describe('formatToPar', () => {
   it('formats even, over, and under par correctly', () => {
     expect(Golf.formatToPar(0)).toBe('E');

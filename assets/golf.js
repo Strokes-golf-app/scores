@@ -264,6 +264,22 @@ const Golf = (() => {
     };
   }
 
+  /**
+   * Cumulative match-play status after each played hole. Takes the `log`
+   * array from computeMatchPlay ([{ hole, result:'A'|'B'|'halved' }]) and
+   * returns [{ hole, cum }] where cum is the running differential after that
+   * hole: cum > 0 means Team A is that many holes up, cum < 0 means Team B is
+   * up, cum === 0 is all square. Used to render the hole-by-hole strip.
+   */
+  function matchRunning(log) {
+    let cum = 0;
+    return (log || []).map(entry => {
+      if (entry.result === 'A') cum += 1;
+      else if (entry.result === 'B') cum -= 1;
+      return { hole: entry.hole, cum };
+    });
+  }
+
   function formatToPar(n) {
     if (n === 0) return 'E';
     return n > 0 ? `+${n}` : `${n}`;
@@ -439,6 +455,7 @@ const Golf = (() => {
     rankPlayers,
     computeSkins,
     computeMatchPlay,
+    matchRunning,
     computeMoney,
     formatToPar,
     formatMoney,
