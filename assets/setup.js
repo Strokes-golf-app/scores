@@ -34,11 +34,18 @@ function renderSetupPlayerList() {
   state.setupPlayers.forEach((p) => {
     const row = document.createElement('div');
     row.className = 'player-row';
+    // In edit mode, players already saved to the round (existing) are locked:
+    // their name/handicap can't be edited here and they can't be removed, so a
+    // mid-round edit never disturbs someone who already has scores.
+    const dis = p.existing ? 'disabled' : '';
+    const removeBtn = p.existing
+      ? ''
+      : `<button class="player-row-remove" data-id="${p.id}" aria-label="Remove player">×</button>`;
     row.innerHTML = `
-      <input type="text" value="${escapeAttr(p.name)}" placeholder="Player name" data-id="${p.id}" class="setup-name-input">
+      <input type="text" value="${escapeAttr(p.name)}" placeholder="Player name" data-id="${p.id}" class="setup-name-input" ${dis}>
       <span class="hcp-label">HCP</span>
-      <input type="number" value="${p.handicap}" data-id="${p.id}" class="hcp-input setup-hcp-input" inputmode="decimal" min="0" max="54" step="0.1" placeholder="0">
-      <button class="player-row-remove" data-id="${p.id}" aria-label="Remove player">×</button>
+      <input type="number" value="${p.handicap}" data-id="${p.id}" class="hcp-input setup-hcp-input" inputmode="decimal" min="0" max="54" step="0.1" placeholder="0" ${dis}>
+      ${removeBtn}
     `;
     wrap.appendChild(row);
   });
@@ -167,6 +174,163 @@ async function resetSetupScreen() {
   state.setupPlayers = [{ id: uid('p'), name: hostName, handicap: hostHandicap }];
   renderParGrid();
   renderSetupPlayerList();
+  state.editingRoundId = null;
+  applySetupMode('create');
+}
+
+// Toggles the setup screen between "create a new round" and "edit an existing
+// round" presentation. In edit mode the settings that would disturb scoring
+// once a round is live — the course, hole count, and pars/handicaps — are
+// locked, and the title/primary button reflect saving rather than creating.
+function applySetupMode(mode) {
+  const editing = mode === 'edit';
+
+  const title = document.querySelector('#screen-setup .topbar-title');
+  if (title) title.textContent = editing ? 'Edit round' : 'New round';
+  const createBtn = document.getElementById('btn-create-round');
+  if (createBtn) createBtn.textContent = editing ? 'Save changes' : 'Create round & get code';
+
+  const lock = (el) => { if (el) el.disabled = editing; };
+  lock(document.getElementById('setup-course-search'));
+  lock(document.getElementById('btn-setup-course-search'));
+  lock(document.getElementById('hole-count'));
+  document.querySelectorAll('#par-grid .par-input, #par-grid .hole-hcp-input')
+    .forEach(inp => { inp.disabled = editing; });
+
+  const hint = document.getElementById('setup-locked-hint');
+  if (hint) hint.hidden = !editing;
+}
+
+// Opens the setup screen pre-filled from the current live round so the host
+// can change the safe settings (course name, modes, stakes, match teams, and
+// add players) mid-round. Reached from the "Edit round" footer button.
+async function openRoundEditor() {
+  const r = state.round;
+  if (!r) return;
+  state.editingRoundId = state.roundId;
+
+  document.getElementById('course-name').value = r.courseName || '';
+  document.getElementById('hole-count').value = String(r.holeCount || 18);
+  state.selectedCourseNine = r.holeOffset === 9 ? 'back' : null;
+
+  document.querySelectorAll('#mode-grid input[name="mode"]').forEach(cb => {
+    const on = cb.value === 'gross' || (r.modes || []).includes(cb.value);
+    cb.checked = on;
+    cb.closest('.mode-card').classList.toggle('checked', on);
+  });
+  const matchOn = (r.modes || []).includes('match');
+  document.getElementById('match-players-field').hidden = !matchOn;
+  document.getElementById('match-use-handicap').checked = r.matchUseHandicap !== false;
+
+  const hasStakes = r.stakes && Object.keys(r.stakes).some(k => r.stakes[k] > 0);
+  state.setupBetsEnabled = !!(r.betsEnabled || hasStakes);
+  state.setupStakes = { ...(r.stakes || {}) };
+  document.getElementById('bets-enabled').checked = state.setupBetsEnabled;
+  document.getElementById('set-stakes-field').hidden = !state.setupBetsEnabled;
+
+  // Existing players keep their real db id and are flagged so they can't be
+  // removed or renamed here (see renderSetupPlayerList).
+  state.setupPlayers = r.players.map(p => ({
+    id: p.id,
+    name: p.name,
+    handicap: p.handicap || 0,
+    existing: true,
+    hasScores: !!(p.scores && Object.keys(p.scores).some(k => p.scores[k] != null)),
+  }));
+
+  renderParGrid();
+  document.querySelectorAll('#par-grid .par-input').forEach(inp => {
+    const h = Number(inp.dataset.hole);
+    if (r.pars && r.pars[h - 1] != null) inp.value = r.pars[h - 1];
+  });
+  document.querySelectorAll('#par-grid .hole-hcp-input').forEach(inp => {
+    const h = Number(inp.dataset.hole);
+    if (r.strokeIndex && r.strokeIndex[h - 1] != null) inp.value = r.strokeIndex[h - 1];
+  });
+
+  renderSetupPlayerList();
+
+  if (matchOn) {
+    const teamA = new Set(r.matchTeamA || []);
+    const teamB = new Set(r.matchTeamB || []);
+    document.querySelectorAll('.match-assign-select').forEach(sel => {
+      if (teamA.has(sel.dataset.id)) sel.value = 'A';
+      else if (teamB.has(sel.dataset.id)) sel.value = 'B';
+    });
+  }
+
+  applySetupMode('edit');
+  showScreen('screen-setup');
+}
+
+// Persists the safe settings edited via openRoundEditor. Inserts any newly
+// added players, then updates the round row — never touching hole_count, pars,
+// stroke_index, or hole_offset, which stay fixed for a live round.
+async function saveRoundEdits() {
+  const roundId = state.editingRoundId;
+  if (!roundId) return;
+
+  const courseName = document.getElementById('course-name').value.trim() || 'Untitled round';
+  const modes = collectModes();
+  const betsEnabled = document.getElementById('bets-enabled').checked;
+  const stakes = betsEnabled ? (state.setupStakes || {}) : {};
+
+  let matchUseHandicap = true;
+  let teamA = [], teamB = [];
+  if (modes.includes('match')) {
+    ({ teamA, teamB } = collectMatchAssignments());
+    if (teamA.length === 0 || teamB.length === 0) {
+      showToast('Assign at least one player to each match play team');
+      return;
+    }
+    if (teamA.length > 3 || teamB.length > 3) {
+      showToast('Match play teams can have at most 3 players each');
+      return;
+    }
+    matchUseHandicap = document.getElementById('match-use-handicap').checked;
+  }
+
+  try {
+    // Insert newly added players first, mapping their temp id to a real db id.
+    const tempIdToDbId = {};
+    const newPlayers = state.setupPlayers.filter(p => !p.existing && p.name.trim());
+    if (newPlayers.length > 0) {
+      const rows = newPlayers.map(p => {
+        const dbId = crypto.randomUUID();
+        tempIdToDbId[p.id] = dbId;
+        return { id: dbId, round_id: roundId, name: p.name.trim(), handicap: p.handicap || 0, user_id: null };
+      });
+      const { error: insErr } = await supabaseClient.from('players').insert(rows);
+      if (insErr) throw insErr;
+    }
+
+    const resolveId = id => tempIdToDbId[id] || id; // existing players keep their id
+    const matchTeamA = modes.includes('match') ? teamA.map(resolveId) : null;
+    const matchTeamB = modes.includes('match') ? teamB.map(resolveId) : null;
+
+    const { error: updErr } = await supabaseClient
+      .from('rounds')
+      .update({
+        course_name: courseName,
+        modes,
+        stakes,
+        bets_enabled: betsEnabled,
+        match_team_a: matchTeamA && matchTeamA.length ? matchTeamA : null,
+        match_team_b: matchTeamB && matchTeamB.length ? matchTeamB : null,
+        match_use_handicap: matchUseHandicap,
+      })
+      .eq('id', roundId);
+    if (updErr) throw updErr;
+
+    state.editingRoundId = null;
+    await loadRound(roundId);
+    showScreen('screen-round');
+    onRoundUpdate();
+    showToast('Round updated');
+  } catch (e) {
+    console.error(e);
+    showToast('Could not save changes — check your connection');
+  }
 }
 
 

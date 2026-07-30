@@ -521,6 +521,7 @@
       <span class="topbar-spacer"></span>
     </header>
     <div class="screen-body">
+      <p id="setup-locked-hint" class="field-hint" hidden>Course, hole count, and pars are locked once the round is live.</p>
       <div class="field">
         <label class="field-label" for="setup-course-search">Course</label>
         <div class="course-search-wrapper">
@@ -561,9 +562,11 @@
       </div>
 
       <div class="field">
-        <label class="field-label">Hole pars (optional)</label>
-        <p class="field-hint">Leave blank to default every hole to par 4. You can fix this later from the scorecard.</p>
-        <div id="par-grid" class="par-grid"></div>
+        <details class="course-details">
+          <summary class="course-details-summary">View course details</summary>
+          <p class="field-hint">Leave blank to default every hole to par 4. You can fix this later from the scorecard.</p>
+          <div id="par-grid" class="par-grid"></div>
+        </details>
       </div>
 
       <div class="field">
@@ -805,6 +808,10 @@
       <button class="round-footer-btn" id="btn-round-leave" type="button" aria-label="Leave round">
         <span class="round-footer-icon">←</span>
         <span class="round-footer-label">Back</span>
+      </button>
+      <button class="round-footer-btn" id="btn-edit-round" type="button" aria-label="Edit round" hidden>
+        <span class="round-footer-icon">✏️</span>
+        <span class="round-footer-label">Edit round</span>
       </button>
       <button class="round-footer-btn" id="btn-round-share" type="button" aria-label="Share round">
         <span class="round-footer-icon">📋</span>

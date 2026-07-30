@@ -859,7 +859,7 @@ h3 {
 
 .drawer-user-name {
   margin: 0.75rem 0 0;
-  text-align: center;
+  text-align: left;
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 600;
@@ -1318,10 +1318,46 @@ input::placeholder {
 }
 
 /* ---------- Par grid (setup) ---------- */
+/* Collapsible "View course details" disclosure on the setup screen — the pars
+   and hole handicaps live inside and only show once the summary is opened. */
+.course-details-summary {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--fairway);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0;
+}
+
+.course-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.course-details-summary::before {
+  content: "▸";
+  font-size: 11px;
+  transition: transform 0.15s ease;
+}
+
+.course-details[open] > .course-details-summary::before {
+  transform: rotate(90deg);
+}
+
+.course-details > .field-hint {
+  margin-top: 0.5rem;
+}
+
 .par-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 5px;
+  margin-top: 0.5rem;
 }
 
 .par-cell {
@@ -2072,6 +2108,7 @@ input::placeholder {
 .hole-nav-label {
   margin: 0;
   font-size: 11px;
+  font-weight: 700;
   color: var(--ink-faint);
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -2185,8 +2222,8 @@ input::placeholder {
 /* Sits at the bottom of the round screen, after both tab panels, so the
    controls are reachable from the Scorecard and Leaderboard tabs alike. */
 .round-footer {
-  display: flex;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   padding: 1rem 1.25rem 2rem;
   border-top: 1.5px solid var(--line);
