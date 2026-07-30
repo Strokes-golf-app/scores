@@ -105,16 +105,32 @@ function relativeToParLabel(gross, par) {
   return `+${diff} over par`;
 }
 
+// Renders the player's card as a scorecard-style grid: the front nine on one
+// row and the back nine on the next, each hole showing its number, a score box
+// (blank until entered), and the hole's par + handicap underneath, with OUT /
+// IN / TOTAL sums at the end of each row.
 function renderMiniHoles(player, r) {
   const wrap = document.getElementById('mini-holes');
   wrap.innerHTML = '';
-  for (let h = 1; h <= r.holeCount; h++) {
+
+  const hc = r.holeCount;
+  const nineCols = hc > 9 ? 9 : hc;
+  // 9 (or fewer) hole columns, then a nine-total column, then a round-total
+  // column — the second total column only exists on an 18-hole card.
+  wrap.className = 'sc-strip' + (hc > 9 ? '' : ' sc-strip-single');
+  wrap.style.setProperty('--sc-cols', nineCols);
+
+  const grossAt = (h) => (player.scores && player.scores[String(h)] != null ? Number(player.scores[String(h)]) : null);
+
+  // One playable hole cell — a button so tapping it jumps the entry to that hole.
+  const holeCell = (h) => {
     const par = r.pars[h - 1] || 4;
     const si = r.strokeIndex && r.strokeIndex[h - 1] != null ? r.strokeIndex[h - 1] : null;
-    const gross = player.scores && player.scores[String(h)] != null ? Number(player.scores[String(h)]) : null;
+    const gross = grossAt(h);
 
-    const cell = document.createElement('div');
-    let cls = 'mini-hole';
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    let cls = 'sc-cell';
     if (gross != null) {
       cls += ' played';
       if (gross < par) cls += ' under';
@@ -124,28 +140,44 @@ function renderMiniHoles(player, r) {
     if (h === state.currentHole) cls += ' current';
     cell.className = cls;
 
-    const num = document.createElement('span');
-    num.className = 'mini-hole-num';
-    num.textContent = h + (r.holeOffset || 0);
-
-    const score = document.createElement('span');
-    score.className = 'mini-hole-score';
-    score.textContent = gross != null ? gross : '—';
-
-    const sub = document.createElement('div');
-    sub.className = 'mini-hole-sub';
-    const parLine = document.createElement('span');
-    parLine.textContent = `Par ${par}`;
-    sub.appendChild(parLine);
-    if (si != null) {
-      const hcpLine = document.createElement('span');
-      hcpLine.textContent = `Hcp ${si}`;
-      sub.appendChild(hcpLine);
-    }
-
-    cell.append(num, score, sub);
+    const meta = `<span>Par ${par}</span>` + (si != null ? `<span>Hcp ${si}</span>` : '');
+    cell.innerHTML =
+      `<span class="sc-cell-num">${h + (r.holeOffset || 0)}</span>` +
+      `<span class="sc-cell-score">${gross != null ? gross : ''}</span>` +
+      `<span class="sc-cell-meta">${meta}</span>`;
     cell.addEventListener('click', () => { state.currentHole = h; renderScorecardTab(); });
-    wrap.appendChild(cell);
+    return cell;
+  };
+
+  // A summary cell (OUT / IN / TOTAL). `to === 0` renders the empty grand-total
+  // slot that keeps the front row aligned with the back row's TOTAL column.
+  const totalCell = (label, from, to) => {
+    const cell = document.createElement('div');
+    cell.className = 'sc-cell sc-total' + (label === 'TOTAL' ? ' sc-grand' : '');
+    if (to === 0) return cell; // empty alignment slot on the front row
+    let sum = 0, any = false, parSum = 0;
+    for (let h = from; h <= to; h++) {
+      parSum += (r.pars[h - 1] || 4);
+      const g = grossAt(h);
+      if (g != null) { sum += g; any = true; }
+    }
+    cell.innerHTML =
+      `<span class="sc-cell-num">${label}</span>` +
+      `<span class="sc-cell-score">${any ? sum : ''}</span>` +
+      `<span class="sc-cell-meta"><span>Par ${parSum}</span></span>`;
+    return cell;
+  };
+
+  if (hc > 9) {
+    for (let h = 1; h <= 9; h++) wrap.appendChild(holeCell(h));
+    wrap.appendChild(totalCell('OUT', 1, 9));
+    wrap.appendChild(totalCell('TOTAL', 0, 0)); // empty grand slot on front row
+    for (let h = 10; h <= hc; h++) wrap.appendChild(holeCell(h));
+    wrap.appendChild(totalCell('IN', 10, hc));
+    wrap.appendChild(totalCell('TOTAL', 1, hc));
+  } else {
+    for (let h = 1; h <= hc; h++) wrap.appendChild(holeCell(h));
+    wrap.appendChild(totalCell('TOTAL', 1, hc));
   }
 }
 

@@ -242,9 +242,13 @@ function renderRoundHeader() {
   document.getElementById('round-meta').textContent = r.ended
     ? `${r.holeCount} holes · Final results`
     : `${r.holeCount} holes · Thru ${Golf.groupThru(r.players, r.holeCount)}`;
-  document.getElementById('btn-cancel-round').hidden = !isHost() || r.ended;
-  document.getElementById('btn-edit-round').hidden = !isHost() || r.ended;
+  const hostControls = isHost() && !r.ended;
+  document.getElementById('btn-cancel-round').hidden = !hostControls;
+  document.getElementById('btn-edit-round').hidden = !hostControls;
   document.getElementById('btn-round-feedback').hidden = !r.ended;
+  // With all four buttons showing, the footer divider is a full "+"; otherwise
+  // (2 buttons) only the vertical line applies.
+  document.querySelector('.round-footer-grid')?.classList.toggle('is-quad', hostControls);
 }
 
 // ---------------------------------------------------------

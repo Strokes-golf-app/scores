@@ -2231,30 +2231,56 @@ input::placeholder {
 /* Sits at the bottom of the round screen, after both tab panels, so the
    controls are reachable from the Scorecard and Leaderboard tabs alike. */
 .round-footer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
   padding: 1rem 1.25rem 2rem;
   border-top: 1.5px solid var(--line);
 }
 
+/* Four borderless labels divided by a short, inset "+" — a vertical and a
+   horizontal line that float in the middle without reaching the edges. */
+.round-footer-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.round-footer-grid::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  bottom: 12%;
+  width: 1px;
+  background: var(--line);
+  transform: translateX(-50%);
+}
+
+/* Horizontal arm only when all four buttons are present (host, live round). */
+.round-footer-grid.is-quad::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: var(--line);
+  transform: translateY(-50%);
+}
+
 .round-footer-btn {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  padding: 0.7rem 0.5rem;
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--white);
+  padding: 1rem 0.5rem;
+  border: none;
+  background: none;
   color: var(--ink-soft);
   cursor: pointer;
 }
 
 .round-footer-btn:active {
-  background: var(--sand-light);
+  opacity: 0.6;
 }
 
 .round-footer-icon {
@@ -2346,76 +2372,113 @@ input::placeholder {
   gap: 0.6rem;
 }
 
-.mini-holes {
+/* Scorecard-style card: front nine on one row, back nine on the next, each
+   nine ending in its total (OUT/IN) plus a round TOTAL column. */
+.sc-strip {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 5px;
+  /* minmax(0, …) lets every column shrink below its content so all 11 columns
+     (9 holes + two totals) fit the phone width instead of overflowing. */
+  grid-template-columns: repeat(var(--sc-cols, 9), minmax(0, 1fr)) minmax(0, 1.2fr) minmax(0, 1.2fr);
+  gap: 3px;
 }
 
-.mini-hole {
-  border-radius: 6px;
-  background: var(--sand-light);
+.sc-strip-single {
+  grid-template-columns: repeat(var(--sc-cols, 9), minmax(0, 1fr)) minmax(0, 1.2fr);
+}
+
+.sc-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1px;
-  padding: 5px 2px;
-  min-height: 62px;
+  padding: 4px 1px;
+  min-height: 58px;
+  border-radius: 5px;
+  background: var(--sand-light);
   color: var(--ink-faint);
   border: 1.5px solid transparent;
+  font: inherit;
+}
+
+button.sc-cell {
   cursor: pointer;
 }
 
-.mini-hole-num {
+.sc-cell-num {
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  opacity: 0.8;
+  letter-spacing: 0.3px;
+  opacity: 0.85;
 }
 
-.mini-hole-score {
+/* The score box: a fixed-height slot that stays blank until a score exists,
+   so an unplayed hole reads like an empty scorecard box. */
+.sc-cell-score {
   font-family: var(--font-mono);
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
   line-height: 1.05;
+  min-height: 20px;
 }
 
-.mini-hole-sub {
+.sc-cell-meta {
   display: flex;
   flex-direction: column;
   align-items: center;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.15;
+  letter-spacing: 0.1px;
   opacity: 0.8;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.mini-hole.played {
+.sc-cell.played {
   color: var(--ink);
   border-color: var(--line);
 }
 
-.mini-hole.under {
+.sc-cell.under {
   background: var(--fairway-light);
   color: var(--white);
+  border-color: var(--fairway-light);
 }
 
-.mini-hole.over {
+.sc-cell.over {
   background: var(--flag);
   color: var(--white);
+  border-color: var(--flag);
 }
 
-.mini-hole.even {
+.sc-cell.even {
   background: var(--sand);
+  color: var(--ink);
+  border-color: var(--sand);
+}
+
+.sc-cell.current {
+  border-color: var(--fairway);
+  border-width: 2px;
+}
+
+/* Nine / round totals — a distinct cream tint so they read as summary columns. */
+.sc-total {
+  background: var(--cream);
+  border-color: var(--line);
   color: var(--ink);
 }
 
-.mini-hole.current {
-  border-color: var(--fairway);
-  border-width: 2px;
+.sc-total .sc-cell-num {
+  color: var(--fairway);
+  opacity: 1;
+}
+
+.sc-grand {
+  background: var(--white);
 }
 
 /* ---------- Skins hole-by-hole strip ---------- */
