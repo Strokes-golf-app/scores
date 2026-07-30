@@ -905,6 +905,15 @@ h3 {
   text-align: center;
 }
 
+/* SVG icons (drawer nav) sit a touch larger than the emoji they replace and
+   keep a fixed square footprint so labels stay aligned. */
+img.drawer-item-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex: none;
+}
+
 .drawer-item-muted {
   color: var(--ink-soft);
   font-weight: 500;
