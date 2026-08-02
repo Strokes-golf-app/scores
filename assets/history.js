@@ -195,6 +195,9 @@ function reconstructRound(row) {
     matchTeamA: snap.match_team_a || null,
     matchTeamB: snap.match_team_b || null,
     matchUseHandicap: snap.match_use_handicap !== false,
+    sidematchTeamC: snap.sidematch_team_c || null,
+    sidematchTeamD: snap.sidematch_team_d || null,
+    sidematchUseHandicap: snap.sidematch_use_handicap !== false,
     betsEnabled: snap.bets_enabled === true,
     stakes: snap.stakes || {},
     status: row.status || 'completed',
@@ -247,6 +250,7 @@ function renderHistoryDetailBoard(mode) {
 
   if (mode === 'skins') return renderHistoryDetailSkins(summaries, round, metaEl, boardEl);
   if (mode === 'match') return renderHistoryDetailMatch(summaries, round, metaEl, boardEl);
+  if (mode === 'sidematch') return renderHistoryDetailSideMatch(summaries, round, metaEl, boardEl);
   if (mode === 'money') return renderHistoryDetailMoney(summaries, round, metaEl, boardEl);
 
   metaEl.textContent = mode === 'stableford'
@@ -389,6 +393,51 @@ function renderHistoryDetailMatch(summaries, round, metaEl, boardEl) {
         <span class="history-match-team">${escapeHtml(teamAName)}</span>
         <span class="history-match-vs">vs</span>
         <span class="history-match-team">${escapeHtml(teamBName)}</span>
+      </div>
+      <div class="history-match-outcome">${escapeHtml(resultText)}</div>
+    </div>
+  `;
+}
+
+function renderHistoryDetailSideMatch(summaries, round, metaEl, boardEl) {
+  if (!round.sidematchTeamC || !round.sidematchTeamD || !round.sidematchTeamC.length || !round.sidematchTeamD.length) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">This round didn\'t have a side match set.</div>';
+    return;
+  }
+
+  const teamC = round.sidematchTeamC.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  const teamD = round.sidematchTeamD.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  if (!teamC.length || !teamD.length) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Side match players weren\'t found in this round.</div>';
+    return;
+  }
+
+  const m = Golf.computeMatchPlay(teamC, teamD, round.holeCount, round.sidematchUseHandicap);
+  const teamCName = teamC.map(s => s.name).join(' & ');
+  const teamDName = teamD.map(s => s.name).join(' & ');
+
+  metaEl.textContent = round.sidematchUseHandicap
+    ? 'Side match — head-to-head, best-ball net score per hole.'
+    : 'Side match — head-to-head, best-ball gross score per hole.';
+
+  let resultText;
+  if (m.diff === 0) {
+    resultText = 'Side match halved — all square';
+  } else {
+    const winnerName = m.diff > 0 ? teamCName : teamDName;
+    resultText = m.remaining > 0
+      ? `${winnerName} won ${m.margin}&${m.remaining}`
+      : `${winnerName} won ${m.margin} up`;
+  }
+
+  boardEl.innerHTML = `
+    <div class="history-match-result">
+      <div class="history-match-teams">
+        <span class="history-match-team">${escapeHtml(teamCName)}</span>
+        <span class="history-match-vs">vs</span>
+        <span class="history-match-team">${escapeHtml(teamDName)}</span>
       </div>
       <div class="history-match-outcome">${escapeHtml(resultText)}</div>
     </div>

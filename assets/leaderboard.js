@@ -51,6 +51,10 @@ function renderLeaderboardTab() {
     renderMatchBoard(summaries, r);
     return;
   }
+  if (mode === 'sidematch') {
+    renderSideMatchBoard(summaries, r);
+    return;
+  }
   if (mode === 'money') {
     renderMoneyBoard(summaries, r);
     return;
@@ -320,4 +324,52 @@ function renderMatchBoard(summaries, r) {
       <p class="match-thru">thru ${m.thru} of ${r.holeCount}</p>
     </div>
   ` + matchStripHtml(m.log, r.holeCount, r.holeOffset, teamAName, teamBName, teamAInit, teamBInit);
+}
+
+// The side match — a separate head-to-head (Team C vs Team D) running alongside
+// the main game. Mirrors renderMatchBoard using the sidematch fields; reuses the
+// same match engine and hole-by-hole strip.
+function renderSideMatchBoard(summaries, r) {
+  const metaEl = document.getElementById('board-meta');
+  const boardEl = document.getElementById('leaderboard');
+
+  if (!r.sidematchTeamC || !r.sidematchTeamD || r.sidematchTeamC.length === 0 || r.sidematchTeamD.length === 0) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Side match needs teams selected at setup.</div>';
+    return;
+  }
+
+  const teamCSummaries = r.sidematchTeamC.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  const teamDSummaries = r.sidematchTeamD.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  if (teamCSummaries.length === 0 || teamDSummaries.length === 0) return;
+
+  const m = Golf.computeMatchPlay(teamCSummaries, teamDSummaries, r.holeCount, r.sidematchUseHandicap);
+  const teamCName = teamCSummaries.map(s => s.name).join(' & ');
+  const teamDName = teamDSummaries.map(s => s.name).join(' & ');
+  const teamCInit = teamCSummaries.map(s => initials(s.name)).join('/');
+  const teamDInit = teamDSummaries.map(s => initials(s.name)).join('/');
+
+  metaEl.textContent = r.sidematchUseHandicap
+    ? 'Side match — head-to-head, best-ball net score per hole.'
+    : 'Side match — head-to-head, best-ball gross score per hole.';
+
+  let statusText;
+  if (m.thru === 0) {
+    statusText = 'Not started';
+  } else if (m.diff === 0) {
+    statusText = 'All square';
+  } else {
+    const leaderName = m.diff > 0 ? teamCName : teamDName;
+    statusText = m.decided && m.thru < r.holeCount
+      ? `${leaderName} wins ${m.margin}&${m.remaining}`
+      : `${leaderName} ${m.margin} up`;
+  }
+
+  boardEl.innerHTML = `
+    <div class="match-card">
+      <p class="match-vs">${escapeHtml(teamCName)} vs ${escapeHtml(teamDName)}</p>
+      <p class="match-status">${statusText}</p>
+      <p class="match-thru">thru ${m.thru} of ${r.holeCount}</p>
+    </div>
+  ` + matchStripHtml(m.log, r.holeCount, r.holeOffset, teamCName, teamDName, teamCInit, teamDInit);
 }

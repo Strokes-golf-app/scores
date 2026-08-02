@@ -26,6 +26,18 @@ create table if not exists rounds (
   created_at timestamptz not null default now()
 );
 
+-- NOTE: this file is behind the live schema — the app also uses columns added
+-- since (course_location, stroke_index, hole_offset, match_team_a/b uuid[],
+-- match_use_handicap, bets_enabled, stakes jsonb, host_user_id). New columns
+-- are added via `alter table ... add column if not exists` so they apply to the
+-- existing table.
+
+-- Side Match: a separate head-to-head (Team C vs Team D) alongside the main game.
+alter table rounds
+  add column if not exists sidematch_team_c uuid[],
+  add column if not exists sidematch_team_d uuid[],
+  add column if not exists sidematch_use_handicap boolean;
+
 -- ---------- players ----------
 -- One row per player in a round.
 create table if not exists players (

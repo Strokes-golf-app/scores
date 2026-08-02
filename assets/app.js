@@ -123,7 +123,9 @@ function init() {
 
   document.querySelectorAll('#mode-grid input[name="mode"]').forEach(cb => {
     cb.addEventListener('change', () => {
-      document.getElementById('match-players-field').hidden = !document.getElementById('mode-grid').querySelector('input[value="match"]').checked;
+      const grid = document.getElementById('mode-grid');
+      document.getElementById('match-players-field').hidden = !grid.querySelector('input[value="match"]').checked;
+      document.getElementById('sidematch-players-field').hidden = !grid.querySelector('input[value="sidematch"]').checked;
       cb.closest('.mode-card').classList.toggle('checked', cb.checked);
     });
   });
