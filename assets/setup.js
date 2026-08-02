@@ -56,6 +56,7 @@ function renderSetupPlayerList() {
       if (p) p.name = e.target.value;
       renderMatchAssignList();
       renderSideMatchAssignList();
+      renderSixesAssignList();
     });
   });
   wrap.querySelectorAll('.setup-hcp-input').forEach(inp => {
@@ -85,11 +86,13 @@ function renderSetupPlayerList() {
       renderSetupPlayerList();
       renderMatchAssignList();
       renderSideMatchAssignList();
+      renderSixesAssignList();
     });
   });
 
   renderMatchAssignList();
   renderSideMatchAssignList();
+  renderSixesAssignList();
 }
 
 // Builds the team-assignment list shown when "Match play" is checked.
@@ -193,6 +196,61 @@ function sideMatchError(teamC, teamD) {
   return '';
 }
 
+// Sixes needs exactly four players in a seat order (the rotation is fixed by
+// seat). Each player gets a "seat 1-4 / not in" select. Mirrors the match
+// assign list, preserving picks across re-renders.
+function renderSixesAssignList() {
+  const wrap = document.getElementById('sixes-assign-list');
+  if (!wrap) return;
+
+  const previous = {};
+  wrap.querySelectorAll('.sixes-assign-select').forEach(sel => {
+    previous[sel.dataset.id] = sel.value;
+  });
+
+  wrap.innerHTML = '';
+  state.setupPlayers.forEach(p => {
+    const label = p.name || 'Unnamed player';
+    const row = document.createElement('div');
+    row.className = 'match-assign-row';
+    row.innerHTML = `
+      <span class="match-assign-name">${escapeHtml(label)}</span>
+      <select class="sixes-assign-select" data-id="${p.id}">
+        <option value="">Not in sixes</option>
+        <option value="1">Seat 1</option>
+        <option value="2">Seat 2</option>
+        <option value="3">Seat 3</option>
+        <option value="4">Seat 4</option>
+      </select>
+    `;
+    wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll('.sixes-assign-select').forEach(sel => {
+    if (previous[sel.dataset.id]) sel.value = previous[sel.dataset.id];
+  });
+}
+
+// Reads the sixes seat selects into an ordered [seat1, seat2, seat3, seat4]
+// array of player ids. Returns { players, error } — error is '' when exactly
+// four distinct seats (1-4) are filled by named players.
+function collectSixesPlayers() {
+  const validIds = new Set(state.setupPlayers.filter(p => p.name.trim()).map(p => p.id));
+  const bySeat = {};
+  let assigned = 0;
+  document.querySelectorAll('.sixes-assign-select').forEach(sel => {
+    if (!validIds.has(sel.dataset.id) || !sel.value) return;
+    assigned += 1;
+    if (bySeat[sel.value]) bySeat[sel.value] = 'DUP';
+    else bySeat[sel.value] = sel.dataset.id;
+  });
+  const seats = ['1', '2', '3', '4'];
+  if (assigned !== 4 || seats.some(s => !bySeat[s] || bySeat[s] === 'DUP')) {
+    return { players: [], error: 'Sixes needs exactly four players, one in each seat (1-4)' };
+  }
+  return { players: seats.map(s => bySeat[s]), error: '' };
+}
+
 // Shows/hides the per-mode config fields from the currently-checked mode boxes
 // and relabels the shared team field. Match play and Nassau share one Team A/B
 // assignment, so the team field shows when either is on.
@@ -204,6 +262,7 @@ function syncModeConfigFields() {
   document.getElementById('match-players-field').hidden = !(matchOn || nassauOn);
   document.getElementById('sidematch-players-field').hidden = !isOn('sidematch');
   document.getElementById('nassau-format-field').hidden = !nassauOn;
+  document.getElementById('sixes-field').hidden = !isOn('sixes');
 
   const label = document.getElementById('match-players-label');
   if (label) {
@@ -227,6 +286,10 @@ async function resetSetupScreen() {
   document.getElementById('nassau-format-field').hidden = true;
   const nassauMatchRadio = document.querySelector('#nassau-format input[value="match"]');
   if (nassauMatchRadio) nassauMatchRadio.checked = true;
+  document.getElementById('sixes-field').hidden = true;
+  document.getElementById('sixes-use-handicap').checked = true;
+  const sixesMatchRadio = document.querySelector('#sixes-format input[value="match"]');
+  if (sixesMatchRadio) sixesMatchRadio.checked = true;
   state.setupBetsEnabled = false;
   state.setupStakes = {};
   document.getElementById('bets-enabled').checked = false;
@@ -307,6 +370,10 @@ async function openRoundEditor() {
   document.getElementById('sidematch-use-handicap').checked = r.sidematchUseHandicap !== false;
   const nassauFmtRadio = document.querySelector(`#nassau-format input[value="${r.nassauFormat === 'stroke' ? 'stroke' : 'match'}"]`);
   if (nassauFmtRadio) nassauFmtRadio.checked = true;
+  const sixesOn = (r.modes || []).includes('sixes');
+  const sixesFmtRadio = document.querySelector(`#sixes-format input[value="${r.sixesFormat === 'stroke' ? 'stroke' : 'match'}"]`);
+  if (sixesFmtRadio) sixesFmtRadio.checked = true;
+  document.getElementById('sixes-use-handicap').checked = r.sixesUseHandicap !== false;
   syncModeConfigFields();
 
   const hasStakes = r.stakes && Object.keys(r.stakes).some(k => r.stakes[k] > 0);
@@ -355,6 +422,14 @@ async function openRoundEditor() {
     });
   }
 
+  if (sixesOn && Array.isArray(r.sixesPlayers)) {
+    const seatOf = {};
+    r.sixesPlayers.forEach((id, i) => { seatOf[id] = String(i + 1); });
+    document.querySelectorAll('.sixes-assign-select').forEach(sel => {
+      if (seatOf[sel.dataset.id]) sel.value = seatOf[sel.dataset.id];
+    });
+  }
+
   applySetupMode('edit');
   showScreen('screen-setup');
 }
@@ -400,6 +475,19 @@ async function saveRoundEdits() {
     sidematchUseHandicap = document.getElementById('sidematch-use-handicap').checked;
   }
 
+  let sixesPlayerIds = [], sixesFormat = null, sixesUseHandicap = true;
+  if (modes.includes('sixes')) {
+    if (Number(document.getElementById('hole-count').value) !== 18) {
+      showToast('Sixes needs an 18-hole round');
+      return;
+    }
+    const { players, error: sixesErr } = collectSixesPlayers();
+    if (sixesErr) { showToast(sixesErr); return; }
+    sixesPlayerIds = players;
+    sixesFormat = document.querySelector('#sixes-format input:checked')?.value || 'match';
+    sixesUseHandicap = document.getElementById('sixes-use-handicap').checked;
+  }
+
   try {
     // Insert newly added players first, mapping their temp id to a real db id.
     const tempIdToDbId = {};
@@ -419,6 +507,7 @@ async function saveRoundEdits() {
     const matchTeamB = needsTeams ? teamB.map(resolveId) : null;
     const sidematchTeamC = modes.includes('sidematch') ? teamC.map(resolveId) : null;
     const sidematchTeamD = modes.includes('sidematch') ? teamD.map(resolveId) : null;
+    const sixesPlayers = modes.includes('sixes') ? sixesPlayerIds.map(resolveId) : null;
 
     const { error: updErr } = await supabaseClient
       .from('rounds')
@@ -434,6 +523,9 @@ async function saveRoundEdits() {
         sidematch_team_d: sidematchTeamD && sidematchTeamD.length ? sidematchTeamD : null,
         sidematch_use_handicap: sidematchUseHandicap,
         nassau_format: nassauFormat,
+        sixes_players: sixesPlayers && sixesPlayers.length === 4 ? sixesPlayers : null,
+        sixes_format: sixesFormat,
+        sixes_use_handicap: sixesUseHandicap,
       })
       .eq('id', roundId);
     if (updErr) throw updErr;
@@ -1048,6 +1140,19 @@ async function createRound() {
     sidematchUseHandicap = document.getElementById('sidematch-use-handicap').checked;
   }
 
+  let sixesTempIds = [], sixesFormat = null, sixesUseHandicap = true;
+  if (modes.includes('sixes')) {
+    if (holeCount !== 18) {
+      showToast('Sixes needs an 18-hole round');
+      return;
+    }
+    const { players, error: sixesErr } = collectSixesPlayers();
+    if (sixesErr) { showToast(sixesErr); return; }
+    sixesTempIds = players;
+    sixesFormat = document.querySelector('#sixes-format input:checked')?.value || 'match';
+    sixesUseHandicap = document.getElementById('sixes-use-handicap').checked;
+  }
+
   const code = makeRoundCode();
 
   try {
@@ -1120,6 +1225,7 @@ async function createRound() {
     const matchTeamB = matchTeamBTempIds.map(id => tempIdToDbId[id]).filter(Boolean);
     const sidematchTeamC = sidematchTeamCTempIds.map(id => tempIdToDbId[id]).filter(Boolean);
     const sidematchTeamD = sidematchTeamDTempIds.map(id => tempIdToDbId[id]).filter(Boolean);
+    const sixesPlayers = sixesTempIds.map(id => tempIdToDbId[id]).filter(Boolean);
 
     const { error: updateErr } = await supabaseClient
       .from('rounds')
@@ -1132,6 +1238,9 @@ async function createRound() {
         sidematch_team_d: sidematchTeamD.length ? sidematchTeamD : null,
         sidematch_use_handicap: sidematchUseHandicap,
         nassau_format: nassauFormat,
+        sixes_players: sixesPlayers.length === 4 ? sixesPlayers : null,
+        sixes_format: sixesFormat,
+        sixes_use_handicap: sixesUseHandicap,
       })
       .eq('id', roundId);
 
