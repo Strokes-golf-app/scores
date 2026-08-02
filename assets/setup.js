@@ -55,6 +55,7 @@ function renderSetupPlayerList() {
       const p = state.setupPlayers.find(x => x.id === e.target.dataset.id);
       if (p) p.name = e.target.value;
       renderMatchAssignList();
+      renderSideMatchAssignList();
     });
   });
   wrap.querySelectorAll('.setup-hcp-input').forEach(inp => {
@@ -83,10 +84,12 @@ function renderSetupPlayerList() {
       state.setupPlayers = state.setupPlayers.filter(x => x.id !== e.target.dataset.id);
       renderSetupPlayerList();
       renderMatchAssignList();
+      renderSideMatchAssignList();
     });
   });
 
   renderMatchAssignList();
+  renderSideMatchAssignList();
 }
 
 // Builds the team-assignment list shown when "Match play" is checked.
@@ -136,6 +139,60 @@ function collectMatchAssignments() {
   return { teamA, teamB };
 }
 
+// Side match is a separate head-to-head (Team C vs Team D) that runs alongside
+// the main game — so it has its own assignment list, letting a player be on a
+// main-match team AND in the side match. Mirrors renderMatchAssignList.
+function renderSideMatchAssignList() {
+  const wrap = document.getElementById('sidematch-assign-list');
+  if (!wrap) return;
+
+  const previous = {};
+  wrap.querySelectorAll('.sidematch-assign-select').forEach(sel => {
+    previous[sel.dataset.id] = sel.value;
+  });
+
+  wrap.innerHTML = '';
+  state.setupPlayers.forEach(p => {
+    const label = p.name || 'Unnamed player';
+    const row = document.createElement('div');
+    row.className = 'match-assign-row';
+    row.innerHTML = `
+      <span class="match-assign-name">${escapeHtml(label)}</span>
+      <select class="sidematch-assign-select" data-id="${p.id}">
+        <option value="">Not in side match</option>
+        <option value="C">Team C</option>
+        <option value="D">Team D</option>
+      </select>
+    `;
+    wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll('.sidematch-assign-select').forEach(sel => {
+    if (previous[sel.dataset.id]) sel.value = previous[sel.dataset.id];
+  });
+}
+
+// Reads the side-match selects into { teamC: [ids], teamD: [ids] }.
+function collectSideMatchAssignments() {
+  const validIds = new Set(state.setupPlayers.filter(p => p.name.trim()).map(p => p.id));
+  const teamC = [], teamD = [];
+  document.querySelectorAll('.sidematch-assign-select').forEach(sel => {
+    if (!validIds.has(sel.dataset.id)) return;
+    if (sel.value === 'C') teamC.push(sel.dataset.id);
+    else if (sel.value === 'D') teamD.push(sel.dataset.id);
+  });
+  return { teamC, teamD };
+}
+
+// Validates a side-match team pick; returns an error message, or '' if valid.
+// (Disjointness is enforced by the single per-player select, but we guard anyway.)
+function sideMatchError(teamC, teamD) {
+  if (teamC.length === 0 || teamD.length === 0) return 'Assign a player to each side-match team';
+  if (teamC.length > 3 || teamD.length > 3) return 'Side-match teams can have at most 3 players each';
+  if (teamC.some(id => teamD.includes(id))) return 'A player can\'t be on both side-match teams';
+  return '';
+}
+
 async function resetSetupScreen() {
   document.getElementById('course-name').value = '';
   document.getElementById('hole-count').value = '18';
@@ -145,6 +202,8 @@ async function resetSetupScreen() {
   });
   document.getElementById('match-players-field').hidden = true;
   document.getElementById('match-use-handicap').checked = true;
+  document.getElementById('sidematch-players-field').hidden = true;
+  document.getElementById('sidematch-use-handicap').checked = true;
   state.setupBetsEnabled = false;
   state.setupStakes = {};
   document.getElementById('bets-enabled').checked = false;
@@ -221,6 +280,9 @@ async function openRoundEditor() {
   const matchOn = (r.modes || []).includes('match');
   document.getElementById('match-players-field').hidden = !matchOn;
   document.getElementById('match-use-handicap').checked = r.matchUseHandicap !== false;
+  const sideMatchOn = (r.modes || []).includes('sidematch');
+  document.getElementById('sidematch-players-field').hidden = !sideMatchOn;
+  document.getElementById('sidematch-use-handicap').checked = r.sidematchUseHandicap !== false;
 
   const hasStakes = r.stakes && Object.keys(r.stakes).some(k => r.stakes[k] > 0);
   state.setupBetsEnabled = !!(r.betsEnabled || hasStakes);
@@ -259,6 +321,15 @@ async function openRoundEditor() {
     });
   }
 
+  if (sideMatchOn) {
+    const teamC = new Set(r.sidematchTeamC || []);
+    const teamD = new Set(r.sidematchTeamD || []);
+    document.querySelectorAll('.sidematch-assign-select').forEach(sel => {
+      if (teamC.has(sel.dataset.id)) sel.value = 'C';
+      else if (teamD.has(sel.dataset.id)) sel.value = 'D';
+    });
+  }
+
   applySetupMode('edit');
   showScreen('screen-setup');
 }
@@ -290,6 +361,15 @@ async function saveRoundEdits() {
     matchUseHandicap = document.getElementById('match-use-handicap').checked;
   }
 
+  let sidematchUseHandicap = true;
+  let teamC = [], teamD = [];
+  if (modes.includes('sidematch')) {
+    ({ teamC, teamD } = collectSideMatchAssignments());
+    const err = sideMatchError(teamC, teamD);
+    if (err) { showToast(err); return; }
+    sidematchUseHandicap = document.getElementById('sidematch-use-handicap').checked;
+  }
+
   try {
     // Insert newly added players first, mapping their temp id to a real db id.
     const tempIdToDbId = {};
@@ -307,6 +387,8 @@ async function saveRoundEdits() {
     const resolveId = id => tempIdToDbId[id] || id; // existing players keep their id
     const matchTeamA = modes.includes('match') ? teamA.map(resolveId) : null;
     const matchTeamB = modes.includes('match') ? teamB.map(resolveId) : null;
+    const sidematchTeamC = modes.includes('sidematch') ? teamC.map(resolveId) : null;
+    const sidematchTeamD = modes.includes('sidematch') ? teamD.map(resolveId) : null;
 
     const { error: updErr } = await supabaseClient
       .from('rounds')
@@ -318,6 +400,9 @@ async function saveRoundEdits() {
         match_team_a: matchTeamA && matchTeamA.length ? matchTeamA : null,
         match_team_b: matchTeamB && matchTeamB.length ? matchTeamB : null,
         match_use_handicap: matchUseHandicap,
+        sidematch_team_c: sidematchTeamC && sidematchTeamC.length ? sidematchTeamC : null,
+        sidematch_team_d: sidematchTeamD && sidematchTeamD.length ? sidematchTeamD : null,
+        sidematch_use_handicap: sidematchUseHandicap,
       })
       .eq('id', roundId);
     if (updErr) throw updErr;
@@ -917,6 +1002,16 @@ async function createRound() {
     matchUseHandicap = document.getElementById('match-use-handicap').checked;
   }
 
+  let sidematchTeamCTempIds = [], sidematchTeamDTempIds = [], sidematchUseHandicap = true;
+  if (modes.includes('sidematch')) {
+    const { teamC, teamD } = collectSideMatchAssignments();
+    const err = sideMatchError(teamC, teamD);
+    if (err) { showToast(err); return; }
+    sidematchTeamCTempIds = teamC;
+    sidematchTeamDTempIds = teamD;
+    sidematchUseHandicap = document.getElementById('sidematch-use-handicap').checked;
+  }
+
   const code = makeRoundCode();
 
   try {
@@ -987,6 +1082,8 @@ async function createRound() {
     const hostId = hostRow.id;
     const matchTeamA = matchTeamATempIds.map(id => tempIdToDbId[id]).filter(Boolean);
     const matchTeamB = matchTeamBTempIds.map(id => tempIdToDbId[id]).filter(Boolean);
+    const sidematchTeamC = sidematchTeamCTempIds.map(id => tempIdToDbId[id]).filter(Boolean);
+    const sidematchTeamD = sidematchTeamDTempIds.map(id => tempIdToDbId[id]).filter(Boolean);
 
     const { error: updateErr } = await supabaseClient
       .from('rounds')
@@ -995,6 +1092,9 @@ async function createRound() {
         match_team_a: matchTeamA.length ? matchTeamA : null,
         match_team_b: matchTeamB.length ? matchTeamB : null,
         match_use_handicap: matchUseHandicap,
+        sidematch_team_c: sidematchTeamC.length ? sidematchTeamC : null,
+        sidematch_team_d: sidematchTeamD.length ? sidematchTeamD : null,
+        sidematch_use_handicap: sidematchUseHandicap,
       })
       .eq('id', roundId);
 

@@ -614,6 +614,11 @@
             <span class="mode-name">Match play</span>
             <span class="mode-desc">Head-to-head holes won. 1v1, 1v2, 1v3, or 2v2 with best ball.</span>
           </label>
+          <label class="mode-card">
+            <input type="checkbox" name="mode" value="sidematch">
+            <span class="mode-name">Side Match</span>
+            <span class="mode-desc">A separate head-to-head match between two players, alongside the main game.</span>
+          </label>
         </div>
       </div>
 
@@ -624,6 +629,16 @@
         <label class="match-handicap-toggle">
           <input type="checkbox" id="match-use-handicap" checked>
           <span>Use handicap (net scores) for match play</span>
+        </label>
+      </div>
+
+      <div class="field" id="sidematch-players-field" hidden>
+        <label class="field-label">Side match: assign teams</label>
+        <p class="field-hint">Usually two players (one on Team C, one on Team D), but supports up to 3 per side.</p>
+        <div id="sidematch-assign-list" class="match-assign-list"></div>
+        <label class="match-handicap-toggle">
+          <input type="checkbox" id="sidematch-use-handicap" checked>
+          <span>Use handicap (net scores) for the side match</span>
         </label>
       </div>
 
