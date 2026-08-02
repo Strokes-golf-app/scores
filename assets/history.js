@@ -198,6 +198,7 @@ function reconstructRound(row) {
     sidematchTeamC: snap.sidematch_team_c || null,
     sidematchTeamD: snap.sidematch_team_d || null,
     sidematchUseHandicap: snap.sidematch_use_handicap !== false,
+    nassauFormat: snap.nassau_format || 'match',
     betsEnabled: snap.bets_enabled === true,
     stakes: snap.stakes || {},
     status: row.status || 'completed',
@@ -251,6 +252,7 @@ function renderHistoryDetailBoard(mode) {
   if (mode === 'skins') return renderHistoryDetailSkins(summaries, round, metaEl, boardEl);
   if (mode === 'match') return renderHistoryDetailMatch(summaries, round, metaEl, boardEl);
   if (mode === 'sidematch') return renderHistoryDetailSideMatch(summaries, round, metaEl, boardEl);
+  if (mode === 'nassau') return renderHistoryDetailNassau(summaries, round, metaEl, boardEl);
   if (mode === 'money') return renderHistoryDetailMoney(summaries, round, metaEl, boardEl);
 
   metaEl.textContent = mode === 'stableford'
@@ -442,6 +444,55 @@ function renderHistoryDetailSideMatch(summaries, round, metaEl, boardEl) {
       <div class="history-match-outcome">${escapeHtml(resultText)}</div>
     </div>
   `;
+}
+
+function renderHistoryDetailNassau(summaries, round, metaEl, boardEl) {
+  if (!round.matchTeamA || !round.matchTeamB || !round.matchTeamA.length || !round.matchTeamB.length) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">This round didn\'t have Nassau teams set.</div>';
+    return;
+  }
+  const teamA = round.matchTeamA.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  const teamB = round.matchTeamB.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  if (!teamA.length || !teamB.length) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Nassau players weren\'t found in this round.</div>';
+    return;
+  }
+
+  const aName = teamA.map(s => s.name).join(' & ');
+  const bName = teamB.map(s => s.name).join(' & ');
+  const useHc = round.matchUseHandicap;
+  const stroke = round.nassauFormat === 'stroke';
+  metaEl.textContent = `${stroke ? 'Stroke' : 'Match'} play · best-ball ${useHc ? 'net' : 'gross'} · front, back & total.`;
+
+  const segments = [
+    { label: 'Front 9', from: 1, to: 9 },
+    { label: 'Back 9', from: 10, to: 18 },
+    { label: 'Total', from: 1, to: 18 },
+  ];
+  const rows = segments.map(seg => {
+    let result, sub = '';
+    if (stroke) {
+      const s = Golf.computeStrokeRange(teamA, teamB, seg.from, seg.to, useHc);
+      result = s.thru === 0 ? 'Not played' : (s.leader === null ? 'All square' : `${s.leader === 'A' ? aName : bName} by ${s.diff}`);
+      if (s.thru > 0) sub = `${s.teamATotal}–${s.teamBTotal}`;
+    } else {
+      const m = Golf.computeMatchPlayRange(teamA, teamB, seg.from, seg.to, useHc);
+      result = matchSegmentStatus(m, aName, bName, seg.to - seg.from + 1);
+    }
+    return `<div class="nassau-row">
+      <span class="nassau-seg">${seg.label}</span>
+      <span class="nassau-result">${escapeHtml(result)}</span>
+      <span class="nassau-sub">${escapeHtml(sub)}</span>
+    </div>`;
+  }).join('');
+
+  boardEl.innerHTML = `
+    <div class="match-card nassau-card">
+      <p class="match-vs">${escapeHtml(aName)} vs ${escapeHtml(bName)}</p>
+      <div class="nassau-rows">${rows}</div>
+    </div>`;
 }
 
 // ===========================================================

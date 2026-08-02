@@ -193,6 +193,26 @@ function sideMatchError(teamC, teamD) {
   return '';
 }
 
+// Shows/hides the per-mode config fields from the currently-checked mode boxes
+// and relabels the shared team field. Match play and Nassau share one Team A/B
+// assignment, so the team field shows when either is on.
+function syncModeConfigFields() {
+  const grid = document.getElementById('mode-grid');
+  const isOn = v => !!grid.querySelector(`input[value="${v}"]`)?.checked;
+  const matchOn = isOn('match');
+  const nassauOn = isOn('nassau');
+  document.getElementById('match-players-field').hidden = !(matchOn || nassauOn);
+  document.getElementById('sidematch-players-field').hidden = !isOn('sidematch');
+  document.getElementById('nassau-format-field').hidden = !nassauOn;
+
+  const label = document.getElementById('match-players-label');
+  if (label) {
+    label.textContent = (matchOn && nassauOn) ? 'Match play & Nassau: assign teams'
+      : nassauOn ? 'Nassau: assign teams'
+      : 'Match play: assign teams';
+  }
+}
+
 async function resetSetupScreen() {
   document.getElementById('course-name').value = '';
   document.getElementById('hole-count').value = '18';
@@ -204,6 +224,9 @@ async function resetSetupScreen() {
   document.getElementById('match-use-handicap').checked = true;
   document.getElementById('sidematch-players-field').hidden = true;
   document.getElementById('sidematch-use-handicap').checked = true;
+  document.getElementById('nassau-format-field').hidden = true;
+  const nassauMatchRadio = document.querySelector('#nassau-format input[value="match"]');
+  if (nassauMatchRadio) nassauMatchRadio.checked = true;
   state.setupBetsEnabled = false;
   state.setupStakes = {};
   document.getElementById('bets-enabled').checked = false;
@@ -278,11 +301,13 @@ async function openRoundEditor() {
     cb.closest('.mode-card').classList.toggle('checked', on);
   });
   const matchOn = (r.modes || []).includes('match');
-  document.getElementById('match-players-field').hidden = !matchOn;
+  const nassauOn = (r.modes || []).includes('nassau');
   document.getElementById('match-use-handicap').checked = r.matchUseHandicap !== false;
   const sideMatchOn = (r.modes || []).includes('sidematch');
-  document.getElementById('sidematch-players-field').hidden = !sideMatchOn;
   document.getElementById('sidematch-use-handicap').checked = r.sidematchUseHandicap !== false;
+  const nassauFmtRadio = document.querySelector(`#nassau-format input[value="${r.nassauFormat === 'stroke' ? 'stroke' : 'match'}"]`);
+  if (nassauFmtRadio) nassauFmtRadio.checked = true;
+  syncModeConfigFields();
 
   const hasStakes = r.stakes && Object.keys(r.stakes).some(k => r.stakes[k] > 0);
   state.setupBetsEnabled = !!(r.betsEnabled || hasStakes);
@@ -312,7 +337,7 @@ async function openRoundEditor() {
 
   renderSetupPlayerList();
 
-  if (matchOn) {
+  if (matchOn || nassauOn) {
     const teamA = new Set(r.matchTeamA || []);
     const teamB = new Set(r.matchTeamB || []);
     document.querySelectorAll('.match-assign-select').forEach(sel => {
@@ -346,16 +371,21 @@ async function saveRoundEdits() {
   const betsEnabled = document.getElementById('bets-enabled').checked;
   const stakes = betsEnabled ? (state.setupStakes || {}) : {};
 
+  // Match play and Nassau share one Team A/B assignment.
+  const needsTeams = modes.includes('match') || modes.includes('nassau');
+  const nassauFormat = modes.includes('nassau')
+    ? (document.querySelector('#nassau-format input:checked')?.value || 'match')
+    : null;
   let matchUseHandicap = true;
   let teamA = [], teamB = [];
-  if (modes.includes('match')) {
+  if (needsTeams) {
     ({ teamA, teamB } = collectMatchAssignments());
     if (teamA.length === 0 || teamB.length === 0) {
-      showToast('Assign at least one player to each match play team');
+      showToast('Assign at least one player to each team (Team A and Team B)');
       return;
     }
     if (teamA.length > 3 || teamB.length > 3) {
-      showToast('Match play teams can have at most 3 players each');
+      showToast('Teams can have at most 3 players each');
       return;
     }
     matchUseHandicap = document.getElementById('match-use-handicap').checked;
@@ -385,8 +415,8 @@ async function saveRoundEdits() {
     }
 
     const resolveId = id => tempIdToDbId[id] || id; // existing players keep their id
-    const matchTeamA = modes.includes('match') ? teamA.map(resolveId) : null;
-    const matchTeamB = modes.includes('match') ? teamB.map(resolveId) : null;
+    const matchTeamA = needsTeams ? teamA.map(resolveId) : null;
+    const matchTeamB = needsTeams ? teamB.map(resolveId) : null;
     const sidematchTeamC = modes.includes('sidematch') ? teamC.map(resolveId) : null;
     const sidematchTeamD = modes.includes('sidematch') ? teamD.map(resolveId) : null;
 
@@ -403,6 +433,7 @@ async function saveRoundEdits() {
         sidematch_team_c: sidematchTeamC && sidematchTeamC.length ? sidematchTeamC : null,
         sidematch_team_d: sidematchTeamD && sidematchTeamD.length ? sidematchTeamD : null,
         sidematch_use_handicap: sidematchUseHandicap,
+        nassau_format: nassauFormat,
       })
       .eq('id', roundId);
     if (updErr) throw updErr;
@@ -986,15 +1017,20 @@ async function createRound() {
     return;
   }
 
+  // Match play and Nassau share one Team A/B assignment.
+  const needsTeams = modes.includes('match') || modes.includes('nassau');
+  const nassauFormat = modes.includes('nassau')
+    ? (document.querySelector('#nassau-format input:checked')?.value || 'match')
+    : null;
   let matchTeamATempIds = [], matchTeamBTempIds = [], matchUseHandicap = true;
-  if (modes.includes('match')) {
+  if (needsTeams) {
     const { teamA, teamB } = collectMatchAssignments();
     if (teamA.length === 0 || teamB.length === 0) {
-      showToast('Assign at least one player to each match play team');
+      showToast('Assign at least one player to each team (Team A and Team B)');
       return;
     }
     if (teamA.length > 3 || teamB.length > 3) {
-      showToast('Match play teams can have at most 3 players each');
+      showToast('Teams can have at most 3 players each');
       return;
     }
     matchTeamATempIds = teamA;
@@ -1095,6 +1131,7 @@ async function createRound() {
         sidematch_team_c: sidematchTeamC.length ? sidematchTeamC : null,
         sidematch_team_d: sidematchTeamD.length ? sidematchTeamD : null,
         sidematch_use_handicap: sidematchUseHandicap,
+        nassau_format: nassauFormat,
       })
       .eq('id', roundId);
 

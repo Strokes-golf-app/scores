@@ -63,6 +63,7 @@ function mapRoundRow(row, players) {
     matchUseHandicap: row.match_use_handicap !== false,
     sidematchTeamC: row.sidematch_team_c || null, sidematchTeamD: row.sidematch_team_d || null,
     sidematchUseHandicap: row.sidematch_use_handicap !== false,
+    nassauFormat: row.nassau_format || 'match',
     hostId: row.host_player_id, started: row.started, ended: row.ended,
     holeOffset: row.hole_offset || 0,
     betsEnabled: row.bets_enabled === true, stakes: row.stakes || {},

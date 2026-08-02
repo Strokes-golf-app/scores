@@ -259,6 +259,72 @@ describe('computeMatchPlay — teams and best ball', () => {
   });
 });
 
+// Nassau's three sub-competitions are scored over hole windows.
+describe('computeMatchPlayRange / computeStrokeRange', () => {
+  const pars = Array(18).fill(4);
+  // A wins the front (holes 1-2), B wins the back (holes 10-11), rest halved.
+  const aScores = { 1: 3, 2: 3, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 4, 11: 4, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 4 };
+  const bScores = { 1: 4, 2: 4, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 3, 11: 3, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 4 };
+  const A = Golf.summarizePlayer({ id: 'a', name: 'A', handicap: 0 }, aScores, pars, null, 18);
+  const B = Golf.summarizePlayer({ id: 'b', name: 'B', handicap: 0 }, bScores, pars, null, 18);
+
+  it('scores the front nine, back nine, and full 18 as separate matches', () => {
+    const front = Golf.computeMatchPlayRange([A], [B], 1, 9);
+    expect(front.winner).toBe('A');
+    expect(front.margin).toBe(2);
+    expect(front.thru).toBe(9);
+
+    const back = Golf.computeMatchPlayRange([A], [B], 10, 18);
+    expect(back.winner).toBe('B');
+    expect(back.margin).toBe(2);
+
+    const total = Golf.computeMatchPlayRange([A], [B], 1, 18);
+    expect(total.winner).toBe(null); // 2 up front, 2 down back → all square
+    expect(total.diff).toBe(0);
+    expect(total.thru).toBe(18);
+  });
+
+  it('reports "remaining" relative to the segment (early-decided within a nine)', () => {
+    const runaway = Golf.summarizePlayer({ id: 'c', name: 'C', handicap: 0 }, { 1: 3, 2: 3, 3: 3, 4: 3, 5: 3 }, pars, null, 18);
+    const seg = Golf.computeMatchPlayRange([runaway], [B], 1, 9);
+    expect(seg.decided).toBe(true);
+    expect(seg.margin).toBe(5);
+    expect(seg.remaining).toBe(4); // "5 and 4" within the front nine
+    expect(seg.thru).toBe(5);
+  });
+
+  it('computeMatchPlay is the full-round window', () => {
+    const viaRange = Golf.computeMatchPlayRange([A], [B], 1, 18);
+    const viaFull = Golf.computeMatchPlay([A], [B], 18);
+    expect(viaFull).toEqual(viaRange);
+  });
+
+  it('sums best-ball stroke totals per window, lower total leading', () => {
+    const front = Golf.computeStrokeRange([A], [B], 1, 9);
+    expect(front.teamATotal).toBe(34); // 3+3+4*7
+    expect(front.teamBTotal).toBe(36);
+    expect(front.leader).toBe('A');
+    expect(front.diff).toBe(2);
+
+    const back = Golf.computeStrokeRange([A], [B], 10, 18);
+    expect(back.leader).toBe('B');
+    expect(back.diff).toBe(2);
+
+    const total = Golf.computeStrokeRange([A], [B], 1, 18);
+    expect(total.teamATotal).toBe(70);
+    expect(total.teamBTotal).toBe(70);
+    expect(total.leader).toBe(null);
+  });
+
+  it('stops at the first hole a side has not completed', () => {
+    const partial = Golf.summarizePlayer({ id: 'd', name: 'D', handicap: 0 }, { 1: 4, 2: 4 }, pars, null, 18);
+    const seg = Golf.computeStrokeRange([A], [partial], 1, 9);
+    expect(seg.thru).toBe(2);
+    const backSeg = Golf.computeMatchPlayRange([A], [partial], 10, 18);
+    expect(backSeg.thru).toBe(0); // nobody has a back-nine score
+  });
+});
+
 describe('matchRunning', () => {
   it('accumulates the running differential after each hole', () => {
     const log = [
