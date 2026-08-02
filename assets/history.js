@@ -199,6 +199,9 @@ function reconstructRound(row) {
     sidematchTeamD: snap.sidematch_team_d || null,
     sidematchUseHandicap: snap.sidematch_use_handicap !== false,
     nassauFormat: snap.nassau_format || 'match',
+    sixesPlayers: snap.sixes_players || null,
+    sixesFormat: snap.sixes_format || 'match',
+    sixesUseHandicap: snap.sixes_use_handicap !== false,
     betsEnabled: snap.bets_enabled === true,
     stakes: snap.stakes || {},
     status: row.status || 'completed',
@@ -253,6 +256,7 @@ function renderHistoryDetailBoard(mode) {
   if (mode === 'match') return renderHistoryDetailMatch(summaries, round, metaEl, boardEl);
   if (mode === 'sidematch') return renderHistoryDetailSideMatch(summaries, round, metaEl, boardEl);
   if (mode === 'nassau') return renderHistoryDetailNassau(summaries, round, metaEl, boardEl);
+  if (mode === 'sixes') return renderHistoryDetailSixes(summaries, round, metaEl, boardEl);
   if (mode === 'money') return renderHistoryDetailMoney(summaries, round, metaEl, boardEl);
 
   metaEl.textContent = mode === 'stableford'
@@ -493,6 +497,47 @@ function renderHistoryDetailNassau(summaries, round, metaEl, boardEl) {
       <p class="match-vs">${escapeHtml(aName)} vs ${escapeHtml(bName)}</p>
       <div class="nassau-rows">${rows}</div>
     </div>`;
+}
+
+function renderHistoryDetailSixes(summaries, round, metaEl, boardEl) {
+  if (!Array.isArray(round.sixesPlayers) || round.sixesPlayers.length !== 4) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">This round didn\'t have Sixes set.</div>';
+    return;
+  }
+  const seats = round.sixesPlayers.map(id => summaries.find(s => s.playerId === id) || null);
+  if (seats.some(s => !s)) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Sixes players weren\'t found in this round.</div>';
+    return;
+  }
+
+  const useHc = round.sixesUseHandicap;
+  const stroke = round.sixesFormat === 'stroke';
+  metaEl.textContent = `${stroke ? 'Stroke' : 'Match'} play · best-ball ${useHc ? 'net' : 'gross'} · partners rotate every six.`;
+  const pairName = idxs => idxs.map(i => seats[i].name).join(' & ');
+
+  const blocks = Golf.sixesSegments().map(seg => {
+    const teamX = seg.teamX.map(i => seats[i]);
+    const teamY = seg.teamY.map(i => seats[i]);
+    let result;
+    if (stroke) {
+      const s = Golf.computeStrokeRange(teamX, teamY, seg.from, seg.to, useHc);
+      result = s.thru === 0 ? 'Not played'
+        : s.leader === null ? `All square (${s.teamATotal}–${s.teamBTotal})`
+        : `${s.leader === 'A' ? pairName(seg.teamX) : pairName(seg.teamY)} by ${s.diff} (${s.teamATotal}–${s.teamBTotal})`;
+    } else {
+      const m = Golf.computeMatchPlayRange(teamX, teamY, seg.from, seg.to, useHc);
+      result = matchSegmentStatus(m, pairName(seg.teamX), pairName(seg.teamY), seg.to - seg.from + 1);
+    }
+    return `<div class="sixes-seg">
+      <p class="sixes-seg-label">${seg.label}</p>
+      <p class="sixes-pairing">${escapeHtml(pairName(seg.teamX))} <span class="sixes-vs">vs</span> ${escapeHtml(pairName(seg.teamY))}</p>
+      <p class="sixes-result">${escapeHtml(result)}</p>
+    </div>`;
+  }).join('');
+
+  boardEl.innerHTML = `<div class="match-card nassau-card sixes-card">${blocks}</div>`;
 }
 
 // ===========================================================

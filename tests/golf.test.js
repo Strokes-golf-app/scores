@@ -325,6 +325,27 @@ describe('computeMatchPlayRange / computeStrokeRange', () => {
   });
 });
 
+describe('sixesSegments', () => {
+  it('rotates all four partnerships across three 6-hole windows', () => {
+    const segs = Golf.sixesSegments();
+    expect(segs.map(s => [s.from, s.to])).toEqual([[1, 6], [7, 12], [13, 18]]);
+    expect(segs.map(s => [s.teamX, s.teamY])).toEqual([
+      [[0, 1], [2, 3]],
+      [[0, 2], [1, 3]],
+      [[0, 3], [1, 2]],
+    ]);
+    // Every player (seat) partners each of the other three exactly once.
+    const partners = { 0: new Set(), 1: new Set(), 2: new Set(), 3: new Set() };
+    segs.forEach(({ teamX, teamY }) => {
+      [teamX, teamY].forEach(([a, b]) => { partners[a].add(b); partners[b].add(a); });
+    });
+    expect(partners[0]).toEqual(new Set([1, 2, 3]));
+    expect(partners[1]).toEqual(new Set([0, 2, 3]));
+    expect(partners[2]).toEqual(new Set([0, 1, 3]));
+    expect(partners[3]).toEqual(new Set([0, 1, 2]));
+  });
+});
+
 describe('matchRunning', () => {
   it('accumulates the running differential after each hole', () => {
     const log = [

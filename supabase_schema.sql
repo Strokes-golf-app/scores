@@ -43,6 +43,13 @@ alter table rounds
 alter table rounds
   add column if not exists nassau_format text;
 
+-- Sixes: four players (sixes_players holds the four ids in seat order — the
+-- rotation is fixed by seat), scored per six-hole segment as match or stroke.
+alter table rounds
+  add column if not exists sixes_players uuid[],
+  add column if not exists sixes_format text,
+  add column if not exists sixes_use_handicap boolean;
+
 -- ---------- players ----------
 -- One row per player in a round.
 create table if not exists players (

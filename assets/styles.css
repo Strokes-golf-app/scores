@@ -2800,6 +2800,55 @@ button.sc-cell {
   color: var(--ink-faint);
 }
 
+/* Sixes board — one block per rotating 6-hole segment. */
+.sixes-card {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.sixes-seg {
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.sixes-seg:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.sixes-seg-label {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-faint);
+}
+
+.sixes-pairing {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--fairway);
+}
+
+.sixes-vs {
+  color: var(--ink-faint);
+  font-size: 13px;
+  margin: 0 0.15rem;
+}
+
+.sixes-result {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 /* Segmented radio control (e.g. Nassau match/stroke). */
 .segmented {
   display: flex;

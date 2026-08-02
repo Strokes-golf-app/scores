@@ -59,6 +59,10 @@ function renderLeaderboardTab() {
     renderNassauBoard(summaries, r);
     return;
   }
+  if (mode === 'sixes') {
+    renderSixesBoard(summaries, r);
+    return;
+  }
   if (mode === 'money') {
     renderMoneyBoard(summaries, r);
     return;
@@ -447,4 +451,58 @@ function renderNassauBoard(summaries, r) {
       <p class="match-vs">${escapeHtml(aName)} vs ${escapeHtml(bName)}</p>
       <div class="nassau-rows">${rows}</div>
     </div>`;
+}
+
+// Sixes: four players, three 6-hole matches, partners rotating each six. Each
+// segment's result is a match (X&Y / X up) or stroke (X by N) contest between
+// the two rotating pairs, per r.sixesFormat.
+function renderSixesBoard(summaries, r) {
+  const metaEl = document.getElementById('board-meta');
+  const boardEl = document.getElementById('leaderboard');
+
+  if (!Array.isArray(r.sixesPlayers) || r.sixesPlayers.length !== 4) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Sixes needs four players seated at setup.</div>';
+    return;
+  }
+  if (r.holeCount <= 9) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Sixes needs an 18-hole round.</div>';
+    return;
+  }
+
+  const seats = r.sixesPlayers.map(id => summaries.find(s => s.playerId === id) || null);
+  if (seats.some(s => !s)) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Sixes players weren\'t found in this round.</div>';
+    return;
+  }
+
+  const useHc = r.sixesUseHandicap;
+  const stroke = r.sixesFormat === 'stroke';
+  metaEl.textContent = `${stroke ? 'Stroke' : 'Match'} play · best-ball ${useHc ? 'net' : 'gross'} · partners rotate every six.`;
+
+  const pairName = idxs => idxs.map(i => seats[i].name).join(' & ');
+
+  const blocks = Golf.sixesSegments().map(seg => {
+    const teamX = seg.teamX.map(i => seats[i]);
+    const teamY = seg.teamY.map(i => seats[i]);
+    let result;
+    if (stroke) {
+      const s = Golf.computeStrokeRange(teamX, teamY, seg.from, seg.to, useHc);
+      if (s.thru === 0) result = 'Not started';
+      else if (s.leader === null) result = `All square (${s.teamATotal}–${s.teamBTotal})`;
+      else result = `${s.leader === 'A' ? pairName(seg.teamX) : pairName(seg.teamY)} by ${s.diff} (${s.teamATotal}–${s.teamBTotal})`;
+    } else {
+      const m = Golf.computeMatchPlayRange(teamX, teamY, seg.from, seg.to, useHc);
+      result = matchSegmentStatus(m, pairName(seg.teamX), pairName(seg.teamY), seg.to - seg.from + 1);
+    }
+    return `<div class="sixes-seg">
+      <p class="sixes-seg-label">${seg.label}</p>
+      <p class="sixes-pairing">${escapeHtml(pairName(seg.teamX))} <span class="sixes-vs">vs</span> ${escapeHtml(pairName(seg.teamY))}</p>
+      <p class="sixes-result">${escapeHtml(result)}</p>
+    </div>`;
+  }).join('');
+
+  boardEl.innerHTML = `<div class="match-card nassau-card sixes-card">${blocks}</div>`;
 }

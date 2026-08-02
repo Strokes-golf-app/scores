@@ -300,6 +300,22 @@ const Golf = (() => {
   }
 
   /**
+   * Sixes: three 6-hole competitions with rotating partnerships among four
+   * players in seat order (indices 0-3). Every player partners each other
+   * player for one six-hole segment. Returns the fixed schedule — the segment
+   * label, its hole window, and which seats pair up — as seat indices into a
+   * 4-player array. Score each segment with computeMatchPlayRange /
+   * computeStrokeRange using those pairs.
+   */
+  function sixesSegments() {
+    return [
+      { label: 'Holes 1-6',   from: 1,  to: 6,  teamX: [0, 1], teamY: [2, 3] },
+      { label: 'Holes 7-12',  from: 7,  to: 12, teamX: [0, 2], teamY: [1, 3] },
+      { label: 'Holes 13-18', from: 13, to: 18, teamX: [0, 3], teamY: [1, 2] },
+    ];
+  }
+
+  /**
    * Cumulative match-play status after each played hole. Takes the `log`
    * array from computeMatchPlay ([{ hole, result:'A'|'B'|'halved' }]) and
    * returns [{ hole, cum }] where cum is the running differential after that
@@ -492,6 +508,7 @@ const Golf = (() => {
     computeMatchPlay,
     computeMatchPlayRange,
     computeStrokeRange,
+    sixesSegments,
     matchRunning,
     computeMoney,
     formatToPar,
