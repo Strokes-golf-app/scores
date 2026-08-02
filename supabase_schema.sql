@@ -38,6 +38,11 @@ alter table rounds
   add column if not exists sidematch_team_d uuid[],
   add column if not exists sidematch_use_handicap boolean;
 
+-- Nassau: front 9 / back 9 / full 18 sub-competitions. Shares match_team_a/b and
+-- match_use_handicap; this column selects the scoring format ('match' | 'stroke').
+alter table rounds
+  add column if not exists nassau_format text;
+
 -- ---------- players ----------
 -- One row per player in a round.
 create table if not exists players (

@@ -2755,6 +2755,90 @@ button.sc-cell {
   margin: 0.4rem 0 0;
 }
 
+/* ---------- Nassau board (front / back / total) ---------- */
+.nassau-rows {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nassau-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.55rem 0.25rem;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+
+.nassau-row:first-child {
+  border-top: none;
+}
+
+.nassau-seg {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-faint);
+}
+
+.nassau-result {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+}
+
+.nassau-sub {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+/* Segmented radio control (e.g. Nassau match/stroke). */
+.segmented {
+  display: flex;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-top: 0.4rem;
+}
+
+.segmented-option {
+  flex: 1;
+  position: relative;
+  text-align: center;
+  cursor: pointer;
+}
+
+.segmented-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented-option span {
+  display: block;
+  padding: 0.6rem 0.5rem;
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.segmented-option + .segmented-option span {
+  border-left: 1.5px solid var(--line);
+}
+
+.segmented-option input:checked + span {
+  background: var(--fairway);
+  color: var(--white);
+}
+
 /* ---------- History ---------- */
 .history-list {
   display: flex;

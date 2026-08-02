@@ -43,7 +43,7 @@ const PENDING_PROFILE_KEY = 'fairwaylive_pending_profile';
 // Display labels for each game mode, keyed by the value stored in
 // rounds.modes. Shared by the lobby chips and the leaderboard mode
 // tabs so the labels only need updating in one place.
-const MODE_NAMES = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play', sidematch: 'Side Match', money: 'Money' };
+const MODE_NAMES = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play', sidematch: 'Side Match', nassau: 'Nassau', money: 'Money' };
 
 // Leaderboard tabs for a round: its game modes, plus a synthetic
 // "money" tab when bets are on with at least one real stake.

@@ -123,9 +123,7 @@ function init() {
 
   document.querySelectorAll('#mode-grid input[name="mode"]').forEach(cb => {
     cb.addEventListener('change', () => {
-      const grid = document.getElementById('mode-grid');
-      document.getElementById('match-players-field').hidden = !grid.querySelector('input[value="match"]').checked;
-      document.getElementById('sidematch-players-field').hidden = !grid.querySelector('input[value="sidematch"]').checked;
+      syncModeConfigFields();
       cb.closest('.mode-card').classList.toggle('checked', cb.checked);
     });
   });

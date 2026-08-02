@@ -218,31 +218,34 @@ const Golf = (() => {
   }
 
   /**
-   * Match play between two teams of 1-3 players each (1v1, 1v2, 1v3,
-   * 2v2, etc). Each team's score per hole is its best individual score
-   * that hole ("best ball"). Pass a single summary object (not an
-   * array) for a solo player — it gets wrapped automatically.
-   * Set useHandicap=false to compare gross scores instead of net.
+   * Match play between two teams of 1-3 players each over a 1-based,
+   * inclusive hole window [fromHole..toHole]. `thru` counts holes
+   * completed within the window; `remaining`/`decided` are relative to
+   * the window length (so a Nassau front-nine can be "won 3&2"). Each
+   * team's score per hole is its best ball. Set useHandicap=false to
+   * compare gross scores. Halted at the first hole either side hasn't
+   * finished, so partial rounds report correctly.
    */
-  function computeMatchPlay(teamA, teamB, holeCount, useHandicap = true) {
+  function computeMatchPlayRange(teamA, teamB, fromHole, toHole, useHandicap = true) {
     const aTeam = Array.isArray(teamA) ? teamA : [teamA];
     const bTeam = Array.isArray(teamB) ? teamB : [teamB];
+    const segLength = toHole - fromHole + 1;
 
     let diff = 0;
     let thru = 0;
     const log = [];
 
-    for (let h = 0; h < holeCount; h++) {
+    for (let h = fromHole - 1; h < toHole; h++) {
       const aScore = bestBallHoleScore(aTeam, h, useHandicap);
       const bScore = bestBallHoleScore(bTeam, h, useHandicap);
       if (aScore == null || bScore == null) break;
-      thru = h + 1;
+      thru += 1;
 
       if (aScore < bScore) diff += 1;
       else if (bScore < aScore) diff -= 1;
       log.push({ hole: h + 1, result: aScore === bScore ? 'halved' : (aScore < bScore ? 'A' : 'B') });
 
-      const holesRemaining = holeCount - thru;
+      const holesRemaining = segLength - thru;
       if (Math.abs(diff) > holesRemaining) {
         return {
           thru, diff, decided: true,
@@ -256,12 +259,44 @@ const Golf = (() => {
 
     return {
       thru, diff,
-      decided: thru === holeCount && diff !== 0,
+      decided: thru === segLength && diff !== 0,
       winner: diff > 0 ? 'A' : (diff < 0 ? 'B' : null),
       margin: Math.abs(diff),
-      remaining: holeCount - thru,
+      remaining: segLength - thru,
       log,
     };
+  }
+
+  /**
+   * Match play between two teams over the whole round. Thin wrapper over
+   * computeMatchPlayRange for the full 1..holeCount window.
+   */
+  function computeMatchPlay(teamA, teamB, holeCount, useHandicap = true) {
+    return computeMatchPlayRange(teamA, teamB, 1, holeCount, useHandicap);
+  }
+
+  /**
+   * Stroke play between two teams over a 1-based, inclusive hole window.
+   * Sums each team's best-ball score across holes both sides have
+   * completed (stopping at the first incomplete hole, like match play).
+   * Lower total leads. Returns { thru, teamATotal, teamBTotal, leader, diff }.
+   */
+  function computeStrokeRange(teamA, teamB, fromHole, toHole, useHandicap = true) {
+    const aTeam = Array.isArray(teamA) ? teamA : [teamA];
+    const bTeam = Array.isArray(teamB) ? teamB : [teamB];
+
+    let teamATotal = 0, teamBTotal = 0, thru = 0;
+    for (let h = fromHole - 1; h < toHole; h++) {
+      const aScore = bestBallHoleScore(aTeam, h, useHandicap);
+      const bScore = bestBallHoleScore(bTeam, h, useHandicap);
+      if (aScore == null || bScore == null) break;
+      teamATotal += aScore;
+      teamBTotal += bScore;
+      thru += 1;
+    }
+
+    const leader = teamATotal === teamBTotal ? null : (teamATotal < teamBTotal ? 'A' : 'B');
+    return { thru, teamATotal, teamBTotal, leader, diff: Math.abs(teamATotal - teamBTotal) };
   }
 
   /**
@@ -455,6 +490,8 @@ const Golf = (() => {
     rankPlayers,
     computeSkins,
     computeMatchPlay,
+    computeMatchPlayRange,
+    computeStrokeRange,
     matchRunning,
     computeMoney,
     formatToPar,

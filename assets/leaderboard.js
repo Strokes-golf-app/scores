@@ -55,6 +55,10 @@ function renderLeaderboardTab() {
     renderSideMatchBoard(summaries, r);
     return;
   }
+  if (mode === 'nassau') {
+    renderNassauBoard(summaries, r);
+    return;
+  }
   if (mode === 'money') {
     renderMoneyBoard(summaries, r);
     return;
@@ -372,4 +376,75 @@ function renderSideMatchBoard(summaries, r) {
       <p class="match-thru">thru ${m.thru} of ${r.holeCount}</p>
     </div>
   ` + matchStripHtml(m.log, r.holeCount, r.holeOffset, teamCName, teamDName, teamCInit, teamDInit);
+}
+
+// Match-play status line shared by the Nassau segments (mirrors renderMatchBoard).
+function matchSegmentStatus(m, aName, bName, segLength) {
+  if (m.thru === 0) return 'Not started';
+  if (m.diff === 0) return 'All square';
+  const leader = m.diff > 0 ? aName : bName;
+  return (m.decided && m.thru < segLength)
+    ? `${leader} wins ${m.margin}&${m.remaining}`
+    : `${leader} ${m.margin} up`;
+}
+
+// Nassau: three head-to-head competitions — front 9, back 9, and full 18 — over
+// the shared Team A/B, each scored as match or stroke play per r.nassauFormat.
+function renderNassauBoard(summaries, r) {
+  const metaEl = document.getElementById('board-meta');
+  const boardEl = document.getElementById('leaderboard');
+
+  if (!r.matchTeamA || !r.matchTeamB || r.matchTeamA.length === 0 || r.matchTeamB.length === 0) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Nassau needs Team A and Team B selected at setup.</div>';
+    return;
+  }
+  if (r.holeCount <= 9) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Nassau needs an 18-hole round.</div>';
+    return;
+  }
+
+  const teamA = r.matchTeamA.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  const teamB = r.matchTeamB.map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+  if (!teamA.length || !teamB.length) return;
+
+  const aName = teamA.map(s => s.name).join(' & ');
+  const bName = teamB.map(s => s.name).join(' & ');
+  const useHc = r.matchUseHandicap;
+  const stroke = r.nassauFormat === 'stroke';
+
+  metaEl.textContent = `${stroke ? 'Stroke' : 'Match'} play · best-ball ${useHc ? 'net' : 'gross'} · front, back & total.`;
+
+  const segments = [
+    { label: 'Front 9', from: 1, to: 9 },
+    { label: 'Back 9', from: 10, to: 18 },
+    { label: 'Total', from: 1, to: 18 },
+  ];
+
+  const rows = segments.map(seg => {
+    let result, sub = '';
+    if (stroke) {
+      const s = Golf.computeStrokeRange(teamA, teamB, seg.from, seg.to, useHc);
+      if (s.thru === 0) result = 'Not started';
+      else if (s.leader === null) result = 'All square';
+      else result = `${s.leader === 'A' ? aName : bName} by ${s.diff}`;
+      if (s.thru > 0) sub = `${s.teamATotal}–${s.teamBTotal}`;
+    } else {
+      const m = Golf.computeMatchPlayRange(teamA, teamB, seg.from, seg.to, useHc);
+      result = matchSegmentStatus(m, aName, bName, seg.to - seg.from + 1);
+      if (m.thru > 0) sub = `thru ${m.thru}`;
+    }
+    return `<div class="nassau-row">
+      <span class="nassau-seg">${seg.label}</span>
+      <span class="nassau-result">${escapeHtml(result)}</span>
+      <span class="nassau-sub">${escapeHtml(sub)}</span>
+    </div>`;
+  }).join('');
+
+  boardEl.innerHTML = `
+    <div class="match-card nassau-card">
+      <p class="match-vs">${escapeHtml(aName)} vs ${escapeHtml(bName)}</p>
+      <div class="nassau-rows">${rows}</div>
+    </div>`;
 }
