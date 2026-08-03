@@ -113,6 +113,13 @@ function renderMoneyBoard(summaries, r) {
     matchTeamA: r.matchTeamA,
     matchTeamB: r.matchTeamB,
     matchUseHandicap: r.matchUseHandicap,
+    sidematchTeamC: r.sidematchTeamC,
+    sidematchTeamD: r.sidematchTeamD,
+    sidematchUseHandicap: r.sidematchUseHandicap,
+    nassauFormat: r.nassauFormat,
+    sixesPlayers: r.sixesPlayers,
+    sixesFormat: r.sixesFormat,
+    sixesUseHandicap: r.sixesUseHandicap,
   });
 
   metaEl.textContent = 'Net across every bet this round. Provisional until all scores are in.';
@@ -156,6 +163,9 @@ function moneyBreakdownHtml(byMode, stakes, nameById) {
       case 'stableford': return `Everyone antes $${s}. Most points takes the whole pot.`;
       case 'skins': return `Each skin is worth $${s}, paid to its winner by every other player. Tied holes carry to the next.`;
       case 'match': return `The losing side pays $${s}, split across the winning team.`;
+      case 'sidematch': return `Team C vs Team D — the losing side pays $${s}, split across the winning team.`;
+      case 'nassau': return `Front, back and total each pay $${s} to that segment's winner; a halved segment pays nothing.`;
+      case 'sixes': return `Each six-hole match pays $${s} to the winning pair; partners rotate every six.`;
       default: return '';
     }
   };

@@ -984,13 +984,16 @@ function collectModes() {
 // Stakes screen — shared by setup (in-memory, pre-create) and the
 // lobby (writes back to the round). Sublabels encode the settlement
 // model for each mode.
-const STAKE_ORDER = ['gross', 'net', 'stableford', 'skins', 'match'];
+const STAKE_ORDER = ['gross', 'net', 'stableford', 'skins', 'match', 'sidematch', 'nassau', 'sixes'];
 const STAKE_META = {
   gross: { label: 'Gross', sub: 'Ante per player' },
   net: { label: 'Net', sub: 'Ante per player' },
   stableford: { label: 'Stableford', sub: 'Ante per player' },
   skins: { label: 'Skins', sub: 'Per skin won' },
   match: { label: 'Match play', sub: 'Team A vs Team B' },
+  sidematch: { label: 'Side Match', sub: 'Team C vs Team D' },
+  nassau: { label: 'Nassau', sub: 'Front, back & total — 3 bets' },
+  sixes: { label: 'Sixes', sub: 'Per 6-hole match' },
 };
 
 // Plain-language "what this bet is" for the info dialog on the stakes
@@ -1015,6 +1018,18 @@ const BET_EXPLAINERS = {
   match: {
     title: 'Match play: team vs team',
     body: 'The two sides play head-to-head, hole by hole. Whoever is ahead when the match can no longer be caught wins it. The losing side pays the match stake, split across the winning team. A tied (halved) match pays nothing.',
+  },
+  sidematch: {
+    title: 'Side match: a second head-to-head',
+    body: 'A separate match between Team C and Team D running alongside the main game. The losing side pays the stake, split across the winning team. A halved side match pays nothing.',
+  },
+  nassau: {
+    title: 'Nassau: three bets in one',
+    body: 'The stake rides on three separate bets — the front nine, the back nine, and the full eighteen. Each is won on its own, so this stake is at risk up to three times over. The losing side pays the stake on each segment it loses; a tied segment pays nothing.',
+  },
+  sixes: {
+    title: 'Sixes: a bet on every six',
+    body: 'Partners rotate every six holes, and each six-hole match is its own bet. The losing pair pays the stake (split between them) on each six they lose, so the stake is at risk three times across the round. A tied six pays nothing.',
   },
 };
 

@@ -395,9 +395,14 @@ const Golf = (() => {
    */
   function computeMoney(summaries, opts) {
     const { modes = [], stakes = {}, holeCount,
-            matchTeamA, matchTeamB, matchUseHandicap = true } = opts || {};
+            matchTeamA, matchTeamB, matchUseHandicap = true,
+            sidematchTeamC, sidematchTeamD, sidematchUseHandicap = true,
+            nassauFormat = 'match',
+            sixesPlayers, sixesFormat = 'match', sixesUseHandicap = true } = opts || {};
     const playerIds = summaries.map(s => s.playerId);
     const N = playerIds.length;
+    const byId = {};
+    summaries.forEach(s => { byId[s.playerId] = s; });
     const byMode = {};
     const byPlayer = {};
     playerIds.forEach(id => { byPlayer[id] = 0; });
@@ -405,6 +410,13 @@ const Golf = (() => {
     const addNet = (mode, netMap) => {
       byMode[mode] = netMap;
       playerIds.forEach(id => { byPlayer[id] += (netMap[id] || 0); });
+    };
+
+    // A head-to-head payout: winners split +stake, losers split -stake, added
+    // into an existing netMap (so several segments can accumulate).
+    const payTeams = (netMap, winnerIds, loserIds, stake) => {
+      winnerIds.forEach(id => { if (netMap[id] != null) netMap[id] += stake / winnerIds.length; });
+      loserIds.forEach(id => { if (netMap[id] != null) netMap[id] -= stake / loserIds.length; });
     };
 
     // Ante pots for the stroke-play modes.
@@ -457,6 +469,79 @@ const Golf = (() => {
           losers.forEach(id => { if (netMap[id] != null) netMap[id] -= matchStake / losers.length; });
           addNet('match', netMap);
         }
+      }
+    }
+
+    // Side match — same as match play, using Team C vs Team D.
+    const sideStake = Number(stakes.sidematch) || 0;
+    if (modes.includes('sidematch') && sideStake > 0 &&
+        sidematchTeamC && sidematchTeamD && sidematchTeamC.length && sidematchTeamD.length) {
+      const teamC = sidematchTeamC.map(id => byId[id]).filter(Boolean);
+      const teamD = sidematchTeamD.map(id => byId[id]).filter(Boolean);
+      if (teamC.length && teamD.length) {
+        const m = computeMatchPlay(teamC, teamD, holeCount, sidematchUseHandicap);
+        if (m.winner) {
+          const netMap = {};
+          playerIds.forEach(id => { netMap[id] = 0; });
+          payTeams(netMap,
+            m.winner === 'A' ? sidematchTeamC : sidematchTeamD,
+            m.winner === 'A' ? sidematchTeamD : sidematchTeamC, sideStake);
+          addNet('sidematch', netMap);
+        }
+      }
+    }
+
+    // Nassau — three separate bets (front 9, back 9, total 18) over Team A/B.
+    // Each segment's winner is paid the stake; halved/undecided segments pay 0.
+    const nassauStake = Number(stakes.nassau) || 0;
+    if (modes.includes('nassau') && nassauStake > 0 && holeCount > 9 &&
+        matchTeamA && matchTeamB && matchTeamA.length && matchTeamB.length) {
+      const teamA = matchTeamA.map(id => byId[id]).filter(Boolean);
+      const teamB = matchTeamB.map(id => byId[id]).filter(Boolean);
+      if (teamA.length && teamB.length) {
+        const netMap = {};
+        playerIds.forEach(id => { netMap[id] = 0; });
+        [[1, 9], [10, 18], [1, 18]].forEach(([from, to]) => {
+          let winner = null;
+          if (nassauFormat === 'stroke') {
+            const s = computeStrokeRange(teamA, teamB, from, to, matchUseHandicap);
+            if (s.thru === to - from + 1) winner = s.leader; // settle a nine only once complete
+          } else {
+            winner = computeMatchPlayRange(teamA, teamB, from, to, matchUseHandicap).winner;
+          }
+          if (winner) payTeams(netMap,
+            winner === 'A' ? matchTeamA : matchTeamB,
+            winner === 'A' ? matchTeamB : matchTeamA, nassauStake);
+        });
+        if (Object.values(netMap).some(v => Math.abs(v) > 0.005)) addNet('nassau', netMap);
+      }
+    }
+
+    // Sixes — the stake rides on each of the three rotating 6-hole matches.
+    const sixesStake = Number(stakes.sixes) || 0;
+    if (modes.includes('sixes') && sixesStake > 0 && holeCount > 9 &&
+        Array.isArray(sixesPlayers) && sixesPlayers.length === 4) {
+      const seats = sixesPlayers.map(id => byId[id]);
+      if (seats.every(Boolean)) {
+        const netMap = {};
+        playerIds.forEach(id => { netMap[id] = 0; });
+        sixesSegments().forEach(seg => {
+          const teamX = seg.teamX.map(i => seats[i]);
+          const teamY = seg.teamY.map(i => seats[i]);
+          const xIds = seg.teamX.map(i => sixesPlayers[i]);
+          const yIds = seg.teamY.map(i => sixesPlayers[i]);
+          let winner = null;
+          if (sixesFormat === 'stroke') {
+            const s = computeStrokeRange(teamX, teamY, seg.from, seg.to, sixesUseHandicap);
+            if (s.thru === seg.to - seg.from + 1) winner = s.leader;
+          } else {
+            winner = computeMatchPlayRange(teamX, teamY, seg.from, seg.to, sixesUseHandicap).winner;
+          }
+          if (winner) payTeams(netMap,
+            winner === 'A' ? xIds : yIds,
+            winner === 'A' ? yIds : xIds, sixesStake);
+        });
+        if (Object.values(netMap).some(v => Math.abs(v) > 0.005)) addNet('sixes', netMap);
       }
     }
 
