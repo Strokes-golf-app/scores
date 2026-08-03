@@ -301,6 +301,13 @@ function renderHistoryDetailMoney(summaries, round, metaEl, boardEl) {
     matchTeamA: round.matchTeamA,
     matchTeamB: round.matchTeamB,
     matchUseHandicap: round.matchUseHandicap,
+    sidematchTeamC: round.sidematchTeamC,
+    sidematchTeamD: round.sidematchTeamD,
+    sidematchUseHandicap: round.sidematchUseHandicap,
+    nassauFormat: round.nassauFormat,
+    sixesPlayers: round.sixesPlayers,
+    sixesFormat: round.sixesFormat,
+    sixesUseHandicap: round.sixesUseHandicap,
   });
   metaEl.textContent = 'Final money across every bet this round.';
 

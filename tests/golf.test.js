@@ -530,3 +530,48 @@ describe('computeMoney', () => {
     expect(byPlayer.b).toBe(0);
   });
 });
+
+describe('computeMoney — Side Match / Nassau / Sixes', () => {
+  const pars18 = Array(18).fill(4);
+  const p = (id, scores, hcp = 0) => Golf.summarizePlayer({ id, name: id, handicap: hcp }, scores, pars18, null, 18);
+  const flat = v => { const o = {}; for (let h = 1; h <= 18; h++) o[h] = v; return o; };
+
+  it('side match: losing side pays the stake (Team C vs Team D)', () => {
+    const c = p('c', flat(4)); const d = p('d', flat(5));
+    const { byPlayer } = Golf.computeMoney([c, d], {
+      modes: ['sidematch'], stakes: { sidematch: 10 }, holeCount: 18,
+      sidematchTeamC: ['c'], sidematchTeamD: ['d'], sidematchUseHandicap: false,
+    });
+    expect(byPlayer.c).toBe(10);
+    expect(byPlayer.d).toBe(-10);
+  });
+
+  it('nassau: three bets — A wins front & total, back halved pays nothing', () => {
+    const a = flat(4), b = flat(4);
+    a[1] = 3; a[2] = 3; // A wins the front (and thus the total); back all square
+    const A = p('a', a), B = p('b', b);
+    const { byMode, byPlayer } = Golf.computeMoney([A, B], {
+      modes: ['nassau'], stakes: { nassau: 5 }, holeCount: 18,
+      matchTeamA: ['a'], matchTeamB: ['b'], matchUseHandicap: false, nassauFormat: 'match',
+    });
+    expect(byPlayer.a).toBe(10); // front + total; back halved
+    expect(byPlayer.b).toBe(-10);
+    expect(byMode.nassau.a).toBe(10);
+  });
+
+  it('sixes: the stake rides on each rotating six, zero-sum across the four', () => {
+    const a = flat(4), b = flat(4), c = flat(4), d = flat(4);
+    for (let h = 1; h <= 6; h++) a[h] = 3;   // seg1 (a&b vs c&d): a&b win
+    for (let h = 7; h <= 12; h++) d[h] = 3;  // seg2 (a&c vs b&d): b&d win
+    const A = p('a', a), B = p('b', b), C = p('c', c), D = p('d', d);
+    const { byPlayer } = Golf.computeMoney([A, B, C, D], {
+      modes: ['sixes'], stakes: { sixes: 6 }, holeCount: 18,
+      sixesPlayers: ['a', 'b', 'c', 'd'], sixesFormat: 'match', sixesUseHandicap: false,
+    });
+    expect(byPlayer.a).toBe(0);   // +3 seg1, -3 seg2
+    expect(byPlayer.b).toBe(6);   // +3 seg1, +3 seg2
+    expect(byPlayer.c).toBe(-6);  // -3 seg1, -3 seg2
+    expect(byPlayer.d).toBe(0);   // -3 seg1, +3 seg2 (seg3 halved)
+    expect(byPlayer.a + byPlayer.b + byPlayer.c + byPlayer.d).toBe(0);
+  });
+});
