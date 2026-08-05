@@ -548,7 +548,7 @@ describe('computeMoney — Side Match / Nassau / Sixes', () => {
     expect(byPlayer.d).toBe(-10);
   });
 
-  it('nassau: three bets — A wins front & total, back halved pays nothing', () => {
+  it('nassau (legacy single stake): A wins front & total, back halved pays nothing', () => {
     const a = flat(4), b = flat(4);
     a[1] = 3; a[2] = 3; // A wins the front (and thus the total); back all square
     const A = p('a', a), B = p('b', b);
@@ -556,9 +556,40 @@ describe('computeMoney — Side Match / Nassau / Sixes', () => {
       modes: ['nassau'], stakes: { nassau: 5 }, holeCount: 18,
       matchTeamA: ['a'], matchTeamB: ['b'], matchUseHandicap: false, nassauFormat: 'match',
     });
+    // Legacy number applies the same stake to all three segments.
     expect(byPlayer.a).toBe(10); // front + total; back halved
     expect(byPlayer.b).toBe(-10);
     expect(byMode.nassau.a).toBe(10);
+  });
+
+  it('nassau (two stakes): nines rides on front & back, total rides once', () => {
+    const a = flat(4), b = flat(4);
+    a[1] = 3; a[2] = 3;    // A wins the front nine
+    b[10] = 3; b[11] = 3;  // B wins the back nine → total is all square
+    const A = p('a', a), B = p('b', b);
+    const { byMode, byPlayer } = Golf.computeMoney([A, B], {
+      modes: ['nassau'], stakes: { nassau: { nines: 5, total: 10 } }, holeCount: 18,
+      matchTeamA: ['a'], matchTeamB: ['b'], matchUseHandicap: false, nassauFormat: 'match',
+    });
+    // A +5 (won front nine), -5 (lost back nine), total halved → net 0.
+    expect(byPlayer.a).toBe(0);
+    expect(byPlayer.b).toBe(0);
+    expect(byMode.nassau).toBeUndefined(); // nothing moved net across the two
+  });
+
+  it('nassau (two stakes): a zero nines stake settles only the full 18', () => {
+    const a = flat(4), b = flat(4);
+    a[1] = 3; a[3] = 3; // A wins the front by 2
+    b[10] = 3;          // B wins the back by 1 → A still wins the total by 1
+    const A = p('a', a), B = p('b', b);
+    const { byMode, byPlayer } = Golf.computeMoney([A, B], {
+      modes: ['nassau'], stakes: { nassau: { nines: 0, total: 10 } }, holeCount: 18,
+      matchTeamA: ['a'], matchTeamB: ['b'], matchUseHandicap: false, nassauFormat: 'match',
+    });
+    // nines stake is 0 → front and back pay nothing; only the 18 settles.
+    expect(byMode.nassau.a).toBe(10);
+    expect(byPlayer.a).toBe(10);
+    expect(byPlayer.b).toBe(-10);
   });
 
   it('sixes: the stake rides on each rotating six, zero-sum across the four', () => {

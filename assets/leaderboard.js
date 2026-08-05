@@ -164,7 +164,10 @@ function moneyBreakdownHtml(byMode, stakes, nameById) {
       case 'skins': return `Each skin is worth $${s}, paid to its winner by every other player. Tied holes carry to the next.`;
       case 'match': return `The losing side pays $${s}, split across the winning team.`;
       case 'sidematch': return `Team C vs Team D — the losing side pays $${s}, split across the winning team.`;
-      case 'nassau': return `Front, back and total each pay $${s} to that segment's winner; a halved segment pays nothing.`;
+      case 'nassau': {
+        const { nines, total } = Golf.nassauStakes(stakes);
+        return `Front and back each pay $${nines} to the nine's winner; the full 18 pays $${total}. Halved segments pay nothing.`;
+      }
       case 'sixes': return `Each six-hole match pays $${s} to the winning pair; partners rotate every six.`;
       default: return '';
     }

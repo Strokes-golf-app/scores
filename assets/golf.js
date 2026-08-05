@@ -393,6 +393,20 @@ const Golf = (() => {
    *   stake, so carried skins scale naturally. Zero-sum.
    * - match: the losing side pays the stake, split within each team.
    */
+
+  // Nassau carries two stakes: `nines` rides on BOTH the front and the
+  // back nine (same bet each), `total` rides on the full 18. Accepts the
+  // legacy single-number shape (one stake applied to all three segments)
+  // so older / archived rounds still settle.
+  function nassauStakes(stakes) {
+    const n = stakes && stakes.nassau;
+    if (n && typeof n === 'object') {
+      return { nines: Number(n.nines) || 0, total: Number(n.total) || 0 };
+    }
+    const v = Number(n) || 0;
+    return { nines: v, total: v };
+  }
+
   function computeMoney(summaries, opts) {
     const { modes = [], stakes = {}, holeCount,
             matchTeamA, matchTeamB, matchUseHandicap = true,
@@ -491,17 +505,19 @@ const Golf = (() => {
       }
     }
 
-    // Nassau — three separate bets (front 9, back 9, total 18) over Team A/B.
-    // Each segment's winner is paid the stake; halved/undecided segments pay 0.
-    const nassauStake = Number(stakes.nassau) || 0;
-    if (modes.includes('nassau') && nassauStake > 0 && holeCount > 9 &&
+    // Nassau — two stakes over Team A/B: `nines` rides on BOTH the front
+    // and the back (same bet each), `total` rides on the full 18. Each
+    // segment's winner is paid its stake; halved/undecided segments pay 0.
+    const { nines: nassauNines, total: nassauTotal } = nassauStakes(stakes);
+    if (modes.includes('nassau') && (nassauNines > 0 || nassauTotal > 0) && holeCount > 9 &&
         matchTeamA && matchTeamB && matchTeamA.length && matchTeamB.length) {
       const teamA = matchTeamA.map(id => byId[id]).filter(Boolean);
       const teamB = matchTeamB.map(id => byId[id]).filter(Boolean);
       if (teamA.length && teamB.length) {
         const netMap = {};
         playerIds.forEach(id => { netMap[id] = 0; });
-        [[1, 9], [10, 18], [1, 18]].forEach(([from, to]) => {
+        [[1, 9, nassauNines], [10, 18, nassauNines], [1, 18, nassauTotal]].forEach(([from, to, stake]) => {
+          if (stake <= 0) return;
           let winner = null;
           if (nassauFormat === 'stroke') {
             const s = computeStrokeRange(teamA, teamB, from, to, matchUseHandicap);
@@ -511,7 +527,7 @@ const Golf = (() => {
           }
           if (winner) payTeams(netMap,
             winner === 'A' ? matchTeamA : matchTeamB,
-            winner === 'A' ? matchTeamB : matchTeamA, nassauStake);
+            winner === 'A' ? matchTeamB : matchTeamA, stake);
         });
         if (Object.values(netMap).some(v => Math.abs(v) > 0.005)) addNet('nassau', netMap);
       }
@@ -595,6 +611,7 @@ const Golf = (() => {
     computeStrokeRange,
     sixesSegments,
     matchRunning,
+    nassauStakes,
     computeMoney,
     formatToPar,
     formatMoney,

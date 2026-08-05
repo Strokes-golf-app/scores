@@ -992,7 +992,7 @@ const STAKE_META = {
   skins: { label: 'Skins', sub: 'Per skin won' },
   match: { label: 'Match play', sub: 'Team A vs Team B' },
   sidematch: { label: 'Side Match', sub: 'Team C vs Team D' },
-  nassau: { label: 'Nassau', sub: 'Front, back & total — 3 bets' },
+  nassau: { label: 'Nassau', sub: 'Nines (each) & total — 2 bets' },
   sixes: { label: 'Sixes', sub: 'Per 6-hole match' },
 };
 
@@ -1024,8 +1024,8 @@ const BET_EXPLAINERS = {
     body: 'A separate match between Team C and Team D running alongside the main game. The losing side pays the stake, split across the winning team. A halved side match pays nothing.',
   },
   nassau: {
-    title: 'Nassau: three bets in one',
-    body: 'The stake rides on three separate bets — the front nine, the back nine, and the full eighteen. Each is won on its own, so this stake is at risk up to three times over. The losing side pays the stake on each segment it loses; a tied segment pays nothing.',
+    title: 'Nassau: two bets',
+    body: 'Two stakes. The nines stake rides on both the front nine and the back nine — each is won on its own, so that stake is at risk twice. The total stake rides once on the full eighteen. The losing side pays the relevant stake on each segment it loses; a tied segment pays nothing.',
   },
   sixes: {
     title: 'Sixes: a bet on every six',
@@ -1054,6 +1054,30 @@ function renderStakesScreen(modes, stakes) {
   }
   list.innerHTML = ordered.map(m => {
     const meta = STAKE_META[m];
+    if (m === 'nassau') {
+      const { nines, total } = Golf.nassauStakes(stakes || {});
+      return `
+      <div class="stakes-row">
+        <div>
+          <span class="stakes-row-name">Nassau · Nines</span>
+          <button type="button" class="stakes-row-sub stakes-info-link" data-mode="nassau" aria-label="What Nassau means">Front &amp; back 9 — same bet each<span class="stakes-info-icon" aria-hidden="true">ⓘ</span></button>
+        </div>
+        <div class="stakes-amount">
+          <span class="cur">$</span>
+          <input type="number" class="stakes-input" data-mode="nassau" data-seg="nines" min="0" step="1" inputmode="numeric" placeholder="0" value="${nines || ''}">
+        </div>
+      </div>
+      <div class="stakes-row">
+        <div>
+          <span class="stakes-row-name">Nassau · Total</span>
+          <span class="stakes-row-sub">Full 18</span>
+        </div>
+        <div class="stakes-amount">
+          <span class="cur">$</span>
+          <input type="number" class="stakes-input" data-mode="nassau" data-seg="total" min="0" step="1" inputmode="numeric" placeholder="0" value="${total || ''}">
+        </div>
+      </div>`;
+    }
     const val = stakes && stakes[m] != null ? stakes[m] : '';
     return `
       <div class="stakes-row">
@@ -1071,10 +1095,17 @@ function renderStakesScreen(modes, stakes) {
 
 function collectStakes() {
   const stakes = {};
+  const nassau = {};
   document.querySelectorAll('#stakes-list .stakes-input').forEach(inp => {
     const v = Number(inp.value);
-    if (inp.value !== '' && v > 0) stakes[inp.dataset.mode] = v;
+    const valid = inp.value !== '' && v > 0;
+    if (inp.dataset.mode === 'nassau') {
+      if (valid) nassau[inp.dataset.seg] = v;
+    } else if (valid) {
+      stakes[inp.dataset.mode] = v;
+    }
   });
+  if (nassau.nines || nassau.total) stakes.nassau = nassau;
   return stakes;
 }
 
