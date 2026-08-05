@@ -272,7 +272,9 @@ describe('computeMatchPlayRange / computeStrokeRange', () => {
     const front = Golf.computeMatchPlayRange([A], [B], 1, 9);
     expect(front.winner).toBe('A');
     expect(front.margin).toBe(2);
-    expect(front.thru).toBe(9);
+    expect(front.thru).toBe(8); // 2 up with 1 to play → clinched "2 and 1" at hole 8
+    expect(front.decided).toBe(true);
+    expect(front.remaining).toBe(1);
 
     const back = Golf.computeMatchPlayRange([A], [B], 10, 18);
     expect(back.winner).toBe('B');
