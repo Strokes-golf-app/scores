@@ -228,17 +228,25 @@ async function setPutts(delta) {
   if (!hasScore) return;
 
   const strokes = Number(player.scores[String(h)]);
-  const editingSelf = player.id === state.myPlayerId;
-  const { error } = editingSelf
-    ? await supabaseClient
-        .from('scores')
-        .upsert({ player_id: player.id, hole: h, strokes, putts }, { onConflict: 'player_id,hole' })
-    : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: strokes, p_putts: putts });
+  const { error } = await saveScore(player, h, strokes, putts);
 
   if (error) {
     console.error(error);
     showToast('Could not save putts — check your connection');
   }
+}
+
+// Persists one hole's strokes + putts for a player, choosing the right write
+// path: your own card writes directly; a teammate's card in a tournament goes
+// through tournament_upsert_score (captain check); otherwise host_upsert_score.
+async function saveScore(player, hole, strokes, putts) {
+  if (player.id === state.myPlayerId) {
+    return supabaseClient
+      .from('scores')
+      .upsert({ player_id: player.id, hole, strokes, putts }, { onConflict: 'player_id,hole' });
+  }
+  const rpc = state.round.isTournament ? 'tournament_upsert_score' : 'host_upsert_score';
+  return supabaseClient.rpc(rpc, { p_player_id: player.id, p_hole: hole, p_strokes: strokes, p_putts: putts });
 }
 
 async function setStroke(delta) {
@@ -265,12 +273,7 @@ async function setStroke(delta) {
 
   renderScorecardTab();
 
-  const editingSelf = player.id === state.myPlayerId;
-  const { error } = editingSelf
-    ? await supabaseClient
-        .from('scores')
-        .upsert({ player_id: player.id, hole: h, strokes: next, putts }, { onConflict: 'player_id,hole' })
-    : await supabaseClient.rpc('host_upsert_score', { p_player_id: player.id, p_hole: h, p_strokes: next, p_putts: putts });
+  const { error } = await saveScore(player, h, next, putts);
 
   if (error) {
     console.error(error);
