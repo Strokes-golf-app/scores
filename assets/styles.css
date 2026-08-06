@@ -1623,6 +1623,45 @@ input::placeholder {
   flex: none;
 }
 
+/* Tournament: team-assignment row (team select + captain toggle) and the
+   manual match-pairing rows (two team selects + remove). */
+.team-assign-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+}
+.team-assign-select {
+  width: auto;
+  flex: none;
+}
+.team-captain-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.team-captain-label input {
+  width: 16px;
+  height: 16px;
+}
+.tournament-match-row {
+  gap: 0.5rem;
+}
+.tournament-match-row .pairing-select {
+  width: auto;
+  flex: 1;
+}
+.pairing-vs {
+  font-weight: 700;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
 .match-handicap-toggle {
   display: flex;
   align-items: center;

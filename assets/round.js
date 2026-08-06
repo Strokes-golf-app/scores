@@ -47,6 +47,8 @@ function mapPlayers(playerRows, scoreRows) {
   return playerRows.map(p => ({
     ...p,
     handicap: Number(p.handicap) || 0,
+    team: p.team != null ? Number(p.team) : null, // tournament team number (1..8), or null
+    isCaptain: p.is_captain === true,             // tournament captain flag
     scores: mapPlayerScores(scoreRows, p.id),
     putts: mapPlayerPutts(scoreRows, p.id),
   }));
@@ -70,6 +72,9 @@ function mapRoundRow(row, players) {
     hostId: row.host_player_id, started: row.started, ended: row.ended,
     holeOffset: row.hole_offset || 0,
     betsEnabled: row.bets_enabled === true, stakes: row.stakes || {},
+    isTournament: row.is_tournament === true,
+    teamSize: row.team_size != null ? Number(row.team_size) : null,
+    tournamentMatches: row.tournament_matches || null,
     players,
   };
 }

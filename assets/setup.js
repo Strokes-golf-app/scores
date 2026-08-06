@@ -57,6 +57,7 @@ function renderSetupPlayerList() {
       renderMatchAssignList();
       renderSideMatchAssignList();
       renderSixesAssignList();
+      renderTeamAssignList();
     });
   });
   wrap.querySelectorAll('.setup-hcp-input').forEach(inp => {
@@ -87,12 +88,14 @@ function renderSetupPlayerList() {
       renderMatchAssignList();
       renderSideMatchAssignList();
       renderSixesAssignList();
+      renderTeamAssignList();
     });
   });
 
   renderMatchAssignList();
   renderSideMatchAssignList();
   renderSixesAssignList();
+  renderTeamAssignList();
 }
 
 // Builds the team-assignment list shown when "Match play" is checked.
@@ -251,12 +254,200 @@ function collectSixesPlayers() {
   return { players: seats.map(s => bySeat[s]), error: '' };
 }
 
+// ---------------------------------------------------------
+// Tournament setup — team assignment and manual match pairings.
+// A tournament reuses the whole setup screen; these helpers drive the
+// tournament-only fields. Up to 16 players on teams of 2 (max 8 teams) or
+// 4 (max 4 teams); every player must be on a team.
+// ---------------------------------------------------------
+function tournamentTeamSize() {
+  const checked = document.querySelector('#team-size input:checked');
+  return checked && checked.value === '4' ? 4 : 2;
+}
+function tournamentTeamCount() {
+  return tournamentTeamSize() === 4 ? 4 : 8;
+}
+
+// Toggles the setup screen between normal-round and tournament presentation:
+// which mode cards / config fields are available, the title and primary
+// button text, and the team + pairing fields.
+function syncTournamentUI() {
+  const t = !!state.setupIsTournament;
+  document.querySelectorAll('#screen-setup .tournament-only').forEach(el => { el.hidden = !t; });
+  document.querySelectorAll('#screen-setup .regular-only').forEach(el => { el.hidden = t; });
+
+  // Modes exclusive to the other context can't stay checked.
+  document.querySelectorAll('#mode-grid .regular-only input[name="mode"]').forEach(cb => {
+    if (t && cb.checked) { cb.checked = false; cb.closest('.mode-card').classList.remove('checked'); }
+  });
+  if (!t) {
+    const bb = document.querySelector('#mode-grid input[value="bestball"]');
+    if (bb && bb.checked) { bb.checked = false; bb.closest('.mode-card').classList.remove('checked'); }
+  }
+
+  if (!state.editingRoundId) {
+    const title = document.querySelector('#screen-setup .topbar-title');
+    if (title) title.textContent = t ? 'New tournament' : 'New round';
+    const createBtn = document.getElementById('btn-create-round');
+    if (createBtn) createBtn.textContent = t ? 'Create tournament & get code' : 'Create round & get code';
+  }
+
+  syncModeConfigFields();
+  if (t) { renderTeamAssignList(); renderTournamentMatchList(); }
+}
+
+// Team-assignment list: each player gets a team select (1..N) and a captain
+// checkbox. Preserves picks across re-renders by player id; a team pick above
+// the current max (after shrinking team size) is dropped.
+function renderTeamAssignList() {
+  const wrap = document.getElementById('team-assign-list');
+  if (!wrap) return;
+
+  const prev = {};
+  wrap.querySelectorAll('.team-assign-row').forEach(row => {
+    prev[row.dataset.id] = {
+      team: row.querySelector('.team-assign-select')?.value || '',
+      captain: !!row.querySelector('.team-captain-toggle')?.checked,
+    };
+  });
+
+  const count = tournamentTeamCount();
+  const opts = ['<option value="">No team</option>']
+    .concat(Array.from({ length: count }, (_, i) => `<option value="${i + 1}">Team ${i + 1}</option>`))
+    .join('');
+
+  wrap.innerHTML = '';
+  state.setupPlayers.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'team-assign-row match-assign-row';
+    row.dataset.id = p.id;
+    row.innerHTML = `
+      <span class="match-assign-name">${escapeHtml(p.name || 'Unnamed player')}</span>
+      <span class="team-assign-controls">
+        <select class="team-assign-select" data-id="${p.id}">${opts}</select>
+        <label class="team-captain-label"><input type="checkbox" class="team-captain-toggle" data-id="${p.id}"> Captain</label>
+      </span>
+    `;
+    wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll('.team-assign-row').forEach(row => {
+    const p = prev[row.dataset.id];
+    if (!p) return;
+    if (p.team && Number(p.team) <= count) row.querySelector('.team-assign-select').value = p.team;
+    row.querySelector('.team-captain-toggle').checked = p.captain;
+  });
+}
+
+// Reads team assignments into { assignments: {id: {team, captain}}, error }.
+// Enforces: ≤16 players, every named player on a team, ≥2 teams, and each used
+// team holds exactly the chosen size. Captains are optional (a team with none
+// simply has no one who can enter teammates' scores).
+function collectTeams() {
+  const size = tournamentTeamSize();
+  const players = state.setupPlayers.filter(p => p.name.trim());
+  if (players.length > 16) return { assignments: {}, error: 'A tournament can have at most 16 players' };
+  const validIds = new Set(players.map(p => p.id));
+
+  const assignments = {};
+  const byTeam = {};
+  let unassigned = 0;
+  document.querySelectorAll('.team-assign-select').forEach(sel => {
+    if (!validIds.has(sel.dataset.id)) return;
+    const team = Number(sel.value) || 0;
+    if (!team) { unassigned += 1; return; }
+    const captain = !!document.querySelector(`.team-captain-toggle[data-id="${sel.dataset.id}"]`)?.checked;
+    assignments[sel.dataset.id] = { team, captain };
+    (byTeam[team] = byTeam[team] || []).push(sel.dataset.id);
+  });
+
+  if (unassigned > 0) return { assignments: {}, error: 'Every player must be assigned to a team' };
+  const teamNos = Object.keys(byTeam);
+  if (teamNos.length < 2) return { assignments: {}, error: 'A tournament needs at least two teams' };
+  for (const t of teamNos) {
+    if (byTeam[t].length !== size) {
+      return { assignments: {}, error: `Each team needs exactly ${size} players — Team ${t} has ${byTeam[t].length}` };
+    }
+  }
+  return { assignments, error: '' };
+}
+
+// Manual match pairings, held in state.tournamentPairings as [{a,b}] of team
+// numbers. Each row is two team selects plus a remove button.
+function renderTournamentMatchList() {
+  const wrap = document.getElementById('tournament-match-list');
+  if (!wrap) return;
+  if (!Array.isArray(state.tournamentPairings)) state.tournamentPairings = [];
+  const count = tournamentTeamCount();
+  const teamOpts = (selected) => ['<option value="">Team…</option>']
+    .concat(Array.from({ length: count }, (_, i) =>
+      `<option value="${i + 1}" ${String(i + 1) === String(selected) ? 'selected' : ''}>Team ${i + 1}</option>`))
+    .join('');
+
+  wrap.innerHTML = state.tournamentPairings.map((pair, idx) => `
+    <div class="tournament-match-row match-assign-row" data-idx="${idx}">
+      <select class="pairing-select" data-idx="${idx}" data-side="a">${teamOpts(pair.a)}</select>
+      <span class="pairing-vs">vs</span>
+      <select class="pairing-select" data-idx="${idx}" data-side="b">${teamOpts(pair.b)}</select>
+      <button type="button" class="player-row-remove pairing-remove" data-idx="${idx}" aria-label="Remove match">×</button>
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('.pairing-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const p = state.tournamentPairings[Number(sel.dataset.idx)];
+      if (p) p[sel.dataset.side] = sel.value ? Number(sel.value) : null;
+    });
+  });
+  wrap.querySelectorAll('.pairing-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.tournamentPairings.splice(Number(btn.dataset.idx), 1);
+      renderTournamentMatchList();
+    });
+  });
+}
+
+function addTournamentPairing() {
+  if (!Array.isArray(state.tournamentPairings)) state.tournamentPairings = [];
+  state.tournamentPairings.push({ a: null, b: null });
+  renderTournamentMatchList();
+}
+
+// Returns the completed pairings as [{a,b}] of team numbers, or an error.
+// Ignores half-filled rows; rejects self-matches and teams with no players.
+function collectTournamentMatches(usedTeams) {
+  const pairings = (state.tournamentPairings || []).filter(p => p.a && p.b);
+  for (const p of pairings) {
+    if (p.a === p.b) return { matches: [], error: 'A match must be between two different teams' };
+    if (usedTeams && (!usedTeams.has(p.a) || !usedTeams.has(p.b))) {
+      return { matches: [], error: 'A pairing references a team with no players' };
+    }
+  }
+  return { matches: pairings.map(p => ({ a: p.a, b: p.b })), error: '' };
+}
+
 // Shows/hides the per-mode config fields from the currently-checked mode boxes
 // and relabels the shared team field. Match play and Nassau share one Team A/B
-// assignment, so the team field shows when either is on.
+// assignment, so the team field shows when either is on. In a tournament the
+// single-round config fields stay hidden; only the team field (always) and the
+// match-pairing field (when match play is on) apply.
 function syncModeConfigFields() {
   const grid = document.getElementById('mode-grid');
   const isOn = v => !!grid.querySelector(`input[value="${v}"]`)?.checked;
+
+  if (state.setupIsTournament) {
+    document.getElementById('match-players-field').hidden = true;
+    document.getElementById('sidematch-players-field').hidden = true;
+    document.getElementById('nassau-format-field').hidden = true;
+    document.getElementById('sixes-field').hidden = true;
+    document.getElementById('tournament-teams-field').hidden = false;
+    document.getElementById('tournament-match-field').hidden = !isOn('match');
+    return;
+  }
+
+  document.getElementById('tournament-teams-field').hidden = true;
+  document.getElementById('tournament-match-field').hidden = true;
+
   const matchOn = isOn('match');
   const nassauOn = isOn('nassau');
   document.getElementById('match-players-field').hidden = !(matchOn || nassauOn);
@@ -272,7 +463,13 @@ function syncModeConfigFields() {
   }
 }
 
-async function resetSetupScreen() {
+async function resetSetupScreen(isTournament = false) {
+  state.setupIsTournament = !!isTournament;
+  state.tournamentPairings = [];
+  const teamSize2 = document.querySelector('#team-size input[value="2"]');
+  if (teamSize2) teamSize2.checked = true;
+  document.getElementById('tournament-match-use-handicap').checked = true;
+
   document.getElementById('course-name').value = '';
   document.getElementById('hole-count').value = '18';
   document.querySelectorAll('#mode-grid input[name="mode"]').forEach(cb => {
@@ -321,6 +518,7 @@ async function resetSetupScreen() {
   renderSetupPlayerList();
   state.editingRoundId = null;
   applySetupMode('create');
+  syncTournamentUI();
 }
 
 // Toggles the setup screen between "create a new round" and "edit an existing
@@ -353,6 +551,11 @@ async function openRoundEditor() {
   const r = state.round;
   if (!r) return;
   state.editingRoundId = state.roundId;
+  state.setupIsTournament = !!r.isTournament;
+  // Swap the mode cards / config fields to the right context up front, so the
+  // prefill below targets the fields that are actually on screen.
+  document.querySelectorAll('#screen-setup .tournament-only').forEach(el => { el.hidden = !r.isTournament; });
+  document.querySelectorAll('#screen-setup .regular-only').forEach(el => { el.hidden = !!r.isTournament; });
 
   document.getElementById('course-name').value = r.courseName || '';
   document.getElementById('hole-count').value = String(r.holeCount || 18);
@@ -430,6 +633,25 @@ async function openRoundEditor() {
     });
   }
 
+  if (state.setupIsTournament) {
+    const sizeRadio = document.querySelector(`#team-size input[value="${r.teamSize === 4 ? '4' : '2'}"]`);
+    if (sizeRadio) sizeRadio.checked = true;
+    document.getElementById('tournament-match-use-handicap').checked = r.matchUseHandicap !== false;
+    state.tournamentPairings = Array.isArray(r.tournamentMatches)
+      ? r.tournamentMatches.map(m => ({ a: m.a, b: m.b }))
+      : [];
+    renderTeamAssignList();
+    document.querySelectorAll('.team-assign-select').forEach(sel => {
+      const p = r.players.find(pl => pl.id === sel.dataset.id);
+      if (p && p.team != null) sel.value = String(p.team);
+    });
+    document.querySelectorAll('.team-captain-toggle').forEach(cb => {
+      const p = r.players.find(pl => pl.id === cb.dataset.id);
+      if (p && p.isCaptain) cb.checked = true;
+    });
+    renderTournamentMatchList();
+  }
+
   applySetupMode('edit');
   showScreen('screen-setup');
 }
@@ -445,6 +667,10 @@ async function saveRoundEdits() {
   const modes = collectModes();
   const betsEnabled = document.getElementById('bets-enabled').checked;
   const stakes = betsEnabled ? (state.setupStakes || {}) : {};
+
+  if (state.setupIsTournament) {
+    return saveTournamentRoundEdits(roundId, courseName, modes, betsEnabled, stakes);
+  }
 
   // Match play and Nassau share one Team A/B assignment.
   const needsTeams = modes.includes('match') || modes.includes('nassau');
@@ -535,6 +761,75 @@ async function saveRoundEdits() {
     showScreen('screen-round');
     onRoundUpdate();
     showToast('Round updated');
+  } catch (e) {
+    console.error(e);
+    showToast('Could not save changes — check your connection');
+  }
+}
+
+// Tournament variant of saveRoundEdits: revalidates teams + pairings, inserts
+// any newly added players with their team/captain, updates existing players'
+// team/captain, and writes the tournament round columns.
+async function saveTournamentRoundEdits(roundId, courseName, modes, betsEnabled, stakes) {
+  const teamRes = collectTeams();
+  if (teamRes.error) { showToast(teamRes.error); return; }
+  const teamSize = tournamentTeamSize();
+  const usedTeams = new Set(Object.values(teamRes.assignments).map(a => a.team));
+  const matchRes = collectTournamentMatches(usedTeams);
+  if (matchRes.error) { showToast(matchRes.error); return; }
+  if (modes.includes('match') && matchRes.matches.length === 0) {
+    showToast('Add at least one match pairing, or turn off Match play');
+    return;
+  }
+  const matchUseHandicap = document.getElementById('tournament-match-use-handicap').checked;
+
+  try {
+    const tempIdToDbId = {};
+    const newPlayers = state.setupPlayers.filter(p => !p.existing && p.name.trim());
+    if (newPlayers.length > 0) {
+      const rows = newPlayers.map(p => {
+        const dbId = crypto.randomUUID();
+        tempIdToDbId[p.id] = dbId;
+        const a = teamRes.assignments[p.id] || null;
+        return {
+          id: dbId, round_id: roundId, name: p.name.trim(), handicap: p.handicap || 0, user_id: null,
+          team: a ? a.team : null, is_captain: !!(a && a.captain),
+        };
+      });
+      const { error: insErr } = await supabaseClient.from('players').insert(rows);
+      if (insErr) throw insErr;
+    }
+
+    // Update existing players' team/captain (small list — up to 16 rows).
+    const existing = state.setupPlayers.filter(p => p.existing);
+    for (const p of existing) {
+      const a = teamRes.assignments[p.id] || null;
+      const { error: upErr } = await supabaseClient
+        .from('players')
+        .update({ team: a ? a.team : null, is_captain: !!(a && a.captain) })
+        .eq('id', p.id);
+      if (upErr) throw upErr;
+    }
+
+    const { error: updErr } = await supabaseClient
+      .from('rounds')
+      .update({
+        course_name: courseName,
+        modes,
+        stakes,
+        bets_enabled: betsEnabled,
+        team_size: teamSize,
+        tournament_matches: matchRes.matches,
+        match_use_handicap: matchUseHandicap,
+      })
+      .eq('id', roundId);
+    if (updErr) throw updErr;
+
+    state.editingRoundId = null;
+    await loadRound(roundId);
+    showScreen('screen-round');
+    onRoundUpdate();
+    showToast('Tournament updated');
   } catch (e) {
     console.error(e);
     showToast('Could not save changes — check your connection');
@@ -1155,9 +1450,30 @@ async function createRound() {
     return;
   }
 
-  // Match play and Nassau share one Team A/B assignment.
-  const needsTeams = modes.includes('match') || modes.includes('nassau');
-  const nassauFormat = modes.includes('nassau')
+  // Tournament: teams (assigned by temp id) and optional manual match pairings
+  // (by team number). These replace the single-round team assignments below.
+  const isTournament = !!state.setupIsTournament;
+  let teamAssignments = {}, teamSize = null, tournamentMatches = [], tournamentMatchUseHandicap = true;
+  if (isTournament) {
+    const t = collectTeams();
+    if (t.error) { showToast(t.error); return; }
+    teamAssignments = t.assignments;
+    teamSize = tournamentTeamSize();
+    const usedTeams = new Set(Object.values(teamAssignments).map(a => a.team));
+    const m = collectTournamentMatches(usedTeams);
+    if (m.error) { showToast(m.error); return; }
+    tournamentMatches = m.matches;
+    if (modes.includes('match') && tournamentMatches.length === 0) {
+      showToast('Add at least one match pairing, or turn off Match play');
+      return;
+    }
+    tournamentMatchUseHandicap = document.getElementById('tournament-match-use-handicap').checked;
+  }
+
+  // Match play and Nassau share one Team A/B assignment (single-round only —
+  // a tournament uses its own team assignment above).
+  const needsTeams = !isTournament && (modes.includes('match') || modes.includes('nassau'));
+  const nassauFormat = (!isTournament && modes.includes('nassau'))
     ? (document.querySelector('#nassau-format input:checked')?.value || 'match')
     : null;
   let matchTeamATempIds = [], matchTeamBTempIds = [], matchUseHandicap = true;
@@ -1177,7 +1493,7 @@ async function createRound() {
   }
 
   let sidematchTeamCTempIds = [], sidematchTeamDTempIds = [], sidematchUseHandicap = true;
-  if (modes.includes('sidematch')) {
+  if (!isTournament && modes.includes('sidematch')) {
     const { teamC, teamD } = collectSideMatchAssignments();
     const err = sideMatchError(teamC, teamD);
     if (err) { showToast(err); return; }
@@ -1187,7 +1503,7 @@ async function createRound() {
   }
 
   let sixesTempIds = [], sixesFormat = null, sixesUseHandicap = true;
-  if (modes.includes('sixes')) {
+  if (!isTournament && modes.includes('sixes')) {
     if (holeCount !== 18) {
       showToast('Sixes needs an 18-hole round');
       return;
@@ -1224,18 +1540,23 @@ async function createRound() {
         hole_offset: state.selectedCourseNine === 'back' ? 9 : 0,
         bets_enabled: state.setupBetsEnabled === true,
         stakes: state.setupBetsEnabled ? (state.setupStakes || {}) : {},
+        is_tournament: isTournament,
+        team_size: teamSize,
       });
 
     if (roundErr) throw roundErr;
 
     // Insert the host's own row FIRST, on its own — this one doesn't
     // depend on the round being readable yet, just on user_id matching.
+    const hostAssign = teamAssignments[validPlayers[0].id] || null;
     const hostRow = {
       id: crypto.randomUUID(),
       round_id: roundId,
       name: validPlayers[0].name.trim(),
       handicap: validPlayers[0].handicap || 0,
       user_id: currentUser.id,
+      team: hostAssign ? hostAssign.team : null,
+      is_captain: !!(hostAssign && hostAssign.captain),
     };
 
     // Maps each setup-screen player to their real database row id, so
@@ -1252,12 +1573,15 @@ async function createRound() {
     const otherPlayers = validPlayers.slice(1).map(p => {
       const dbId = crypto.randomUUID();
       tempIdToDbId[p.id] = dbId;
+      const assign = teamAssignments[p.id] || null;
       return {
         id: dbId,
         round_id: roundId,
         name: p.name.trim(),
         handicap: p.handicap || 0,
         user_id: null,
+        team: assign ? assign.team : null,
+        is_captain: !!(assign && assign.captain),
       };
     });
 
@@ -1279,7 +1603,7 @@ async function createRound() {
         host_player_id: hostId,
         match_team_a: matchTeamA.length ? matchTeamA : null,
         match_team_b: matchTeamB.length ? matchTeamB : null,
-        match_use_handicap: matchUseHandicap,
+        match_use_handicap: isTournament ? tournamentMatchUseHandicap : matchUseHandicap,
         sidematch_team_c: sidematchTeamC.length ? sidematchTeamC : null,
         sidematch_team_d: sidematchTeamD.length ? sidematchTeamD : null,
         sidematch_use_handicap: sidematchUseHandicap,
@@ -1287,6 +1611,7 @@ async function createRound() {
         sixes_players: sixesPlayers.length === 4 ? sixesPlayers : null,
         sixes_format: sixesFormat,
         sixes_use_handicap: sixesUseHandicap,
+        tournament_matches: isTournament ? tournamentMatches : null,
       })
       .eq('id', roundId);
 
