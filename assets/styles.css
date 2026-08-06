@@ -1089,6 +1089,12 @@ img.drawer-item-icon {
   color: var(--fairway);
 }
 
+.history-match-roster {
+  margin-top: 0.4rem;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
 /* Read-only scorecard grid */
 .history-scorecard {
   margin-top: 1.75rem;
@@ -2764,6 +2770,21 @@ button.sc-cell {
   color: var(--ink-faint);
   font-size: 14px;
   padding: 2rem 1rem;
+}
+
+/* Section label between the team standings and the individual leaderboard on a
+   tournament board. */
+.board-subhead {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 1.1rem 0 0.5rem;
+}
+.board-subhead:first-child {
+  margin-top: 0;
 }
 
 .match-card {

@@ -217,6 +217,79 @@ const Golf = (() => {
     return Math.min(...values);
   }
 
+  // Groups player objects by their tournament team number into
+  // { teamNo: [playerId, ...] }. Players with no team are skipped.
+  function tournamentTeams(players) {
+    const teams = {};
+    (players || []).forEach(p => {
+      if (p.team != null) (teams[p.team] = teams[p.team] || []).push(p.id);
+    });
+    return teams;
+  }
+
+  /**
+   * Team standings for a tournament, ranked best-first.
+   * - gross / net: team value is the SUM of its members' to-par (lower wins).
+   * - stableford: team value is the SUM of its members' points (higher wins).
+   * - bestball: per hole, the best net among members (via bestBallHoleScore),
+   *   summed and expressed to par over the holes the whole team has completed.
+   * `teams` is the { teamNo: [playerId] } map from tournamentTeams. A team is
+   * "not started" (unranked, listed last) only when no member has posted a
+   * score; otherwise it ranks on whatever it has (provisional). Ties share a
+   * rank. Returns rows { team, memberIds, thru, toPar, points, total, rank }.
+   */
+  function computeTeamStandings(summaries, teams, mode, opts = {}) {
+    const { pars = [], holeCount = 18, useHandicap = true } = opts;
+    const byId = {};
+    summaries.forEach(s => { byId[s.playerId] = s; });
+
+    const rows = Object.keys(teams).map(teamNo => {
+      const memberIds = teams[teamNo];
+      const members = memberIds.map(id => byId[id]).filter(Boolean);
+      const anyStarted = members.some(s => s.thru > 0);
+      const teamThru = members.length ? Math.min(...members.map(s => s.thru)) : 0;
+
+      let toPar = 0, points = 0, total = 0, sortValue = 0;
+      if (mode === 'bestball') {
+        let sum = 0, parSum = 0;
+        for (let h = 0; h < holeCount; h++) {
+          const bb = bestBallHoleScore(members, h, useHandicap);
+          if (bb == null) continue;
+          sum += bb;
+          parSum += (pars[h] || 4);
+        }
+        total = sum;
+        toPar = sum - parSum;
+        sortValue = toPar;
+      } else if (mode === 'stableford') {
+        points = members.reduce((a, s) => a + (s.stablefordTotal || 0), 0);
+        total = points;
+        sortValue = -points; // higher points is better
+      } else {
+        const parField = mode === 'net' ? 'toParNet' : 'toParGross';
+        const totField = mode === 'net' ? 'netTotal' : 'grossTotal';
+        toPar = members.reduce((a, s) => a + (s[parField] || 0), 0);
+        total = members.reduce((a, s) => a + (s[totField] || 0), 0);
+        sortValue = toPar;
+      }
+
+      return { team: Number(teamNo), memberIds, thru: teamThru, toPar, points, total, sortValue, anyStarted };
+    });
+
+    const started = rows.filter(r => r.anyStarted);
+    const notStarted = rows.filter(r => !r.anyStarted);
+    started.sort((a, b) => a.sortValue - b.sortValue);
+
+    let rank = 0, last = null;
+    started.forEach((r, i) => {
+      if (last === null || r.sortValue !== last) { rank = i + 1; last = r.sortValue; }
+      r.rank = rank;
+    });
+    notStarted.forEach(r => { r.rank = null; });
+
+    return [...started, ...notStarted];
+  }
+
   /**
    * Match play between two teams of 1-3 players each over a 1-based,
    * inclusive hole window [fromHole..toHole]. `thru` counts holes
@@ -612,6 +685,8 @@ const Golf = (() => {
     sixesSegments,
     matchRunning,
     nassauStakes,
+    tournamentTeams,
+    computeTeamStandings,
     computeMoney,
     formatToPar,
     formatMoney,

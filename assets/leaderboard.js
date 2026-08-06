@@ -43,6 +43,16 @@ function renderLeaderboardTab() {
     return;
   }
 
+  // Tournament boards: team standings + individual for the stroke/best-ball
+  // modes, and per-pairing cards for match play. Money falls through to the
+  // shared money board (team-mode settlement is a later phase).
+  if (r.isTournament) {
+    if (mode === 'match') { renderTournamentMatchBoard(summaries, r); return; }
+    if (mode === 'money') { renderMoneyBoard(summaries, r); return; }
+    renderTeamBoard(summaries, r, mode);
+    return;
+  }
+
   if (mode === 'skins') {
     renderSkinsBoard(summaries, r);
     return;
@@ -72,34 +82,137 @@ function renderLeaderboardTab() {
     ? 'Points scored per hole, summed. Higher is better.'
     : 'Total score relative to par. Lower is better.';
 
-  const ranked = Golf.rankPlayers(summaries, mode);
-  boardEl.innerHTML = '';
-  ranked.forEach(s => {
-    const row = document.createElement('div');
-    row.className = 'lb-row' + (s.rank === 1 ? ' leader' : '');
+  boardEl.innerHTML = individualRowsHtml(summaries, mode);
+}
 
+// The per-player rows for a gross/net/stableford board, as an HTML string.
+// Shared by the normal leaderboard and the tournament team board's lower
+// "individual" section. Best ball ranks individuals by their net score.
+function individualRowsHtml(summaries, mode) {
+  const indivMode = mode === 'bestball' ? 'net' : mode;
+  const ranked = Golf.rankPlayers(summaries, indivMode);
+  return ranked.map(s => {
     let scoreText, scoreClass = '';
-    if (mode === 'stableford') {
+    if (indivMode === 'stableford') {
       scoreText = s.thru > 0 ? s.stablefordTotal : '–';
     } else {
-      const toPar = mode === 'net' ? s.toParNet : s.toParGross;
+      const toPar = indivMode === 'net' ? s.toParNet : s.toParGross;
       scoreText = s.thru > 0 ? Golf.formatToPar(toPar) : '–';
       scoreClass = toPar < 0 ? 'neg' : (toPar > 0 ? 'pos' : '');
     }
+    const detail = indivMode === 'net' ? `${s.netTotal} net` : (indivMode === 'stableford' ? `${s.grossTotal} gross` : `HCP ${s.handicap}`);
+    return `
+      <div class="lb-row${s.rank === 1 ? ' leader' : ''}">
+        <span class="lb-rank">${s.rank || '–'}</span>
+        <span class="lb-name-wrap">
+          <span class="lb-name">${escapeHtml(s.name)}</span>
+          <span class="lb-thru">${s.thru > 0 ? 'thru ' + s.thru + (indivMode === 'gross' ? ' · ' + playerPuttsTotal(s.playerId) + ' putts' : '') : 'not started'}</span>
+        </span>
+        <span class="lb-detail">${s.thru > 0 ? detail : ''}</span>
+        <span class="lb-score ${scoreClass}">${scoreText}</span>
+      </div>`;
+  }).join('');
+}
 
-    const detail = mode === 'net' ? `${s.netTotal} net` : (mode === 'stableford' ? `${s.grossTotal} gross` : `HCP ${s.handicap}`);
+// Tournament team standings (top) + the individual leaderboard (below) for
+// gross / net / stableford / best ball. Uses Golf.computeTeamStandings.
+function renderTeamBoard(summaries, r, mode) {
+  const metaEl = document.getElementById('board-meta');
+  const boardEl = document.getElementById('leaderboard');
+  const teams = Golf.tournamentTeams(r.players);
 
-    row.innerHTML = `
-      <span class="lb-rank">${s.rank || '–'}</span>
-      <span class="lb-name-wrap">
-        <span class="lb-name">${escapeHtml(s.name)}</span>
-        <span class="lb-thru">${s.thru > 0 ? 'thru ' + s.thru + (mode === 'gross' ? ' · ' + playerPuttsTotal(s.playerId) + ' putts' : '') : 'not started'}</span>
-      </span>
-      <span class="lb-detail">${s.thru > 0 ? detail : ''}</span>
-      <span class="lb-score ${scoreClass}">${scoreText}</span>
-    `;
-    boardEl.appendChild(row);
+  if (Object.keys(teams).length === 0) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">Assign players to teams to see standings.</div>';
+    return;
+  }
+
+  const standings = Golf.computeTeamStandings(summaries, teams, mode, {
+    pars: r.pars, holeCount: r.holeCount, useHandicap: true,
   });
+
+  metaEl.textContent = mode === 'stableford'
+    ? 'Team standings — combined points. Higher is better. Provisional until all scores are in.'
+    : mode === 'bestball'
+      ? 'Team standings — best net per hole counts. Lower is better. Provisional until all scores are in.'
+      : 'Team standings — combined score to par. Lower is better. Provisional until all scores are in.';
+
+  const nameById = {};
+  summaries.forEach(s => { nameById[s.playerId] = s.name; });
+
+  const teamRows = standings.map(t => {
+    const members = t.memberIds.map(id => nameById[id] || '?').join(' & ');
+    let scoreText, scoreClass = '';
+    if (mode === 'stableford') {
+      scoreText = t.anyStarted ? t.points : '–';
+    } else {
+      scoreText = t.anyStarted ? Golf.formatToPar(t.toPar) : '–';
+      scoreClass = t.toPar < 0 ? 'neg' : (t.toPar > 0 ? 'pos' : '');
+    }
+    return `
+      <div class="lb-row${t.rank === 1 ? ' leader' : ''}">
+        <span class="lb-rank">${t.rank || '–'}</span>
+        <span class="lb-name-wrap">
+          <span class="lb-name">Team ${t.team}</span>
+          <span class="lb-thru">${escapeHtml(members)}${t.anyStarted ? ' · thru ' + t.thru : ''}</span>
+        </span>
+        <span class="lb-detail"></span>
+        <span class="lb-score ${scoreClass}">${scoreText}</span>
+      </div>`;
+  }).join('');
+
+  boardEl.innerHTML =
+    `<div class="board-subhead">Teams</div>${teamRows}` +
+    `<div class="board-subhead">Individual</div>${individualRowsHtml(summaries, mode)}`;
+}
+
+// Tournament match play: one card per manual pairing (Team X vs Team Y),
+// each scored like a single-round match with the hole-by-hole strip.
+function renderTournamentMatchBoard(summaries, r) {
+  const metaEl = document.getElementById('board-meta');
+  const boardEl = document.getElementById('leaderboard');
+  const matches = Array.isArray(r.tournamentMatches) ? r.tournamentMatches : [];
+
+  if (matches.length === 0) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">No match pairings were set for this tournament.</div>';
+    return;
+  }
+
+  const teams = Golf.tournamentTeams(r.players);
+  metaEl.textContent = r.matchUseHandicap
+    ? 'Each match is head-to-head, best-ball net score per hole.'
+    : 'Each match is head-to-head, best-ball gross score per hole.';
+
+  boardEl.innerHTML = matches.map(pair => {
+    const aSum = (teams[pair.a] || []).map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+    const bSum = (teams[pair.b] || []).map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+    const aName = `Team ${pair.a}`, bName = `Team ${pair.b}`;
+    if (!aSum.length || !bSum.length) {
+      return `<div class="match-card"><p class="match-vs">${aName} vs ${bName}</p><p class="match-status">Waiting on rosters</p></div>`;
+    }
+    const m = Golf.computeMatchPlay(aSum, bSum, r.holeCount, r.matchUseHandicap);
+    const aInit = aSum.map(s => initials(s.name)).join('/');
+    const bInit = bSum.map(s => initials(s.name)).join('/');
+
+    let statusText;
+    if (m.thru === 0) statusText = 'Not started';
+    else if (m.diff === 0) statusText = 'All square';
+    else {
+      const leaderName = m.diff > 0 ? aName : bName;
+      statusText = m.decided && m.thru < r.holeCount
+        ? `${leaderName} wins ${m.margin}&${m.remaining}`
+        : `${leaderName} ${m.margin} up`;
+    }
+    const roster = `${aSum.map(s => s.name).join(' & ')} vs ${bSum.map(s => s.name).join(' & ')}`;
+    return `
+      <div class="match-card">
+        <p class="match-vs">${aName} vs ${bName}</p>
+        <p class="match-status">${statusText}</p>
+        <p class="match-thru">${escapeHtml(roster)} · thru ${m.thru} of ${r.holeCount}</p>
+      </div>
+    ` + matchStripHtml(m.log, r.holeCount, r.holeOffset, aName, bName, aInit, bInit);
+  }).join('');
 }
 
 function renderMoneyBoard(summaries, r) {
