@@ -212,11 +212,31 @@ function enterRound() {
 // Lets the host pick any player from a dropdown and enter scores on
 // their behalf. Everyone else just sees a static "Entering for you"
 // label, same as before.
+
+// The players the current user is allowed to enter scores for:
+// - Tournament: your own team if you're a captain, otherwise just yourself.
+//   (The host is NOT a global editor in a tournament.)
+// - Regular round: everyone if you're the host, otherwise just yourself.
+function scoringCandidates() {
+  const r = state.round;
+  const me = myPlayer();
+  if (r.isTournament) {
+    if (me && me.isCaptain && me.team != null) {
+      return r.players.filter(p => p.team === me.team);
+    }
+    return me ? [me] : [];
+  }
+  if (isHost()) return r.players;
+  return me ? [me] : [];
+}
+
 function renderScoringSelector() {
   const label = document.getElementById('scoring-for-label');
   const select = document.getElementById('scoring-for-select');
+  const candidates = scoringCandidates();
 
-  if (!isHost()) {
+  // Only one player to score for → a static label, no dropdown.
+  if (candidates.length <= 1) {
     const me = myPlayer();
     label.textContent = me ? `Entering for ${me.name}` : 'Entering for you';
     label.hidden = false;
@@ -224,9 +244,14 @@ function renderScoringSelector() {
     return;
   }
 
+  // Keep the active pick within what you're allowed to score.
+  if (!candidates.some(p => p.id === state.scoringPlayerId)) {
+    state.scoringPlayerId = state.myPlayerId;
+  }
+
   label.textContent = 'Scoring for';
   select.hidden = false;
-  select.innerHTML = state.round.players.map(p =>
+  select.innerHTML = candidates.map(p =>
     `<option value="${p.id}" ${p.id === state.scoringPlayerId ? 'selected' : ''}>${escapeHtml(p.name)}${p.id === state.myPlayerId ? ' (you)' : ''}</option>`
   ).join('');
 }
