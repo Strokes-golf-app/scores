@@ -19,19 +19,27 @@ function init() {
   }
 
   document.getElementById('btn-new-round').addEventListener('click', async () => {
+    state.pendingNewIsTournament = false;
     const inProgressRounds = await getInProgressRounds();
     if (inProgressRounds.length > 0) {
       showResumePrompt(inProgressRounds);
     } else {
-      await resetSetupScreen();
+      await resetSetupScreen(false);
       showScreen('screen-setup');
     }
   });
 
-  // Tournaments are not built yet — the button is a placeholder for the
-  // upcoming multi-group flow.
-  document.getElementById('btn-new-tournament').addEventListener('click', () => {
-    showToast('Tournaments coming soon');
+  // Opens the setup screen in tournament mode — same course/players/bets flow
+  // as a normal round, plus team assignment and (optional) match pairings.
+  document.getElementById('btn-new-tournament').addEventListener('click', async () => {
+    state.pendingNewIsTournament = true;
+    const inProgressRounds = await getInProgressRounds();
+    if (inProgressRounds.length > 0) {
+      showResumePrompt(inProgressRounds);
+    } else {
+      await resetSetupScreen(true);
+      showScreen('screen-setup');
+    }
   });
 
   document.getElementById('btn-course-upload-back').addEventListener('click', () => showScreen('screen-home'));
@@ -64,7 +72,7 @@ function init() {
 
   document.getElementById('btn-resume-prompt-no').addEventListener('click', async () => {
     hideResumePrompt();
-    await resetSetupScreen();
+    await resetSetupScreen(!!state.pendingNewIsTournament);
     showScreen('screen-setup');
   });
 
@@ -127,6 +135,15 @@ function init() {
       cb.closest('.mode-card').classList.toggle('checked', cb.checked);
     });
   });
+
+  // Tournament: changing team size re-scopes the team/pairing selects.
+  document.querySelectorAll('#team-size input[name="team-size"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      renderTeamAssignList();
+      renderTournamentMatchList();
+    });
+  });
+  document.getElementById('btn-add-pairing').addEventListener('click', addTournamentPairing);
 
   document.getElementById('btn-create-round').addEventListener('click', () => {
     if (state.editingRoundId) saveRoundEdits();

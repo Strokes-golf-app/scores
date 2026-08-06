@@ -21,6 +21,7 @@ const state = {
   activeModeTab: null,
   activeViewRoundsTab: 'completed', // 'completed' or 'inprogress' — which tab is showing on the View Rounds screen
   setupPlayers: [],
+  setupIsTournament: false,         // whether the setup screen is building a tournament (teams, up to 16 players)
   setupBetsEnabled: false,          // whether the setup screen's Bets toggle is on
   setupStakes: {},                  // { mode: dollars } entered on the stakes screen before a round exists
   stakesContext: 'setup',           // 'setup' or 'lobby' — where the stakes screen was opened from
@@ -43,7 +44,7 @@ const PENDING_PROFILE_KEY = 'fairwaylive_pending_profile';
 // Display labels for each game mode, keyed by the value stored in
 // rounds.modes. Shared by the lobby chips and the leaderboard mode
 // tabs so the labels only need updating in one place.
-const MODE_NAMES = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play', sidematch: 'Side Match', nassau: 'Nassau', sixes: 'Sixes', money: 'Money' };
+const MODE_NAMES = { gross: 'Gross', net: 'Net', stableford: 'Stableford', skins: 'Skins', match: 'Match play', sidematch: 'Side Match', nassau: 'Nassau', sixes: 'Sixes', bestball: 'Best Ball', money: 'Money' };
 
 // Leaderboard tabs for a round: its game modes, plus a synthetic
 // "money" tab when bets are on with at least one real stake.

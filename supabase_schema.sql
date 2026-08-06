@@ -50,6 +50,14 @@ alter table rounds
   add column if not exists sixes_format text,
   add column if not exists sixes_use_handicap boolean;
 
+-- Tournament: a single round with up to 16 players on teams. team_size is 2 or 4;
+-- tournament_matches is a jsonb array of { a, b } team-number pairs for manual
+-- match play. Team membership + captain flag live on players (below).
+alter table rounds
+  add column if not exists is_tournament boolean not null default false,
+  add column if not exists team_size smallint,
+  add column if not exists tournament_matches jsonb;
+
 -- ---------- players ----------
 -- One row per player in a round.
 create table if not exists players (
@@ -59,6 +67,12 @@ create table if not exists players (
   handicap numeric(4,1) not null default 0,
   created_at timestamptz not null default now()
 );
+
+-- Tournament team membership: team (1..8) and whether this player is a captain
+-- (captains can enter scores for their whole team — enforced in Phase 2's RPC).
+alter table players
+  add column if not exists team smallint,
+  add column if not exists is_captain boolean not null default false;
 
 -- ---------- scores ----------
 -- One row per (player, hole). Updating a single hole only touches

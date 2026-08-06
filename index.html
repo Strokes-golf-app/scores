@@ -604,7 +604,12 @@
             <span class="mode-name">Stableford</span>
             <span class="mode-desc">Points per hole based on net score vs par.</span>
           </label>
-          <label class="mode-card">
+          <label class="mode-card tournament-only" hidden>
+            <input type="checkbox" name="mode" value="bestball">
+            <span class="mode-name">Team Best Ball</span>
+            <span class="mode-desc">Lowest net among teammates counts on each hole, summed for the team.</span>
+          </label>
+          <label class="mode-card regular-only">
             <input type="checkbox" name="mode" value="skins">
             <span class="mode-name">Skins</span>
             <span class="mode-desc">Lowest net wins the hole; ties carry to the next.</span>
@@ -614,17 +619,17 @@
             <span class="mode-name">Match play</span>
             <span class="mode-desc">Head-to-head holes won. 1v1, 1v2, 1v3, or 2v2 with best ball.</span>
           </label>
-          <label class="mode-card">
+          <label class="mode-card regular-only">
             <input type="checkbox" name="mode" value="sidematch">
             <span class="mode-name">Side Match</span>
             <span class="mode-desc">A separate head-to-head match between two players, alongside the main game.</span>
           </label>
-          <label class="mode-card">
+          <label class="mode-card regular-only">
             <input type="checkbox" name="mode" value="nassau">
             <span class="mode-name">Nassau</span>
             <span class="mode-desc">Front 9, back 9, and full 18 — three matches in one round. Team A vs Team B.</span>
           </label>
-          <label class="mode-card">
+          <label class="mode-card regular-only">
             <input type="checkbox" name="mode" value="sixes">
             <span class="mode-name">Sixes</span>
             <span class="mode-desc">Four players, three 6-hole matches, partners rotate each six. 18 holes only.</span>
@@ -685,6 +690,33 @@
         <label class="match-handicap-toggle">
           <input type="checkbox" id="sidematch-use-handicap" checked>
           <span>Use handicap (net scores) for the side match</span>
+        </label>
+      </div>
+
+      <div class="field tournament-only" id="tournament-teams-field" hidden>
+        <label class="field-label">Teams</label>
+        <p class="field-hint">Pick a team size, then put every player on a team. Mark one person per team as captain — captains can enter scores for their whole team.</p>
+        <div class="segmented" id="team-size">
+          <label class="segmented-option">
+            <input type="radio" name="team-size" value="2" checked>
+            <span>Teams of 2</span>
+          </label>
+          <label class="segmented-option">
+            <input type="radio" name="team-size" value="4">
+            <span>Teams of 4</span>
+          </label>
+        </div>
+        <div id="team-assign-list" class="match-assign-list"></div>
+      </div>
+
+      <div class="field tournament-only" id="tournament-match-field" hidden>
+        <label class="field-label">Match play pairings</label>
+        <p class="field-hint">Add a match for each head-to-head. Pick the two teams that face off — each match is scored like its own round.</p>
+        <div id="tournament-match-list"></div>
+        <button class="btn btn-secondary btn-block" id="btn-add-pairing" type="button">+ Add a match</button>
+        <label class="match-handicap-toggle">
+          <input type="checkbox" id="tournament-match-use-handicap" checked>
+          <span>Use handicap (net scores) for match play</span>
         </label>
       </div>
 
