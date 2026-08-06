@@ -608,3 +608,66 @@ describe('computeMoney — Side Match / Nassau / Sixes', () => {
     expect(byPlayer.a + byPlayer.b + byPlayer.c + byPlayer.d).toBe(0);
   });
 });
+
+// Tournament team standings: gross/net/stableford sum members; best ball takes
+// the best net per hole. tournamentTeams groups players by their team number.
+describe('tournamentTeams / computeTeamStandings', () => {
+  const pars = Array(18).fill(4);
+  const mk = (id, over, hcp = 0) => {
+    const s = {}; for (let h = 1; h <= 18; h++) s[h] = 4; Object.assign(s, over);
+    return Golf.summarizePlayer({ id, name: id, handicap: hcp }, s, pars, null, 18);
+  };
+
+  it('groups players by team number, skipping the unassigned', () => {
+    const teams = Golf.tournamentTeams([
+      { id: 'a', team: 1 }, { id: 'b', team: 1 }, { id: 'c', team: 2 }, { id: 'd', team: null },
+    ]);
+    expect(teams).toEqual({ 1: ['a', 'b'], 2: ['c'] });
+  });
+
+  it('gross: team to-par is the sum of members, lower ranks first', () => {
+    // Team 1 both even par (0); Team 2 one player +4, one even → +4.
+    const A = mk('a', {}), B = mk('b', {});
+    const C = mk('c', { 1: 8 }), D = mk('d', {});
+    const teams = { 1: ['a', 'b'], 2: ['c', 'd'] };
+    const rows = Golf.computeTeamStandings([A, B, C, D], teams, 'gross', { pars, holeCount: 18 });
+    expect(rows[0].team).toBe(1);
+    expect(rows[0].toPar).toBe(0);
+    expect(rows[0].rank).toBe(1);
+    expect(rows[1].team).toBe(2);
+    expect(rows[1].toPar).toBe(4);
+    expect(rows[1].rank).toBe(2);
+  });
+
+  it('stableford: team points are summed, higher ranks first', () => {
+    const A = mk('a', { 1: 2 }), B = mk('b', {});   // A has a birdie → more points
+    const C = mk('c', {}), D = mk('d', {});
+    const rows = Golf.computeTeamStandings([A, B, C, D], { 1: ['a', 'b'], 2: ['c', 'd'] }, 'stableford', { pars, holeCount: 18 });
+    expect(rows[0].team).toBe(1);
+    expect(rows[0].points).toBeGreaterThan(rows[1].points);
+  });
+
+  it('bestball: best net per hole counts for the team', () => {
+    // Team 1: on hole 1, a=3 b=5 → best 3; elsewhere both 4. Best-ball gross = 3 + 4*17 = 71 (par 72 → -1).
+    const A = mk('a', { 1: 3 }), B = mk('b', { 1: 5 });
+    const C = mk('c', {}), D = mk('d', {});
+    const rows = Golf.computeTeamStandings([A, B, C, D], { 1: ['a', 'b'], 2: ['c', 'd'] }, 'bestball', { pars, holeCount: 18, useHandicap: false });
+    const t1 = rows.find(r => r.team === 1);
+    const t2 = rows.find(r => r.team === 2);
+    expect(t1.total).toBe(71);
+    expect(t1.toPar).toBe(-1);
+    expect(t2.toPar).toBe(0);
+    expect(rows[0].team).toBe(1); // -1 beats even
+  });
+
+  it('lists a team with no posted scores last, unranked', () => {
+    const A = mk('a', {}), B = mk('b', {});
+    // Team 2 has not started at all.
+    const C = Golf.summarizePlayer({ id: 'c', name: 'c', handicap: 0 }, {}, pars, null, 18);
+    const D = Golf.summarizePlayer({ id: 'd', name: 'd', handicap: 0 }, {}, pars, null, 18);
+    const rows = Golf.computeTeamStandings([A, B, C, D], { 1: ['a', 'b'], 2: ['c', 'd'] }, 'gross', { pars, holeCount: 18 });
+    expect(rows[0].team).toBe(1);
+    expect(rows[1].team).toBe(2);
+    expect(rows[1].rank).toBe(null);
+  });
+});

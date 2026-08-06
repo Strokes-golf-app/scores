@@ -181,6 +181,8 @@ function reconstructRound(row) {
     name: p.name,
     handicap: p.handicap || 0,
     user_id: p.user_id,
+    team: p.team != null ? Number(p.team) : null,
+    isCaptain: p.is_captain === true,
     scores: scoresByPlayer[p.id] || {},
     putts: puttsByPlayer[p.id] || {},
   }));
@@ -204,6 +206,9 @@ function reconstructRound(row) {
     sixesUseHandicap: snap.sixes_use_handicap !== false,
     betsEnabled: snap.bets_enabled === true,
     stakes: snap.stakes || {},
+    isTournament: snap.is_tournament === true,
+    teamSize: snap.team_size != null ? Number(snap.team_size) : null,
+    tournamentMatches: snap.tournament_matches || null,
     status: row.status || 'completed',
     players,
     endedAt: row.ended_at,
@@ -252,6 +257,12 @@ function renderHistoryDetailBoard(mode) {
   const metaEl = document.getElementById('history-detail-meta-line');
   const boardEl = document.getElementById('history-detail-board');
 
+  if (round.isTournament) {
+    if (mode === 'match') return renderHistoryDetailTournamentMatch(summaries, round, metaEl, boardEl);
+    if (mode === 'money') return renderHistoryDetailMoney(summaries, round, metaEl, boardEl);
+    return renderHistoryDetailTeam(summaries, round, mode, metaEl, boardEl);
+  }
+
   if (mode === 'skins') return renderHistoryDetailSkins(summaries, round, metaEl, boardEl);
   if (mode === 'match') return renderHistoryDetailMatch(summaries, round, metaEl, boardEl);
   if (mode === 'sidematch') return renderHistoryDetailSideMatch(summaries, round, metaEl, boardEl);
@@ -291,6 +302,118 @@ function renderHistoryDetailBoard(mode) {
     `;
     boardEl.appendChild(rowEl);
   });
+}
+
+// Tournament team standings + individual leaderboard, history detail view.
+// Mirrors the live renderTeamBoard, adding the "(you)" mark on individuals.
+function renderHistoryDetailTeam(summaries, round, mode, metaEl, boardEl) {
+  const teams = Golf.tournamentTeams(round.players);
+  if (Object.keys(teams).length === 0) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">This tournament had no teams assigned.</div>';
+    return;
+  }
+  const standings = Golf.computeTeamStandings(summaries, teams, mode, {
+    pars: round.pars, holeCount: round.holeCount, useHandicap: true,
+  });
+
+  metaEl.textContent = mode === 'stableford'
+    ? 'Team standings — combined points. Higher is better.'
+    : mode === 'bestball'
+      ? 'Team standings — best net per hole counts. Lower is better.'
+      : 'Team standings — combined score to par. Lower is better.';
+
+  const nameById = {};
+  summaries.forEach(s => { nameById[s.playerId] = s.name; });
+
+  const teamRows = standings.map(t => {
+    const members = t.memberIds.map(id => nameById[id] || '?').join(' & ');
+    let scoreText, scoreClass = '';
+    if (mode === 'stableford') {
+      scoreText = t.points;
+    } else {
+      scoreText = Golf.formatToPar(t.toPar);
+      scoreClass = t.toPar < 0 ? 'neg' : (t.toPar > 0 ? 'pos' : '');
+    }
+    return `
+      <div class="lb-row${t.rank === 1 ? ' leader' : ''}">
+        <span class="lb-rank">${t.rank || '–'}</span>
+        <span class="lb-name-wrap">
+          <span class="lb-name">Team ${t.team}</span>
+          <span class="lb-thru">${escapeHtml(members)}</span>
+        </span>
+        <span class="lb-detail"></span>
+        <span class="lb-score ${scoreClass}">${scoreText}</span>
+      </div>`;
+  }).join('');
+
+  const indivMode = mode === 'bestball' ? 'net' : mode;
+  const ranked = Golf.rankPlayers(summaries, indivMode);
+  const indivRows = ranked.map(s => {
+    const meMark = isDetailMe(round, s.playerId) ? ' (you)' : '';
+    let scoreText, scoreClass = '';
+    if (indivMode === 'stableford') {
+      scoreText = s.stablefordTotal;
+    } else {
+      const toPar = indivMode === 'net' ? s.toParNet : s.toParGross;
+      scoreText = Golf.formatToPar(toPar);
+      scoreClass = toPar < 0 ? 'neg' : (toPar > 0 ? 'pos' : '');
+    }
+    const detail = indivMode === 'net' ? `${s.netTotal} net` : (indivMode === 'stableford' ? `${s.grossTotal} gross` : `HCP ${s.handicap}`);
+    return `
+      <div class="lb-row${s.rank === 1 ? ' leader' : ''}">
+        <span class="lb-rank">${s.rank || '–'}</span>
+        <span class="lb-name-wrap"><span class="lb-name">${escapeHtml(s.name)}${meMark}</span></span>
+        <span class="lb-detail">${detail}</span>
+        <span class="lb-score ${scoreClass}">${scoreText}</span>
+      </div>`;
+  }).join('');
+
+  boardEl.innerHTML =
+    `<div class="board-subhead">Teams</div>${teamRows}` +
+    `<div class="board-subhead">Individual</div>${indivRows}`;
+}
+
+// Tournament match play, history detail view: one result card per pairing.
+function renderHistoryDetailTournamentMatch(summaries, round, metaEl, boardEl) {
+  const matches = Array.isArray(round.tournamentMatches) ? round.tournamentMatches : [];
+  if (!matches.length) {
+    metaEl.textContent = '';
+    boardEl.innerHTML = '<div class="lb-empty">This tournament had no match pairings.</div>';
+    return;
+  }
+  const teams = Golf.tournamentTeams(round.players);
+  metaEl.textContent = round.matchUseHandicap
+    ? 'Head-to-head, best-ball net score per hole.'
+    : 'Head-to-head, best-ball gross score per hole.';
+
+  boardEl.innerHTML = matches.map(pair => {
+    const aSum = (teams[pair.a] || []).map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+    const bSum = (teams[pair.b] || []).map(id => summaries.find(s => s.playerId === id)).filter(Boolean);
+    const aName = `Team ${pair.a}`, bName = `Team ${pair.b}`;
+    if (!aSum.length || !bSum.length) {
+      return `<div class="history-match-result"><div class="history-match-teams"><span class="history-match-team">${aName}</span><span class="history-match-vs">vs</span><span class="history-match-team">${bName}</span></div><div class="history-match-outcome">Rosters incomplete</div></div>`;
+    }
+    const m = Golf.computeMatchPlay(aSum, bSum, round.holeCount, round.matchUseHandicap);
+    let resultText;
+    if (m.diff === 0) {
+      resultText = 'Match halved — all square';
+    } else {
+      const winnerName = m.diff > 0 ? aName : bName;
+      resultText = m.remaining > 0 ? `${winnerName} won ${m.margin}&${m.remaining}` : `${winnerName} won ${m.margin} up`;
+    }
+    const roster = `${aSum.map(s => s.name).join(' & ')} vs ${bSum.map(s => s.name).join(' & ')}`;
+    return `
+      <div class="history-match-result">
+        <div class="history-match-teams">
+          <span class="history-match-team">${aName}</span>
+          <span class="history-match-vs">vs</span>
+          <span class="history-match-team">${bName}</span>
+        </div>
+        <div class="history-match-outcome">${escapeHtml(resultText)}</div>
+        <div class="history-match-roster">${escapeHtml(roster)}</div>
+      </div>`;
+  }).join('');
 }
 
 function renderHistoryDetailMoney(summaries, round, metaEl, boardEl) {
