@@ -219,7 +219,7 @@ function renderMoneyBoard(summaries, r) {
   const metaEl = document.getElementById('board-meta');
   const boardEl = document.getElementById('leaderboard');
 
-  const { byMode, byPlayer, transactions } = Golf.computeMoney(summaries, {
+  const { byMode, byPlayer, transactions, byTeam, teamTransactions } = Golf.computeMoney(summaries, {
     modes: r.modes,
     stakes: r.stakes,
     holeCount: r.holeCount,
@@ -233,12 +233,40 @@ function renderMoneyBoard(summaries, r) {
     sixesPlayers: r.sixesPlayers,
     sixesFormat: r.sixesFormat,
     sixesUseHandicap: r.sixesUseHandicap,
+    isTournament: r.isTournament,
+    players: r.players,
+    tournamentMatches: r.tournamentMatches,
+    pars: r.pars,
   });
-
-  metaEl.textContent = 'Net across every bet this round. Provisional until all scores are in.';
 
   const nameById = {};
   summaries.forEach(s => { nameById[s.playerId] = s.name; });
+
+  // Tournament: team money on top (team net rows + team-vs-team settle-up),
+  // then the per-player settle-up, then the per-mode breakdown.
+  if (r.isTournament) {
+    metaEl.textContent = 'Team money across every bet. Provisional until all scores are in.';
+    const teamRows = Object.entries(byTeam || {})
+      .map(([team, net]) => ({ team, net }))
+      .sort((a, b) => b.net - a.net)
+      .map((t, i) => {
+        const cls = t.net > 0 ? 'money-up' : (t.net < 0 ? 'money-down' : '');
+        return `
+          <div class="lb-row${i === 0 && t.net > 0 ? ' leader' : ''}">
+            <span class="lb-rank">${i + 1}</span>
+            <span class="lb-name-wrap"><span class="lb-name">Team ${escapeHtml(t.team)}</span></span>
+            <span class="lb-detail"></span>
+            <span class="lb-score ${cls}">${Golf.formatMoney(t.net)}</span>
+          </div>`;
+      }).join('');
+    boardEl.innerHTML = teamRows;
+    boardEl.insertAdjacentHTML('beforeend', teamSettleHtml(teamTransactions));
+    boardEl.insertAdjacentHTML('beforeend', moneySettleHtml(transactions, nameById, 'Player settle up'));
+    boardEl.insertAdjacentHTML('beforeend', moneyBreakdownHtml(byMode, r.stakes, nameById, true));
+    return;
+  }
+
+  metaEl.textContent = 'Net across every bet this round. Provisional until all scores are in.';
 
   const rows = Object.entries(byPlayer)
     .map(([id, net]) => ({ id, net, name: nameById[id] || '?' }))
@@ -262,14 +290,36 @@ function renderMoneyBoard(summaries, r) {
   boardEl.insertAdjacentHTML('beforeend', moneyBreakdownHtml(byMode, r.stakes, nameById));
 }
 
+// Team-vs-team settle-up for a tournament: "Team 1 → Team 2 $20".
+function teamSettleHtml(teamTransactions) {
+  if (!teamTransactions || !teamTransactions.length) {
+    return '<div class="money-settle"><div class="money-settle-title">Team settle up</div><div class="money-settle-empty">All square — nothing owed between teams yet.</div></div>';
+  }
+  const rows = teamTransactions.map(t => {
+    const amt = Number.isInteger(t.amount) ? t.amount : t.amount.toFixed(2);
+    return `<div class="money-settle-row"><span>Team ${escapeHtml(t.from)}</span><i class="money-arrow">→</i><span>Team ${escapeHtml(t.to)}</span><span class="money-settle-amt">$${amt}</span></div>`;
+  }).join('');
+  return `<div class="money-settle"><div class="money-settle-title">Team settle up</div>${rows}</div>`;
+}
+
 // Per-mode explainer under the Money board: the rule for each bet that
 // moved money (the "why") plus each player's net within it (the "how").
-function moneyBreakdownHtml(byMode, stakes, nameById) {
+function moneyBreakdownHtml(byMode, stakes, nameById, isTournament = false) {
   const modes = STAKE_ORDER.filter(m => byMode[m]);
   if (!modes.length) return '';
 
   const ruleFor = (m) => {
     const s = stakes && stakes[m] != null ? stakes[m] : '';
+    if (isTournament) {
+      switch (m) {
+        case 'gross': return `Everyone antes $${s}. The team with the lowest combined gross takes the pot.`;
+        case 'net': return `Everyone antes $${s}. The team with the lowest combined net takes the pot.`;
+        case 'stableford': return `Everyone antes $${s}. The team with the most combined points takes the pot.`;
+        case 'bestball': return `Everyone antes $${s}. Lowest team best-ball total takes the pot.`;
+        case 'match': return `Each pairing: the losing team pays $${s} per player, split among the winners.`;
+        default: return '';
+      }
+    }
     switch (m) {
       case 'gross': return `Everyone antes $${s}. Lowest gross takes the whole pot.`;
       case 'net': return `Everyone antes $${s}. Lowest net takes the whole pot.`;
@@ -307,15 +357,15 @@ function moneyBreakdownHtml(byMode, stakes, nameById) {
   return `<div class="money-breakdown"><div class="money-settle-title">How it breaks down</div>${blocks}</div>`;
 }
 
-function moneySettleHtml(transactions, nameById) {
+function moneySettleHtml(transactions, nameById, title = 'Settle up') {
   if (!transactions || !transactions.length) {
-    return '<div class="money-settle"><div class="money-settle-title">Settle up</div><div class="money-settle-empty">All square — nothing owed yet.</div></div>';
+    return `<div class="money-settle"><div class="money-settle-title">${escapeHtml(title)}</div><div class="money-settle-empty">All square — nothing owed yet.</div></div>`;
   }
   const rows = transactions.map(t => {
     const amt = Number.isInteger(t.amount) ? t.amount : t.amount.toFixed(2);
     return `<div class="money-settle-row"><span>${escapeHtml(nameById[t.from] || '?')}</span><i class="money-arrow">→</i><span>${escapeHtml(nameById[t.to] || '?')}</span><span class="money-settle-amt">$${amt}</span></div>`;
   }).join('');
-  return `<div class="money-settle"><div class="money-settle-title">Settle up</div>${rows}</div>`;
+  return `<div class="money-settle"><div class="money-settle-title">${escapeHtml(title)}</div>${rows}</div>`;
 }
 
 function renderSkinsBoard(summaries, r) {

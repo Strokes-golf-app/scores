@@ -417,7 +417,7 @@ function renderHistoryDetailTournamentMatch(summaries, round, metaEl, boardEl) {
 }
 
 function renderHistoryDetailMoney(summaries, round, metaEl, boardEl) {
-  const { byMode, byPlayer, transactions } = Golf.computeMoney(summaries, {
+  const { byMode, byPlayer, transactions, byTeam, teamTransactions } = Golf.computeMoney(summaries, {
     modes: round.modes,
     stakes: round.stakes,
     holeCount: round.holeCount,
@@ -431,11 +431,37 @@ function renderHistoryDetailMoney(summaries, round, metaEl, boardEl) {
     sixesPlayers: round.sixesPlayers,
     sixesFormat: round.sixesFormat,
     sixesUseHandicap: round.sixesUseHandicap,
+    isTournament: round.isTournament,
+    players: round.players,
+    tournamentMatches: round.tournamentMatches,
+    pars: round.pars,
   });
   metaEl.textContent = 'Final money across every bet this round.';
 
   const nameById = {};
   summaries.forEach(s => { nameById[s.playerId] = s.name; });
+
+  // Tournament: team money on top, then per-player settle-up and breakdown.
+  if (round.isTournament) {
+    const teamRows = Object.entries(byTeam || {})
+      .map(([team, net]) => ({ team, net }))
+      .sort((a, b) => b.net - a.net)
+      .map((t, i) => {
+        const cls = t.net > 0 ? 'money-up' : (t.net < 0 ? 'money-down' : '');
+        return `
+          <div class="lb-row${i === 0 && t.net > 0 ? ' leader' : ''}">
+            <span class="lb-rank">${i + 1}</span>
+            <span class="lb-name-wrap"><span class="lb-name">Team ${escapeHtml(t.team)}</span></span>
+            <span class="lb-detail"></span>
+            <span class="lb-score ${cls}">${Golf.formatMoney(t.net)}</span>
+          </div>`;
+      }).join('');
+    boardEl.innerHTML = teamRows;
+    boardEl.insertAdjacentHTML('beforeend', teamSettleHtml(teamTransactions));
+    boardEl.insertAdjacentHTML('beforeend', moneySettleHtml(transactions, nameById, 'Player settle up'));
+    boardEl.insertAdjacentHTML('beforeend', moneyBreakdownHtml(byMode, round.stakes, nameById, true));
+    return;
+  }
 
   const rows = Object.entries(byPlayer)
     .map(([id, net]) => ({ id, net, name: nameById[id] || '?' }))

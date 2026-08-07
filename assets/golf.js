@@ -480,12 +480,92 @@ const Golf = (() => {
     return { nines: v, total: v };
   }
 
+  // Sum each player's net into their team's total: { teamNo: net }.
+  function aggregateByTeam(byPlayer, players) {
+    const teamOf = {};
+    (players || []).forEach(p => { if (p.team != null) teamOf[p.id] = p.team; });
+    const byTeam = {};
+    Object.entries(byPlayer).forEach(([id, amt]) => {
+      const t = teamOf[id];
+      if (t == null) return;
+      byTeam[t] = (byTeam[t] || 0) + amt;
+    });
+    return byTeam;
+  }
+
+  // Tournament settlement (see computeMoney). Team ante pots for the stroke /
+  // best-ball modes (winning team takes the pot), and per-person team-vs-team
+  // match play over the manual pairings. Returns per-player nets/settle-up plus
+  // team-level aggregation and a team-vs-team settle-up.
+  function computeTournamentMoney(ctx) {
+    const { summaries, byId, playerIds, byMode, byPlayer, addNet,
+            modes, stakes, holeCount, pars, players,
+            matchUseHandicap, tournamentMatches } = ctx;
+    const teams = tournamentTeams(players);
+    const teamPlayerIds = Object.values(teams).reduce((a, ids) => a.concat(ids), []);
+
+    // Ante pots: everyone antes the stake; the top team by standing takes the
+    // whole pot (ties split among tied teams' members); everyone else -stake.
+    ['gross', 'net', 'stableford', 'bestball'].forEach(mode => {
+      const stake = Number(stakes[mode]) || 0;
+      if (!modes.includes(mode) || stake <= 0 || teamPlayerIds.length < 2) return;
+      if (!summaries.some(s => s.thru > 0)) return;
+      const standings = computeTeamStandings(summaries, teams, mode, { pars, holeCount, useHandicap: true });
+      const started = standings.filter(t => t.rank != null);
+      if (!started.length) return;
+      const bestRank = started[0].rank;
+      const winnerIds = started.filter(t => t.rank === bestRank).reduce((a, t) => a.concat(t.memberIds), []);
+      if (!winnerIds.length) return;
+      const pot = teamPlayerIds.length * stake;
+      const share = pot / winnerIds.length;
+      const winnerSet = new Set(winnerIds);
+      const netMap = {};
+      playerIds.forEach(id => { netMap[id] = 0; });
+      teamPlayerIds.forEach(id => { netMap[id] = (winnerSet.has(id) ? share : 0) - stake; });
+      addNet(mode, netMap);
+    });
+
+    // Match play: each manual pairing settles team-vs-team, per person — the
+    // losing team pays the stake for each of its players, split among winners.
+    const matchStake = Number(stakes.match) || 0;
+    if (modes.includes('match') && matchStake > 0 && Array.isArray(tournamentMatches)) {
+      const netMap = {};
+      playerIds.forEach(id => { netMap[id] = 0; });
+      let moved = false;
+      tournamentMatches.forEach(pair => {
+        const aIds = teams[pair.a] || [];
+        const bIds = teams[pair.b] || [];
+        const aSum = aIds.map(id => byId[id]).filter(Boolean);
+        const bSum = bIds.map(id => byId[id]).filter(Boolean);
+        if (!aSum.length || !bSum.length) return;
+        const m = computeMatchPlay(aSum, bSum, holeCount, matchUseHandicap);
+        if (!m.winner) return;
+        const winIds = m.winner === 'A' ? aIds : bIds;
+        const loseIds = m.winner === 'A' ? bIds : aIds;
+        const potFromLosers = matchStake * loseIds.length; // per-person on the losing side
+        loseIds.forEach(id => { if (netMap[id] != null) netMap[id] -= matchStake; });
+        winIds.forEach(id => { if (netMap[id] != null) netMap[id] += potFromLosers / winIds.length; });
+        moved = true;
+      });
+      if (moved) addNet('match', netMap);
+    }
+
+    const byTeam = aggregateByTeam(byPlayer, players);
+    return {
+      byMode, byPlayer,
+      transactions: settleTransactions(byPlayer),
+      byTeam,
+      teamTransactions: settleTransactions(byTeam),
+    };
+  }
+
   function computeMoney(summaries, opts) {
     const { modes = [], stakes = {}, holeCount,
             matchTeamA, matchTeamB, matchUseHandicap = true,
             sidematchTeamC, sidematchTeamD, sidematchUseHandicap = true,
             nassauFormat = 'match',
-            sixesPlayers, sixesFormat = 'match', sixesUseHandicap = true } = opts || {};
+            sixesPlayers, sixesFormat = 'match', sixesUseHandicap = true,
+            isTournament = false, players = [], tournamentMatches, pars = [] } = opts || {};
     const playerIds = summaries.map(s => s.playerId);
     const N = playerIds.length;
     const byId = {};
@@ -505,6 +585,16 @@ const Golf = (() => {
       winnerIds.forEach(id => { if (netMap[id] != null) netMap[id] += stake / winnerIds.length; });
       loserIds.forEach(id => { if (netMap[id] != null) netMap[id] -= stake / loserIds.length; });
     };
+
+    // Tournament money settles by team and returns early — the individual /
+    // single-round branches below never run for a tournament.
+    if (isTournament) {
+      return computeTournamentMoney({
+        summaries, byId, playerIds, byMode, byPlayer, addNet,
+        modes, stakes, holeCount, pars, players,
+        matchUseHandicap, tournamentMatches,
+      });
+    }
 
     // Ante pots for the stroke-play modes.
     ['gross', 'net', 'stableford'].forEach(mode => {
