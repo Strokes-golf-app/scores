@@ -15,8 +15,10 @@
 const RESUME_WINDOW_DAYS = 30;
 
 // Finds every round the signed-in user is a player in that hasn't
-// ended yet and was created within the last 30 days.
-async function getInProgressRounds() {
+// ended yet and was created within the last 30 days. Pass kind to narrow
+// to one type: 'tournament' (tournaments only) or 'round' (regular rounds
+// only). Omit it to get both (e.g. the View Rounds > In Progress tab).
+async function getInProgressRounds(kind) {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return [];
 
@@ -24,7 +26,7 @@ async function getInProgressRounds() {
 
     const { data, error } = await supabaseClient
         .from('players')
-        .select('round_id, rounds!inner(id, code, course_name, course_location, created_at, started, ended, host_user_id)')
+        .select('round_id, rounds!inner(id, code, course_name, course_location, created_at, started, ended, host_user_id, is_tournament)')
         .eq('user_id', user.id)
         .eq('rounds.ended', false)
         .gte('rounds.created_at', cutoff);
@@ -34,9 +36,12 @@ async function getInProgressRounds() {
         return [];
     }
 
-    const rounds = (data || [])
+    let rounds = (data || [])
         .map(row => row.rounds)
         .filter(Boolean);
+
+    if (kind === 'tournament') rounds = rounds.filter(r => r.is_tournament === true);
+    else if (kind === 'round') rounds = rounds.filter(r => r.is_tournament !== true);
 
     rounds.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     return rounds;
