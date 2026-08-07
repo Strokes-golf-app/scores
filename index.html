@@ -693,6 +693,15 @@
         </label>
       </div>
 
+      <div class="field">
+        <label class="field-label">Players</label>
+        <p class="field-hint">Add everyone now, or just yourself — others can join with the round code and add
+          themselves.</p>
+        <div id="player-list" class="player-list"></div>
+        <button class="btn btn-secondary btn-block" id="btn-add-player" type="button">+ Add a player</button>
+        <button class="btn btn-secondary btn-block" id="btn-add-from-friends" type="button">+ From friends</button>
+      </div>
+
       <div class="field tournament-only" id="tournament-teams-field" hidden>
         <label class="field-label">Teams</label>
         <p class="field-hint">Pick a team size, then put every player on a team. Mark one person per team as captain — captains can enter scores for their whole team.</p>
@@ -718,15 +727,6 @@
           <input type="checkbox" id="tournament-match-use-handicap" checked>
           <span>Use handicap (net scores) for match play</span>
         </label>
-      </div>
-
-      <div class="field">
-        <label class="field-label">Players</label>
-        <p class="field-hint">Add everyone now, or just yourself — others can join with the round code and add
-          themselves.</p>
-        <div id="player-list" class="player-list"></div>
-        <button class="btn btn-secondary btn-block" id="btn-add-player" type="button">+ Add a player</button>
-        <button class="btn btn-secondary btn-block" id="btn-add-from-friends" type="button">+ From friends</button>
       </div>
 
       <button class="btn btn-primary btn-lg btn-block" id="btn-create-round">Create round &amp; get code</button>
