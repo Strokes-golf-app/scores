@@ -20,7 +20,7 @@ function init() {
 
   document.getElementById('btn-new-round').addEventListener('click', async () => {
     state.pendingNewIsTournament = false;
-    const inProgressRounds = await getInProgressRounds();
+    const inProgressRounds = await getInProgressRounds('round');
     if (inProgressRounds.length > 0) {
       showResumePrompt(inProgressRounds);
     } else {
@@ -33,7 +33,7 @@ function init() {
   // as a normal round, plus team assignment and (optional) match pairings.
   document.getElementById('btn-new-tournament').addEventListener('click', async () => {
     state.pendingNewIsTournament = true;
-    const inProgressRounds = await getInProgressRounds();
+    const inProgressRounds = await getInProgressRounds('tournament');
     if (inProgressRounds.length > 0) {
       showResumePrompt(inProgressRounds);
     } else {
