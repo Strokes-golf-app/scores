@@ -671,3 +671,57 @@ describe('tournamentTeams / computeTeamStandings', () => {
     expect(rows[1].rank).toBe(null);
   });
 });
+
+// Tournament money: stroke/best-ball modes are a team ante pot (winning team
+// takes all); match play settles team-vs-team, per person. computeMoney returns
+// per-player nets plus team aggregation and a team-vs-team settle-up.
+describe('computeMoney — tournament', () => {
+  const pars = Array(18).fill(4);
+  const mk = (id, over) => {
+    const s = {}; for (let h = 1; h <= 18; h++) s[h] = 4; Object.assign(s, over);
+    return Golf.summarizePlayer({ id, name: id, handicap: 0 }, s, pars, null, 18);
+  };
+  const players = [
+    { id: 'a', team: 1 }, { id: 'b', team: 1 }, { id: 'c', team: 2 }, { id: 'd', team: 2 },
+  ];
+
+  it('gross ante pot: the winning team takes the whole pot', () => {
+    const A = mk('a', { 1: 3 }), B = mk('b', {}), C = mk('c', {}), D = mk('d', {}); // team 1 has a birdie
+    const { byPlayer, byTeam, teamTransactions } = Golf.computeMoney([A, B, C, D], {
+      isTournament: true, players, modes: ['gross'], stakes: { gross: 5 }, holeCount: 18, pars,
+    });
+    expect(byPlayer.a).toBe(5);   // pot 4×5=20, split by 2 winners = 10 each, minus 5 ante
+    expect(byPlayer.b).toBe(5);
+    expect(byPlayer.c).toBe(-5);
+    expect(byPlayer.d).toBe(-5);
+    expect(byTeam[1]).toBe(10);
+    expect(byTeam[2]).toBe(-10);
+    expect(teamTransactions).toEqual([{ from: '2', to: '1', amount: 10 }]);
+  });
+
+  it('a tie for the pot nets out to zero', () => {
+    const A = mk('a', {}), B = mk('b', {}), C = mk('c', {}), D = mk('d', {}); // all even → teams tie
+    const { byPlayer, teamTransactions } = Golf.computeMoney([A, B, C, D], {
+      isTournament: true, players, modes: ['gross'], stakes: { gross: 5 }, holeCount: 18, pars,
+    });
+    // Pot split across all four winners → each gets its ante back.
+    expect(byPlayer.a).toBe(0);
+    expect(byPlayer.c).toBe(0);
+    expect(teamTransactions).toEqual([]);
+  });
+
+  it('match play settles team-vs-team, per person', () => {
+    const A = mk('a', { 1: 3, 2: 3 }), B = mk('b', {}), C = mk('c', {}), D = mk('d', {}); // team 1 wins the match
+    const { byPlayer, byTeam, teamTransactions } = Golf.computeMoney([A, B, C, D], {
+      isTournament: true, players, modes: ['match'], stakes: { match: 10 }, holeCount: 18,
+      matchUseHandicap: false, tournamentMatches: [{ a: 1, b: 2 }], pars,
+    });
+    expect(byPlayer.a).toBe(10);  // each loser pays 10; winners split 2×10 = +10 each
+    expect(byPlayer.b).toBe(10);
+    expect(byPlayer.c).toBe(-10);
+    expect(byPlayer.d).toBe(-10);
+    expect(byTeam[1]).toBe(20);
+    expect(byTeam[2]).toBe(-20);
+    expect(teamTransactions).toEqual([{ from: '2', to: '1', amount: 20 }]);
+  });
+});

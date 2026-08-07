@@ -1279,17 +1279,35 @@ function collectModes() {
 // Stakes screen — shared by setup (in-memory, pre-create) and the
 // lobby (writes back to the round). Sublabels encode the settlement
 // model for each mode.
-const STAKE_ORDER = ['gross', 'net', 'stableford', 'skins', 'match', 'sidematch', 'nassau', 'sixes'];
+const STAKE_ORDER = ['gross', 'net', 'stableford', 'bestball', 'skins', 'match', 'sidematch', 'nassau', 'sixes'];
 const STAKE_META = {
   gross: { label: 'Gross', sub: 'Ante per player' },
   net: { label: 'Net', sub: 'Ante per player' },
   stableford: { label: 'Stableford', sub: 'Ante per player' },
+  bestball: { label: 'Best Ball', sub: 'Ante per player' },
   skins: { label: 'Skins', sub: 'Per skin won' },
   match: { label: 'Match play', sub: 'Team A vs Team B' },
   sidematch: { label: 'Side Match', sub: 'Team C vs Team D' },
   nassau: { label: 'Nassau', sub: 'Nines (each) & total — 2 bets' },
   sixes: { label: 'Sixes', sub: 'Per 6-hole match' },
 };
+
+// In a tournament these bets settle by team, so the stakes screen shows a
+// team-flavored sub-label and info text (still a per-person stake).
+const TOURNAMENT_STAKE_SUB = {
+  gross: 'Team pot — winner takes all',
+  net: 'Team pot — winner takes all',
+  stableford: 'Team pot — winner takes all',
+  bestball: 'Team pot — winner takes all',
+  match: 'Per player · team vs team',
+};
+
+// True when the stakes screen is being shown for a tournament (setup or lobby).
+function isTournamentStakes() {
+  return state.stakesContext === 'lobby'
+    ? !!(state.round && state.round.isTournament)
+    : !!state.setupIsTournament;
+}
 
 // Plain-language "what this bet is" for the info dialog on the stakes
 // screen. Kept next to STAKE_META so the two stay in sync.
@@ -1328,8 +1346,18 @@ const BET_EXPLAINERS = {
   },
 };
 
+// Tournament versions of the bet explainers — team pots for the stroke/best-ball
+// modes, per-person team-vs-team for match play.
+const TOURNAMENT_BET_EXPLAINERS = {
+  gross: { title: 'Gross: team pot', body: 'Everyone antes the same amount. The team with the lowest combined gross takes the whole pot; teams that tie split it evenly.' },
+  net: { title: 'Net: team pot', body: 'Everyone antes the same amount. The team with the lowest combined net (handicaps applied) takes the whole pot; ties split evenly.' },
+  stableford: { title: 'Stableford: team pot', body: 'Everyone antes the same amount. The team with the most combined points takes the whole pot; ties split evenly.' },
+  bestball: { title: 'Best ball: team pot', body: 'Everyone antes the same amount. Each team counts its best net score on every hole; the lowest best-ball total takes the whole pot, and ties split evenly.' },
+  match: { title: 'Match play: team vs team', body: 'Each pairing is a head-to-head between two teams. The losing team pays the stake for each of its players, split among the winners. A halved match pays nothing.' },
+};
+
 function openBetInfo(mode) {
-  const info = BET_EXPLAINERS[mode];
+  const info = (isTournamentStakes() && TOURNAMENT_BET_EXPLAINERS[mode]) || BET_EXPLAINERS[mode];
   if (!info) return;
   document.getElementById('bet-info-title').textContent = info.title;
   document.getElementById('bet-info-body').textContent = info.body;
@@ -1374,11 +1402,12 @@ function renderStakesScreen(modes, stakes) {
       </div>`;
     }
     const val = stakes && stakes[m] != null ? stakes[m] : '';
+    const sub = (isTournamentStakes() && TOURNAMENT_STAKE_SUB[m]) || meta.sub;
     return `
       <div class="stakes-row">
         <div>
           <span class="stakes-row-name">${meta.label}</span>
-          <button type="button" class="stakes-row-sub stakes-info-link" data-mode="${m}" aria-label="What ${meta.label} means">${meta.sub}<span class="stakes-info-icon" aria-hidden="true">ⓘ</span></button>
+          <button type="button" class="stakes-row-sub stakes-info-link" data-mode="${m}" aria-label="What ${meta.label} means">${sub}<span class="stakes-info-icon" aria-hidden="true">ⓘ</span></button>
         </div>
         <div class="stakes-amount">
           <span class="cur">$</span>
