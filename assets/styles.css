@@ -815,12 +815,13 @@ h3 {
   flex: none;
   align-self: flex-start;
   display: inline-block;
-  width: 29px;
+  width: 31px;
   height: 46px;
-  /* The emblem asset carries ~46% transparent padding around the mark, so we
+  /* The emblem asset carries wide transparent padding around the mark, so we
      crop to just the emblem via a scaled background instead of scaling the
-     whole file (content is ~273x432 at offset 1572,756 within 3420x2214). */
-  background: url('../strokes_golf_logo_only.png') -167px -80px / 364px 236px no-repeat;
+     whole file. The mark is ~274x432 at offset 1572,756 within 3420x2214; the
+     crop keeps a ~20px source-pixel margin on every side so nothing clips. */
+  background: url('../strokes_golf_logo_only.png') -151px -72px / 333px 216px no-repeat;
 }
 
 /* ---------- Home sidebar drawer ---------- */
