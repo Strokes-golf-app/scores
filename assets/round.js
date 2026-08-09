@@ -200,8 +200,6 @@ function enterRound() {
   renderScoringSelector();
   populateModeTabs();
   state.currentHole = 1;
-  state.hasShownHole15Reminder = false;
-  hideFifteenthHoleReminder();
   showScreen('screen-round');
   setTab('card');
   renderRoundHeader();

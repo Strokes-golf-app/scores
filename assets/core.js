@@ -16,7 +16,6 @@ const state = {
   myPlayerId: null,
   scoringPlayerId: null, // who the scorecard tab is entering for — yourself, unless the host switched it
   currentHole: 1,
-  hasShownHole15Reminder: false,
   activeTab: 'card',
   activeModeTab: null,
   activeViewRoundsTab: 'completed', // 'completed' or 'inprogress' — which tab is showing on the View Rounds screen
