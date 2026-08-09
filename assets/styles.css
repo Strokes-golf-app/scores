@@ -809,6 +809,20 @@ h3 {
   margin-top: 0.15rem;
 }
 
+/* Brand emblem in the top-right of the round header (above the tab selector),
+   shown on both the scorecard and leaderboard tabs. */
+#screen-round .round-logo-mark {
+  flex: none;
+  align-self: flex-start;
+  display: inline-block;
+  width: 29px;
+  height: 46px;
+  /* The emblem asset carries ~46% transparent padding around the mark, so we
+     crop to just the emblem via a scaled background instead of scaling the
+     whole file (content is ~273x432 at offset 1572,756 within 3420x2214). */
+  background: url('../strokes_golf_logo_only.png') -167px -80px / 364px 236px no-repeat;
+}
+
 /* ---------- Home sidebar drawer ---------- */
 .drawer-overlay {
   position: fixed;
