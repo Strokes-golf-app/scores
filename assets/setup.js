@@ -268,6 +268,35 @@ function tournamentTeamCount() {
   return tournamentTeamSize() === 4 ? 4 : 8;
 }
 
+function isAutoAssign() {
+  return !!document.getElementById('auto-assign-teams')?.checked;
+}
+
+// Fills the team selects with a handicap-balanced auto-assignment (leaving them
+// editable so the organizer can tweak). Runs only when the toggle is switched
+// on or the team size changes while it's on — never on a plain re-render — so
+// manual edits and typed handicaps aren't clobbered. Shows a hint instead when
+// there aren't enough players to form two teams.
+function applyAutoAssign() {
+  const hint = document.getElementById('auto-assign-hint');
+  if (!isAutoAssign()) { if (hint) hint.hidden = true; return; }
+
+  const named = state.setupPlayers.filter(p => p.name.trim());
+  const { assignments, teams } = Golf.balanceTeamsByHandicap(named, tournamentTeamSize());
+  if (!teams) {
+    if (hint) {
+      hint.textContent = `Add at least ${tournamentTeamSize() * 2} players to auto-balance into teams of ${tournamentTeamSize()}.`;
+      hint.hidden = false;
+    }
+    return;
+  }
+  if (hint) hint.hidden = true;
+  document.querySelectorAll('.team-assign-select').forEach(sel => {
+    const team = assignments[sel.dataset.id];
+    sel.value = team ? String(team) : '';
+  });
+}
+
 // Toggles the setup screen between normal-round and tournament presentation:
 // which mode cards / config fields are available, the title and primary
 // button text, and the team + pairing fields.
@@ -340,9 +369,10 @@ function renderTeamAssignList() {
 }
 
 // Reads team assignments into { assignments: {id: {team, captain}}, error }.
-// Enforces: ≤16 players, every named player on a team, ≥2 teams, and each used
-// team holds exactly the chosen size. Captains are optional (a team with none
-// simply has no one who can enter teammates' scores).
+// Enforces: ≤16 players, every named player on a team, ≥2 teams, and no team
+// larger than the chosen size (teams may be smaller — an odd player count
+// leaves one team short). Captains are optional (a team with none simply has no
+// one who can enter teammates' scores).
 function collectTeams() {
   const size = tournamentTeamSize();
   const players = state.setupPlayers.filter(p => p.name.trim());
@@ -365,8 +395,8 @@ function collectTeams() {
   const teamNos = Object.keys(byTeam);
   if (teamNos.length < 2) return { assignments: {}, error: 'A tournament needs at least two teams' };
   for (const t of teamNos) {
-    if (byTeam[t].length !== size) {
-      return { assignments: {}, error: `Each team needs exactly ${size} players — Team ${t} has ${byTeam[t].length}` };
+    if (byTeam[t].length > size) {
+      return { assignments: {}, error: `Teams of ${size} can't have more than ${size} players — Team ${t} has ${byTeam[t].length}` };
     }
   }
   return { assignments, error: '' };
@@ -468,6 +498,9 @@ async function resetSetupScreen(isTournament = false) {
   state.tournamentPairings = [];
   const teamSize2 = document.querySelector('#team-size input[value="2"]');
   if (teamSize2) teamSize2.checked = true;
+  const autoAssign = document.getElementById('auto-assign-teams');
+  if (autoAssign) autoAssign.checked = false;
+  document.getElementById('auto-assign-hint').hidden = true;
   document.getElementById('tournament-match-use-handicap').checked = true;
 
   document.getElementById('course-name').value = '';
@@ -636,6 +669,9 @@ async function openRoundEditor() {
   if (state.setupIsTournament) {
     const sizeRadio = document.querySelector(`#team-size input[value="${r.teamSize === 4 ? '4' : '2'}"]`);
     if (sizeRadio) sizeRadio.checked = true;
+    const autoAssign = document.getElementById('auto-assign-teams');
+    if (autoAssign) autoAssign.checked = false;
+    document.getElementById('auto-assign-hint').hidden = true;
     document.getElementById('tournament-match-use-handicap').checked = r.matchUseHandicap !== false;
     state.tournamentPairings = Array.isArray(r.tournamentMatches)
       ? r.tournamentMatches.map(m => ({ a: m.a, b: m.b }))

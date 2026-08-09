@@ -725,3 +725,51 @@ describe('computeMoney — tournament', () => {
     expect(teamTransactions).toEqual([{ from: '2', to: '1', amount: 20 }]);
   });
 });
+
+// Auto-assign: distribute players into teams of the chosen size with
+// near-equal team handicap totals; odd counts leave one team short.
+describe('balanceTeamsByHandicap', () => {
+  // Sum each team's handicaps from an { id: teamNo } assignment.
+  const teamSums = (players, assignments) => {
+    const sums = {};
+    players.forEach(p => { const t = assignments[p.id]; if (t) sums[t] = (sums[t] || 0) + p.handicap; });
+    return sums;
+  };
+  const sizes = (assignments) => {
+    const c = {};
+    Object.values(assignments).forEach(t => { c[t] = (c[t] || 0) + 1; });
+    return c;
+  };
+
+  it('teams of 2: balances team totals on an even count', () => {
+    const players = [{ id: 'a', handicap: 0 }, { id: 'b', handicap: 2 }, { id: 'c', handicap: 4 }, { id: 'd', handicap: 6 }];
+    const { assignments, teams } = Golf.balanceTeamsByHandicap(players, 2);
+    expect(teams).toBe(2);
+    const sums = Object.values(teamSums(players, assignments));
+    expect(Math.max(...sums) - Math.min(...sums)).toBe(0); // 6 and 6
+    expect(Object.values(sizes(assignments))).toEqual([2, 2]);
+  });
+
+  it('teams of 4: balances team totals on an even count', () => {
+    const players = Array.from({ length: 8 }, (_, i) => ({ id: 'p' + i, handicap: i }));
+    const { assignments, teams } = Golf.balanceTeamsByHandicap(players, 4);
+    expect(teams).toBe(2);
+    const sums = Object.values(teamSums(players, assignments));
+    expect(Math.max(...sums) - Math.min(...sums)).toBe(0); // 14 and 14
+  });
+
+  it('odd count: assigns everyone with team sizes differing by at most one', () => {
+    const players = [0, 2, 4, 6, 8].map((h, i) => ({ id: 'p' + i, handicap: h }));
+    const { assignments, teams } = Golf.balanceTeamsByHandicap(players, 2);
+    expect(teams).toBe(3); // ceil(5 / 2)
+    expect(Object.keys(assignments).length).toBe(5); // everyone assigned
+    const sz = Object.values(sizes(assignments));
+    expect(Math.max(...sz)).toBe(2);
+    expect(Math.min(...sz)).toBe(1);
+  });
+
+  it('returns teams: 0 when fewer than two teams are possible', () => {
+    expect(Golf.balanceTeamsByHandicap([{ id: 'a', handicap: 3 }, { id: 'b', handicap: 5 }], 4).teams).toBe(0);
+    expect(Golf.balanceTeamsByHandicap([{ id: 'a', handicap: 3 }], 2).teams).toBe(0);
+  });
+});
