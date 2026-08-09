@@ -136,13 +136,16 @@ function init() {
     });
   });
 
-  // Tournament: changing team size re-scopes the team/pairing selects.
+  // Tournament: changing team size re-scopes the team/pairing selects, and
+  // re-balances if auto-assign is on.
   document.querySelectorAll('#team-size input[name="team-size"]').forEach(radio => {
     radio.addEventListener('change', () => {
       renderTeamAssignList();
       renderTournamentMatchList();
+      applyAutoAssign();
     });
   });
+  document.getElementById('auto-assign-teams').addEventListener('change', applyAutoAssign);
   document.getElementById('btn-add-pairing').addEventListener('click', addTournamentPairing);
 
   document.getElementById('btn-create-round').addEventListener('click', () => {
