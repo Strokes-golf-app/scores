@@ -156,11 +156,26 @@ function subscribeToRound(roundId) {
       () => onRoundChanged(roundId))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `round_id=eq.${roundId}` },
       () => onRoundChanged(roundId))
+    // scores rows key on player_id (no round_id), so this subscription can't be
+    // filtered server-side and receives EVERY score change app-wide. Filter by
+    // the payload's player_id so we only reload when a player in THIS round is
+    // affected — otherwise an unrelated round's score would reload us needlessly.
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scores' },
-      () => onRoundChanged(roundId))
+      (payload) => { if (scoreEventInThisRound(payload)) onRoundChanged(roundId); })
     .subscribe();
 
   state.realtimeChannel = channel;
+}
+
+// True when a realtime scores event belongs to a player in the current round.
+// INSERT/UPDATE payloads carry the full new row (with player_id); a DELETE with
+// default replica identity carries only the PK, so player_id is unknown — we
+// return true there (rare; safe fallback to a reload rather than miss a change).
+function scoreEventInThisRound(payload) {
+  const pid = (payload && payload.new && payload.new.player_id)
+    || (payload && payload.old && payload.old.player_id);
+  if (!pid) return true;
+  return !!(state.round && state.round.players && state.round.players.some(p => p.id === pid));
 }
 
 let reloadTimer = null;
