@@ -285,7 +285,7 @@ function applyAutoAssign() {
   const { assignments, teams } = Golf.balanceTeamsByHandicap(named, tournamentTeamSize());
   if (!teams) {
     if (hint) {
-      hint.textContent = `Add at least ${tournamentTeamSize() * 2} players to auto-balance into teams of ${tournamentTeamSize()}.`;
+      hint.textContent = `Add at least ${tournamentTeamSize() * 2} players to auto-assign into teams of ${tournamentTeamSize()}.`;
       hint.hidden = false;
     }
     return;
