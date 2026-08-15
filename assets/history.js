@@ -73,17 +73,20 @@ async function loadRoundHistory() {
   });
 }
 
-// One card per completed round, showing the signed-in user's own line
-// (name + gross + to-par). Everything needed is inside the snapshot, so
-// no extra queries. Stage 3 will make the card tappable for the full
-// all-players detail view.
-function buildHistoryCard(row, userId) {
+// One card per completed round, showing one player's line
+// (name + gross + to-par). `lineUserId` picks whose line to show —
+// the signed-in user for their own history, or the friend on the
+// friend-rounds screen. `detailUserId` is who gets the "(you)" marker
+// in the detail view (always the signed-in user); it defaults to
+// lineUserId so existing callers are unchanged. Everything needed is
+// inside the snapshot, so no extra queries.
+function buildHistoryCard(row, lineUserId, detailUserId = lineUserId) {
   const snap = row.round_snapshot || {};
   const players = row.players_snapshot || [];
   const scores = row.scores_snapshot || [];
   const isCancelled = row.status === 'cancelled';
 
-  const mePlayer = players.find(p => p.user_id === userId);
+  const mePlayer = players.find(p => p.user_id === lineUserId);
   const holeCount = snap.hole_count || (snap.pars ? snap.pars.length : 18);
 
   let playerLine = '';
@@ -124,9 +127,9 @@ function buildHistoryCard(row, userId) {
     ${scoreHtml}
     <span class="history-card-chevron" aria-hidden="true">›</span>
   `;
-  card.addEventListener('click', () => openHistoryDetail(row, userId));
+  card.addEventListener('click', () => openHistoryDetail(row, detailUserId));
   card.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHistoryDetail(row, userId); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHistoryDetail(row, detailUserId); }
   });
   return card;
 }

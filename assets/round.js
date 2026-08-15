@@ -435,8 +435,10 @@ async function confirmCancelRound() {
 // ---------------------------------------------------------
 function setTab(tab) {
   state.activeTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
+  // Scoped to the round screen so the friend-rounds tabs (which reuse
+  // .tab / .tabbar for styling) are never toggled by this handler.
+  document.querySelectorAll('#round-tabbar .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('#screen-round .tabpanel').forEach(p => p.classList.remove('active'));
   document.getElementById(tab === 'card' ? 'tab-card' : 'tab-board').classList.add('active');
   if (tab === 'board') renderLeaderboardTab();
 }

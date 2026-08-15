@@ -811,7 +811,7 @@ h3 {
 
 /* Brand emblem in the top-right of the round header (above the tab selector),
    shown on both the scorecard and leaderboard tabs. */
-#screen-round .round-logo-mark {
+.round-logo-mark {
   flex: none;
   align-self: flex-start;
   display: inline-block;
@@ -1069,6 +1069,32 @@ img.drawer-item-icon {
   display: block;
   margin-top: 0.15rem;
   font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+/* Friend-rounds screen: profile header above the All/With-me tabbar. */
+.friend-rounds-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 1rem 1.25rem 0.75rem;
+}
+
+.friend-rounds-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--ink);
+}
+
+.friend-rounds-handle {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.friend-rounds-hcp {
   font-size: 13px;
   color: var(--ink-faint);
 }
@@ -3083,6 +3109,17 @@ button.sc-cell {
   gap: 0.1rem;
   min-width: 0;
   flex: 1;
+}
+
+/* Tappable friend row — opens that friend's rounds. */
+.friend-info-tappable {
+  cursor: pointer;
+}
+
+.friend-info-tappable:focus-visible {
+  outline: 2px solid var(--fairway);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .friend-name {
