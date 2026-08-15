@@ -882,6 +882,21 @@ h3 {
   color: var(--fairway);
 }
 
+.drawer-user-handle {
+  margin: 0.2rem 0 0;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.drawer-user-hcp {
+  margin: 0.1rem 0 0;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
 .drawer-nav {
   display: flex;
   flex-direction: column;
