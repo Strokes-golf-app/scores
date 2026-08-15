@@ -513,6 +513,28 @@
     </div>
   </section>
 
+  <!-- ============ SCREEN: FRIEND ROUNDS ============ -->
+  <section id="screen-friend-rounds" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-friend-rounds-back" aria-label="Back">←</button>
+      <h2 class="topbar-title">Rounds</h2>
+      <span class="round-logo-mark" role="img" aria-label="Strokes Golf"></span>
+    </header>
+
+    <div class="screen-body">
+      <div class="friend-rounds-header">
+        <span class="friend-rounds-name" id="friend-rounds-name"></span>
+        <span class="friend-rounds-handle" id="friend-rounds-handle"></span>
+        <span class="friend-rounds-hcp" id="friend-rounds-hcp"></span>
+      </div>
+      <nav class="tabbar" id="friend-rounds-tabbar">
+        <button class="tab active" data-friend-rounds-tab="with-me" type="button">Rounds with me</button>
+        <button class="tab" data-friend-rounds-tab="all" type="button">All rounds</button>
+      </nav>
+      <div id="friend-rounds-list" class="history-list"></div>
+    </div>
+  </section>
+
   <!-- ============ SCREEN: NEW ROUND SETUP ============ -->
   <section id="screen-setup" class="screen">
     <header class="topbar">
@@ -933,6 +955,7 @@
   <script src="assets/history.js"></script>
   <script src="assets/profile.js"></script>
   <script src="assets/friends.js"></script>
+  <script src="assets/friend-rounds.js"></script>
   <script src="assets/feedback.js"></script>
   <script src="assets/resume.js"></script>
   <script src="assets/app.js"></script>

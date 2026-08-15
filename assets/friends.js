@@ -14,6 +14,9 @@
 
 let friendSearchTimer = null;
 let lastFriendQuery = '';
+// Accepted friends from the last render, so a tapped row can hand the
+// full friend object (name/username/handicap) to the friend-rounds screen.
+let myFriends = [];
 
 // The @ is display-only; the stored/searched handle is bare.
 // (In 3c this moves to core.js so the lobby can share it.)
@@ -70,14 +73,18 @@ function renderIncomingRequests(rows) {
 }
 
 function renderFriendsList(rows) {
+  myFriends = rows;
   const list = document.getElementById('friends-list');
   if (!rows.length) {
     list.innerHTML = '<div class="friends-empty">No friends yet. Search above to add someone.</div>';
     return;
   }
+  // The .friend-info is a button that opens the friend's rounds; the remove ✕
+  // is a separate button, so closest('[data-friend-action]') resolves each.
   list.innerHTML = rows.map(f => `
     <div class="friend-row">
-      <div class="friend-info">
+      <div class="friend-info friend-info-tappable" role="button" tabindex="0"
+        data-friend-action="view-rounds" data-friend-id="${f.id}">
         <span class="friend-name">${escapeHtml(f.display_name || '')}</span>
         <span class="friend-handle">${escapeHtml(atHandle(f.username))}</span>
       </div>
@@ -154,7 +161,11 @@ async function handleFriendsClick(e) {
   const id = btn.dataset.friendId;
   if (!id) return;
 
-  if (action === 'add') {
+  if (action === 'view-rounds') {
+    const f = myFriends.find(x => x.id === id);
+    if (f) openFriendRounds(f);
+    return;
+  } else if (action === 'add') {
     const { error } = await supabaseClient.rpc('send_friend_request', { p_target_id: id });
     if (error) { console.error(error); showToast('Could not send request'); return; }
     showToast('Request sent');
@@ -183,7 +194,18 @@ function initFriends() {
   const search = document.getElementById('friend-search');
   if (search) search.addEventListener('input', handleFriendSearchInput);
   const screen = document.getElementById('screen-friends');
-  if (screen) screen.addEventListener('click', handleFriendsClick);
+  if (screen) {
+    screen.addEventListener('click', handleFriendsClick);
+    // Enter/Space on the tappable friend row opens their rounds.
+    screen.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const row = e.target.closest('[data-friend-action="view-rounds"]');
+      if (!row) return;
+      e.preventDefault();
+      const f = myFriends.find(x => x.id === row.dataset.friendId);
+      if (f) openFriendRounds(f);
+    });
+  }
 
   // Round-setup friend picker.
   const addFromFriends = document.getElementById('btn-add-from-friends');

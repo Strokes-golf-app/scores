@@ -60,6 +60,7 @@ function init() {
   document.getElementById('btn-friends').addEventListener('click', openFriendsScreen);
   document.getElementById('btn-friends-back').addEventListener('click', () => showScreen('screen-home'));
   if (typeof initFriends === 'function') initFriends();
+  if (typeof initFriendRounds === 'function') initFriendRounds();
   document.getElementById('btn-manage-add-course').addEventListener('click', async () => {
     await resetCourseUploadScreen();
     showScreen('screen-course-upload');
@@ -225,7 +226,9 @@ function init() {
     }
   });
 
-  document.querySelectorAll('.tab').forEach(t => {
+  // Scoped to the round tabbar so it never grabs the friend-rounds tabs,
+  // which reuse the .tab class for the same underline styling.
+  document.querySelectorAll('#round-tabbar .tab').forEach(t => {
     t.addEventListener('click', () => setTab(t.dataset.tab));
   });
 
