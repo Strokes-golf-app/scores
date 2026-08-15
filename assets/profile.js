@@ -143,31 +143,49 @@ async function saveProfile(e) {
   showScreen('screen-home');
 }
 
-// Updates the name shown at the top of the home drawer (above the
-// separator) to the signed-in user's display_name. Hidden for guests
-// or before a name has been set.
+// Updates the identity block at the top of the home drawer (above the
+// separator) to the signed-in user's display_name, with @username and
+// handicap on their own lines below. All hidden for guests or before a
+// name has been set.
 async function refreshDrawerName() {
   const el = document.getElementById('drawer-user-name');
+  const handleEl = document.getElementById('drawer-user-handle');
+  const hcpEl = document.getElementById('drawer-user-hcp');
   if (!el) return;
 
   if (typeof refreshUsernameNudge === 'function') await refreshUsernameNudge();
 
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user || user.is_anonymous) {
+  const hide = () => {
     el.textContent = '';
     el.hidden = true;
-    return;
-  }
+    if (handleEl) { handleEl.textContent = ''; handleEl.hidden = true; }
+    if (hcpEl) { hcpEl.textContent = ''; hcpEl.hidden = true; }
+  };
+
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user || user.is_anonymous) { hide(); return; }
 
   const { data: profile } = await supabaseClient
     .from('user_profiles')
-    .select('display_name')
+    .select('display_name, username, default_handicap')
     .eq('id', user.id)
     .maybeSingle();
 
   const name = profile?.display_name || '';
   el.textContent = name;
   el.hidden = !name;
+
+  if (handleEl) {
+    const handle = profile?.username ? atHandle(profile.username) : '';
+    handleEl.textContent = handle;
+    handleEl.hidden = !handle;
+  }
+
+  if (hcpEl) {
+    const hcp = Number(profile?.default_handicap);
+    hcpEl.textContent = 'Handicap ' + (Number.isFinite(hcp) ? hcp.toFixed(1) : '0.0');
+    hcpEl.hidden = !name;
+  }
 }
 
 // First-run onboarding: called once, right after a NON-invited user
