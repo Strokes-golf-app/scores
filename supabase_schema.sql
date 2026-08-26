@@ -138,11 +138,32 @@ create table if not exists public.friendships (
 create index if not exists idx_players_round_id on players(round_id);
 create index if not exists idx_scores_player_id on scores(player_id);
 create index if not exists idx_api_usage_usage_date on api_usage(usage_key, date);
+create unique index if not exists idx_players_one_membership
+  on players(round_id, user_id) where user_id is not null;
 
 -- ---------- realtime ----------
-alter publication supabase_realtime add table rounds;
-alter publication supabase_realtime add table players;
-alter publication supabase_realtime add table scores;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'rounds'
+  ) then
+    alter publication supabase_realtime add table public.rounds;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'players'
+  ) then
+    alter publication supabase_realtime add table public.players;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'scores'
+  ) then
+    alter publication supabase_realtime add table public.scores;
+  end if;
+end;
+$$;
 
 -- ===========================================================
 -- Helper functions (used inside RLS policies)
@@ -177,7 +198,7 @@ $$;
 create or replace function public.get_round_state(p_round_code text)
  returns json language sql security definer set search_path to 'public'
 as $$
-  select json_build_object(
+  select case when auth.uid() is null then null else json_build_object(
     'round', (select row_to_json(r) from rounds r where r.code = upper(trim(p_round_code))),
     'players', (select coalesce(json_agg(row_to_json(p)), '[]'::json)
                 from players p join rounds r on r.id = p.round_id
@@ -186,33 +207,96 @@ as $$
                from scores s join players p on p.id = s.player_id
                join rounds r on r.id = p.round_id
                where r.code = upper(trim(p_round_code)))
-  );
+  ) end;
 $$;
 
 create or replace function public.claim_player(p_player_id uuid, p_round_code text)
  returns setof players language plpgsql security definer set search_path to 'public'
 as $$
+declare
+  v_round_id uuid;
 begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select id into v_round_id from rounds
+    where code = upper(trim(p_round_code))
+      and started = false
+      and ended = false
+      and cancelled = false;
+
+  if v_round_id is null then
+    raise exception 'Round is not joinable';
+  end if;
+
+  if exists (select 1 from players where round_id = v_round_id and user_id = auth.uid()) then
+    raise exception 'Already joined';
+  end if;
+
   return query
     update players
     set user_id = auth.uid()
     where id = p_player_id
       and user_id is null
-      and round_id = (select id from rounds where code = upper(trim(p_round_code)))
+      and round_id = v_round_id
     returning *;
+end;
+$$;
+
+create or replace function public.join_round(p_round_code text, p_name text, p_handicap numeric)
+ returns players language plpgsql security definer set search_path to 'public'
+as $$
+declare
+  me uuid := auth.uid();
+  v_round_id uuid;
+  v_player players;
+begin
+  if me is null then
+    raise exception 'Not authenticated';
+  end if;
+  if length(trim(coalesce(p_name, ''))) = 0 or length(trim(p_name)) > 80 then
+    raise exception 'A valid player name is required';
+  end if;
+  if p_handicap is null or p_handicap < 0 or p_handicap > 54 then
+    raise exception 'Handicap must be between 0 and 54';
+  end if;
+
+  select id into v_round_id from rounds
+    where code = upper(trim(p_round_code))
+      and started = false
+      and ended = false
+      and cancelled = false;
+  if v_round_id is null then
+    raise exception 'Round is not joinable';
+  end if;
+  if exists (select 1 from players where round_id = v_round_id and user_id = me) then
+    raise exception 'Already joined';
+  end if;
+  if (select count(*) from players where round_id = v_round_id) >= 16 then
+    raise exception 'Round is full';
+  end if;
+
+  insert into players (round_id, name, handicap, user_id)
+    values (v_round_id, trim(p_name), round(p_handicap, 1), me)
+    returning * into v_player;
+  return v_player;
 end;
 $$;
 
 create or replace function public.find_round_by_code(p_code text)
  returns setof rounds language sql security definer set search_path to 'public'
 as $$
-  select * from rounds where code = upper(trim(p_code));
+  select * from rounds
+  where auth.uid() is not null
+    and code = upper(trim(p_code));
 $$;
 
 create or replace function public.round_was_archived(p_code text)
  returns boolean language sql security definer set search_path to 'public'
 as $$
-  select exists(select 1 from completed_rounds where code = p_code);
+  select auth.uid() is not null
+    and exists(select 1 from completed_rounds where code = upper(trim(p_code)));
 $$;
 
 create or replace function public.host_upsert_score(
@@ -489,10 +573,15 @@ begin
 end;
 $$;
 
-grant execute on function public.get_round_state(text) to anon, authenticated;
-grant execute on function public.claim_player(uuid, text) to anon, authenticated;
-grant execute on function public.find_round_by_code(text) to anon, authenticated;
-grant execute on function public.round_was_archived(text) to anon, authenticated;
+revoke execute on function public.get_round_state(text) from anon;
+revoke execute on function public.claim_player(uuid, text) from anon;
+revoke execute on function public.find_round_by_code(text) from anon;
+revoke execute on function public.round_was_archived(text) from anon;
+grant execute on function public.get_round_state(text) to authenticated;
+grant execute on function public.claim_player(uuid, text) to authenticated;
+grant execute on function public.find_round_by_code(text) to authenticated;
+grant execute on function public.round_was_archived(text) to authenticated;
+grant execute on function public.join_round(text, text, numeric) to authenticated;
 
 -- ===========================================================
 -- Row-level security
@@ -507,6 +596,29 @@ alter table api_usage enable row level security;
 alter table friendships enable row level security;
 
 -- ---------- rounds ----------
+drop policy if exists "members can read their round" on public.rounds;
+drop policy if exists "you can create a round as its host" on public.rounds;
+drop policy if exists "only the host can update their round" on public.rounds;
+drop policy if exists "members can read players in their round" on public.players;
+drop policy if exists "host can pre-add players" on public.players;
+drop policy if exists "add yourself, or host can pre-add a placeholder" on public.players;
+drop policy if exists "update your own row, or host-managed placeholders" on public.players;
+drop policy if exists "update your own row, or claim an unclaimed one" on public.players;
+drop policy if exists "members can read scores in their round" on public.scores;
+drop policy if exists "you can only write your own scores" on public.scores;
+drop policy if exists "you can only update your own scores" on public.scores;
+drop policy if exists "users read own profile" on public.user_profiles;
+drop policy if exists "users write own profile" on public.user_profiles;
+drop policy if exists "users update own profile" on public.user_profiles;
+drop policy if exists "any logged-in user can read courses" on public.courses;
+drop policy if exists "owner can insert own courses" on public.courses;
+drop policy if exists "admins can update any course" on public.courses;
+drop policy if exists "admins can delete any course" on public.courses;
+drop policy if exists "participants can read their completed rounds" on public.completed_rounds;
+drop policy if exists "read own friendships" on public.friendships;
+drop policy if exists "send own requests" on public.friendships;
+drop policy if exists "delete own friendships" on public.friendships;
+
 create policy "members can read their round" on rounds
   for select using (is_round_member(id));
 create policy "you can create a round as its host" on rounds
@@ -517,16 +629,22 @@ create policy "only the host can update their round" on rounds
 -- ---------- players ----------
 create policy "members can read players in their round" on players
   for select using (is_round_member(round_id));
-create policy "add yourself, or host can pre-add a placeholder" on players
+create policy "host can pre-add players" on players
   for insert with check (
+    exists (
+      select 1 from rounds r where r.id = players.round_id and r.host_user_id = auth.uid()
+    )
+  );
+create policy "update your own row, or host-managed placeholders" on players
+  for update using (
+    user_id = auth.uid()
+    or exists (select 1 from rounds r where r.id = players.round_id and r.host_user_id = auth.uid())
+  ) with check (
     user_id = auth.uid()
     or (user_id is null and exists (
       select 1 from rounds r where r.id = players.round_id and r.host_user_id = auth.uid()
     ))
   );
-create policy "update your own row, or claim an unclaimed one" on players
-  for update using (user_id = auth.uid() or user_id is null)
-  with check (user_id = auth.uid());
 
 -- ---------- scores ----------
 create policy "members can read scores in their round" on scores

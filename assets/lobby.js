@@ -97,13 +97,11 @@ async function addPlayerToRound(roundId) {
       .eq('id', user.id);
   }
 
-  const { data: { user: currentUser } } = await supabaseClient.auth.getUser();
-
-  const { data, error } = await supabaseClient
-    .from('players')
-    .insert({ round_id: roundId, name: name.trim(), handicap, user_id: currentUser?.id || null })
-    .select()
-    .single();
+  const { data, error } = await supabaseClient.rpc('join_round', {
+    p_round_code: state.roundCode,
+    p_name: name.trim(),
+    p_handicap: handicap,
+  });
 
   if (error) {
     showToast('Could not add player — check your connection');
@@ -121,6 +119,12 @@ async function joinRound(code) {
   if (!code) return;
 
   try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      showToast('Please sign in before joining a round');
+      return;
+    }
+
     const { data: roundRows, error } = await supabaseClient.rpc('find_round_by_code', { p_code: code });
     const roundRow = roundRows && roundRows[0];
 
