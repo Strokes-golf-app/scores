@@ -89,6 +89,7 @@ function init() {
   document.getElementById('btn-course-detail-back').addEventListener('click', () => showScreen('screen-course-manage'));
 
   document.getElementById('btn-cancel-round-lobby').addEventListener('click', () => promptCancelRound(state.roundId));
+  document.getElementById('btn-revoke-invite').addEventListener('click', revokeRoundInvite);
   document.getElementById('btn-cancel-round').addEventListener('click', () => promptCancelRound(state.roundId));
   document.getElementById('btn-cancel-round-confirm-yes').addEventListener('click', confirmCancelRound);
   document.getElementById('btn-cancel-round-confirm-no').addEventListener('click', dismissCancelRoundPrompt);
@@ -212,7 +213,14 @@ function init() {
   document.getElementById('btn-identify-back').addEventListener('click', goHome);
   document.getElementById('btn-identify-add-self').addEventListener('click', async () => {
     const id = await addPlayerToRound(state.roundId);
-    if (id) selectIdentity(id);
+    if (id) {
+      state.myPlayerId = id;
+      saveSession();
+      await loadRound(state.roundId);
+      subscribeToRound(state.roundId);
+      showScreen('screen-lobby');
+      renderLobby();
+    }
   });
 
   document.getElementById('btn-round-leave').addEventListener('click', goHome);

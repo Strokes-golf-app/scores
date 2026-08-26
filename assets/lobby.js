@@ -36,9 +36,27 @@ function renderLobby() {
   renderLobbyStakes();
 
   document.getElementById('btn-start-round').hidden = !isHost();
+  document.getElementById('btn-revoke-invite').hidden = !isHost() || r.inviteRevoked ||
+    (r.inviteExpiresAt && new Date(r.inviteExpiresAt) <= new Date());
   document.getElementById('btn-cancel-round-lobby').hidden = !isHost();
 
   if (r.started) enterRound();
+}
+
+async function revokeRoundInvite() {
+  if (!state.roundId || !isHost()) return;
+  if (!confirm('Stop accepting new players through this round link?')) return;
+
+  const { error } = await supabaseClient.rpc('revoke_round_invite', {
+    p_round_id: state.roundId,
+  });
+  if (error) {
+    showToast('Could not stop new joins — try again');
+    return;
+  }
+  await loadRound(state.roundId);
+  renderLobby();
+  showToast('New joins are disabled');
 }
 
 // Shows current stakes in the lobby. The host always sees this block
@@ -128,7 +146,7 @@ async function joinRound(code) {
     const { data: roundRows, error } = await supabaseClient.rpc('find_round_by_code', { p_code: code });
     const roundRow = roundRows && roundRows[0];
 
-    if (error || !roundRow) {
+    if (error || !roundRow || !roundRow.joinable) {
       const { data: archived } = await supabaseClient.rpc('round_was_archived', { p_code: code });
       showToast(archived ? 'This round has ended' : 'No round found with that code');
       return;
@@ -136,8 +154,12 @@ async function joinRound(code) {
 
     state.roundId = roundRow.id;
     state.roundCode = code;
-    await loadRound(roundRow.id);
-    subscribeToRound(roundRow.id);
+    state.round = {
+      id: roundRow.id,
+      code,
+      courseName: roundRow.course_name,
+      players: [],
+    };
 
     document.getElementById('identify-course-name').textContent = roundRow.course_name;
     renderIdentifyList(state.round);
@@ -151,6 +173,11 @@ async function joinRound(code) {
 async function renderIdentifyList(round) {
   const list = document.getElementById('identify-player-list');
   list.innerHTML = '';
+
+  if (!round.players || round.players.length === 0) {
+    list.innerHTML = '<p class="field-hint">Join this round by adding yourself below.</p>';
+    return;
+  }
 
   // Who we are on this device — so a returning player whose row is already
   // claimed *by them* (new device, cleared local session) can still tap
