@@ -25,6 +25,8 @@ create table if not exists public.rounds (
   ended boolean not null default false,
   cancelled boolean not null default false,
   created_at timestamptz not null default now(),
+  invite_expires_at timestamptz not null default (now() + interval '7 days'),
+  invite_revoked boolean not null default false,
   stroke_index int[],
   match_team_a uuid[] check (match_team_a is null or array_length(match_team_a, 1) between 1 and 3),
   match_team_b uuid[] check (match_team_b is null or array_length(match_team_b, 1) between 1 and 3),
@@ -60,7 +62,6 @@ create table if not exists public.players (
   is_captain boolean not null default false
 );
 
--- ---------- scores ----------
 create table if not exists public.scores (
   id uuid primary key default gen_random_uuid(),
   player_id uuid not null references public.players(id),
@@ -135,11 +136,26 @@ create table if not exists public.friendships (
 );
 
 -- ---------- indexes ----------
+alter table public.rounds add column if not exists invite_expires_at timestamptz
+  not null default (now() + interval '7 days');
+alter table public.rounds add column if not exists invite_revoked boolean not null default false;
+
 create index if not exists idx_players_round_id on players(round_id);
 create index if not exists idx_scores_player_id on scores(player_id);
 create index if not exists idx_api_usage_usage_date on api_usage(usage_key, date);
 create unique index if not exists idx_players_one_membership
   on players(round_id, user_id) where user_id is not null;
+create index if not exists idx_rounds_invite_lookup on rounds(code, invite_expires_at)
+  where invite_revoked = false;
+
+create table if not exists public.round_lookup_attempts (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  window_start timestamptz not null,
+  attempt_count int not null default 0,
+  primary key (user_id, window_start)
+);
+alter table public.round_lookup_attempts enable row level security;
+revoke all on table public.round_lookup_attempts from anon, authenticated;
 
 -- ---------- realtime ----------
 do $$
@@ -191,14 +207,17 @@ $$;
 -- enforces its own access check internally)
 -- ===========================================================
 
--- Scoped by round CODE, not id — see migration_round_access_fix.sql
--- for why. Used before the caller is a confirmed round member
--- (joining by code), so no membership check is possible/appropriate
--- here; the code itself is the access boundary.
+-- Full state is available only to a confirmed round member. Pre-join
+-- callers use find_round_by_code(), which returns a minimal preview.
 create or replace function public.get_round_state(p_round_code text)
  returns json language sql security definer set search_path to 'public'
 as $$
-  select case when auth.uid() is null then null else json_build_object(
+  select case when auth.uid() is not null and exists (
+    select 1 from players member
+    join rounds member_round on member_round.id = member.round_id
+    where member_round.code = upper(trim(p_round_code))
+      and member.user_id = auth.uid()
+  ) then json_build_object(
     'round', (select row_to_json(r) from rounds r where r.code = upper(trim(p_round_code))),
     'players', (select coalesce(json_agg(row_to_json(p)), '[]'::json)
                 from players p join rounds r on r.id = p.round_id
@@ -215,16 +234,34 @@ create or replace function public.claim_player(p_player_id uuid, p_round_code te
 as $$
 declare
   v_round_id uuid;
+  v_window timestamptz := date_trunc('minute', now()) -
+    (extract(minute from now())::int % 10) * interval '1 minute';
+  v_attempts int;
 begin
   if auth.uid() is null then
     raise exception 'Not authenticated';
+  end if;
+
+  if trim(coalesce(p_round_code, '')) !~ '^[A-HJ-NP-Z2-9]{5,32}$' then
+    raise exception 'Invalid round code';
+  end if;
+
+  insert into round_lookup_attempts(user_id, window_start, attempt_count)
+    values (auth.uid(), v_window, 1)
+  on conflict (user_id, window_start)
+    do update set attempt_count = round_lookup_attempts.attempt_count + 1
+  returning attempt_count into v_attempts;
+  if v_attempts > 20 then
+    raise exception 'Too many round attempts';
   end if;
 
   select id into v_round_id from rounds
     where code = upper(trim(p_round_code))
       and started = false
       and ended = false
-      and cancelled = false;
+      and cancelled = false
+      and invite_revoked = false
+      and invite_expires_at > now();
 
   if v_round_id is null then
     raise exception 'Round is not joinable';
@@ -251,9 +288,23 @@ declare
   me uuid := auth.uid();
   v_round_id uuid;
   v_player players;
+  v_window timestamptz := date_trunc('minute', now()) -
+    (extract(minute from now())::int % 10) * interval '1 minute';
+  v_attempts int;
 begin
   if me is null then
     raise exception 'Not authenticated';
+  end if;
+  if trim(coalesce(p_round_code, '')) !~ '^[A-HJ-NP-Z2-9]{5,32}$' then
+    raise exception 'Invalid round code';
+  end if;
+  insert into round_lookup_attempts(user_id, window_start, attempt_count)
+    values (me, v_window, 1)
+  on conflict (user_id, window_start)
+    do update set attempt_count = round_lookup_attempts.attempt_count + 1
+  returning attempt_count into v_attempts;
+  if v_attempts > 20 then
+    raise exception 'Too many round attempts';
   end if;
   if length(trim(coalesce(p_name, ''))) = 0 or length(trim(p_name)) > 80 then
     raise exception 'A valid player name is required';
@@ -266,7 +317,9 @@ begin
     where code = upper(trim(p_round_code))
       and started = false
       and ended = false
-      and cancelled = false;
+      and cancelled = false
+      and invite_revoked = false
+      and invite_expires_at > now();
   if v_round_id is null then
     raise exception 'Round is not joinable';
   end if;
@@ -284,12 +337,38 @@ begin
 end;
 $$;
 
+drop function if exists public.find_round_by_code(text);
 create or replace function public.find_round_by_code(p_code text)
- returns setof rounds language sql security definer set search_path to 'public'
+ returns table(id uuid, course_name text, joinable boolean)
+ language plpgsql security definer set search_path to 'public'
 as $$
-  select * from rounds
-  where auth.uid() is not null
-    and code = upper(trim(p_code));
+declare
+  me uuid := auth.uid();
+  v_window timestamptz := date_trunc('minute', now()) -
+    (extract(minute from now())::int % 10) * interval '1 minute';
+  v_attempts int;
+begin
+  if me is null then
+    return;
+  end if;
+
+  insert into round_lookup_attempts(user_id, window_start, attempt_count)
+    values (me, v_window, 1)
+  on conflict (user_id, window_start)
+    do update set attempt_count = round_lookup_attempts.attempt_count + 1
+  returning attempt_count into v_attempts;
+
+  if v_attempts > 20 then
+    return;
+  end if;
+
+  return query
+    select r.id, r.course_name,
+      (r.started = false and r.ended = false and r.cancelled = false
+       and r.invite_revoked = false and r.invite_expires_at > now())
+    from rounds r
+    where r.code = upper(trim(p_code));
+end;
 $$;
 
 create or replace function public.round_was_archived(p_code text)
@@ -297,6 +376,21 @@ create or replace function public.round_was_archived(p_code text)
 as $$
   select auth.uid() is not null
     and exists(select 1 from completed_rounds where code = upper(trim(p_code)));
+$$;
+
+create or replace function public.revoke_round_invite(p_round_id uuid)
+ returns void language plpgsql security definer set search_path to 'public'
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+  update rounds set invite_revoked = true
+    where id = p_round_id and host_user_id = auth.uid();
+  if not found then
+    raise exception 'Only the round host can revoke this invite';
+  end if;
+end;
 $$;
 
 create or replace function public.host_upsert_score(
@@ -577,11 +671,13 @@ revoke execute on function public.get_round_state(text) from anon;
 revoke execute on function public.claim_player(uuid, text) from anon;
 revoke execute on function public.find_round_by_code(text) from anon;
 revoke execute on function public.round_was_archived(text) from anon;
+revoke execute on function public.join_round(text, text, numeric) from anon;
 grant execute on function public.get_round_state(text) to authenticated;
 grant execute on function public.claim_player(uuid, text) to authenticated;
 grant execute on function public.find_round_by_code(text) to authenticated;
 grant execute on function public.round_was_archived(text) to authenticated;
 grant execute on function public.join_round(text, text, numeric) to authenticated;
+grant execute on function public.revoke_round_invite(uuid) to authenticated;
 
 -- ===========================================================
 -- Row-level security

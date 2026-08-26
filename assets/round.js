@@ -72,6 +72,7 @@ function mapRoundRow(row, players) {
     hostId: row.host_player_id, started: row.started, ended: row.ended,
     holeOffset: row.hole_offset || 0,
     betsEnabled: row.bets_enabled === true, stakes: row.stakes || {},
+    inviteExpiresAt: row.invite_expires_at, inviteRevoked: row.invite_revoked === true,
     isTournament: row.is_tournament === true,
     teamSize: row.team_size != null ? Number(row.team_size) : null,
     tournamentMatches: row.tournament_matches || null,
@@ -84,16 +85,6 @@ function mapRoundRow(row, players) {
 // ---------------------------------------------------------
 async function loadRound(roundId) {
   if (!state.myPlayerId) {
-    // Not a confirmed member yet (e.g. on the identify screen right
-    // after joining by code) — this is the one deliberate exception.
-    const { data, error } = await supabaseClient.rpc('get_round_state', { p_round_code: state.roundCode });
-    if (error || !data || !data.round) {
-      showToast('This round no longer exists');
-      goHome();
-      return null;
-    }
-    const players = mapPlayers(data.players, data.scores);
-    state.round = mapRoundRow(data.round, players);
     return state.round;
   }
 
