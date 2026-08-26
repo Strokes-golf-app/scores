@@ -64,7 +64,9 @@ function uid(prefix) {
 function makeRoundCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I ambiguity
   let code = '';
-  for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  const randomBytes = new Uint8Array(8);
+  crypto.getRandomValues(randomBytes);
+  for (const byte of randomBytes) code += chars[byte % chars.length];
   return code;
 }
 
