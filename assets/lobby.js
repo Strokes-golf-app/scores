@@ -162,8 +162,8 @@ async function renderIdentifyList(round) {
     const rightLabel = claimedByOther
       ? 'Already joined'
       : claimedByMe
-      ? 'Tap to rejoin'
-      : 'HCP ' + p.handicap;
+        ? 'Tap to rejoin'
+        : 'HCP ' + p.handicap;
     row.innerHTML = `
       <span class="player-chip-name">${escapeHtml(p.name)}</span>
       <span class="player-chip-hcp">${rightLabel}</span>
@@ -187,7 +187,10 @@ async function selectIdentity(playerId) {
   }
 
   if (!player.user_id) {
-    const { data: claimedRows, error } = await supabaseClient.rpc('claim_player', { p_player_id: playerId });
+    const { data: claimedRows, error } = await supabaseClient.rpc('claim_player', {
+      p_player_id: playerId,
+      p_round_code: state.roundCode,
+    });
 
     if (error || !claimedRows || claimedRows.length === 0) {
       showToast('Someone else just claimed that name — pick another or add yourself');

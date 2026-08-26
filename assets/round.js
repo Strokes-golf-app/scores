@@ -86,7 +86,7 @@ async function loadRound(roundId) {
   if (!state.myPlayerId) {
     // Not a confirmed member yet (e.g. on the identify screen right
     // after joining by code) — this is the one deliberate exception.
-    const { data, error } = await supabaseClient.rpc('get_round_state', { p_round_id: roundId });
+    const { data, error } = await supabaseClient.rpc('get_round_state', { p_round_code: state.roundCode });
     if (error || !data || !data.round) {
       showToast('This round no longer exists');
       goHome();
