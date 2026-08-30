@@ -124,6 +124,9 @@ create table if not exists public.api_usage (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+create unique index if not exists idx_api_usage_usage_date_unique
+  on public.api_usage (usage_key, date);
+revoke all on table public.api_usage from anon, authenticated;
 
 -- ---------- friendships ----------
 create table if not exists public.friendships (
@@ -200,6 +203,43 @@ create or replace function public.is_admin()
  language sql stable
 as $$
   select coalesce((auth.jwt() -> 'app_metadata' ->> 'is_admin')::boolean, false);
+$$;
+
+create or replace function public.consume_course_api_quota(p_usage_key text, p_daily_limit integer)
+ returns boolean
+ language plpgsql
+ security definer
+ set search_path to 'public'
+as $$
+declare
+  v_usage_key text := trim(coalesce(p_usage_key, ''));
+  v_daily_limit integer := coalesce(p_daily_limit, 0);
+  v_call_count integer;
+begin
+  if v_usage_key = '' then
+    raise exception 'Usage key is required';
+  end if;
+
+  if v_daily_limit <= 0 then
+    raise exception 'Daily limit must be positive';
+  end if;
+
+  with upserted as (
+    insert into public.api_usage (usage_key, date, call_count)
+    values (v_usage_key, current_date, 1)
+    on conflict (usage_key, date) do update
+      set call_count = public.api_usage.call_count + 1,
+          updated_at = now()
+      where public.api_usage.call_count < v_daily_limit
+    returning call_count
+  )
+  select count(*)::int into v_call_count from upserted;
+
+  return v_call_count > 0;
+exception
+  when no_data_found then
+    return false;
+end;
 $$;
 
 -- ===========================================================
@@ -672,11 +712,13 @@ revoke execute on function public.claim_player(uuid, text) from anon;
 revoke execute on function public.find_round_by_code(text) from anon;
 revoke execute on function public.round_was_archived(text) from anon;
 revoke execute on function public.join_round(text, text, numeric) from anon;
+revoke execute on function public.consume_course_api_quota(text, integer) from anon;
 grant execute on function public.get_round_state(text) to authenticated;
 grant execute on function public.claim_player(uuid, text) to authenticated;
 grant execute on function public.find_round_by_code(text) to authenticated;
 grant execute on function public.round_was_archived(text) to authenticated;
 grant execute on function public.join_round(text, text, numeric) to authenticated;
+grant execute on function public.consume_course_api_quota(text, integer) to authenticated;
 grant execute on function public.revoke_round_invite(uuid) to authenticated;
 
 -- ===========================================================
