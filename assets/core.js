@@ -115,6 +115,42 @@ function clearSession() {
   try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ }
 }
 
+async function validateStoredSession(session) {
+  if (!session || !session.roundCode || !session.myPlayerId) {
+    return null;
+  }
+
+  const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+  if (userError || !user || user.is_anonymous) {
+    return null;
+  }
+
+  const { data: playerRow, error: playerError } = await supabaseClient
+    .from('players')
+    .select('id, round_id, user_id')
+    .eq('id', session.myPlayerId)
+    .maybeSingle();
+
+  if (playerError || !playerRow || playerRow.user_id !== user.id) {
+    return null;
+  }
+
+  const { data: roundRow, error: roundError } = await supabaseClient
+    .from('rounds')
+    .select('id, code')
+    .eq('code', session.roundCode)
+    .maybeSingle();
+
+  if (roundError || !roundRow || roundRow.id !== playerRow.round_id) {
+    return null;
+  }
+
+  return {
+    roundCode: roundRow.code,
+    myPlayerId: playerRow.id,
+  };
+}
+
 // A round code the user intended to join, stashed before an email
 // round-trip (e.g. signing up from an invite link) so we can drop
 // them back into that round once they return and log in.

@@ -124,6 +124,9 @@ create table if not exists public.api_usage (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+create unique index if not exists idx_api_usage_usage_date_unique
+  on public.api_usage (usage_key, date);
+revoke all on table public.api_usage from anon, authenticated;
 
 -- ---------- friendships ----------
 create table if not exists public.friendships (
@@ -200,6 +203,43 @@ create or replace function public.is_admin()
  language sql stable
 as $$
   select coalesce((auth.jwt() -> 'app_metadata' ->> 'is_admin')::boolean, false);
+$$;
+
+create or replace function public.consume_course_api_quota(p_usage_key text, p_daily_limit integer)
+ returns boolean
+ language plpgsql
+ security definer
+ set search_path to 'public'
+as $$
+declare
+  v_usage_key text := trim(coalesce(p_usage_key, ''));
+  v_daily_limit integer := coalesce(p_daily_limit, 0);
+  v_call_count integer;
+begin
+  if v_usage_key = '' then
+    raise exception 'Usage key is required';
+  end if;
+
+  if v_daily_limit <= 0 then
+    raise exception 'Daily limit must be positive';
+  end if;
+
+  with upserted as (
+    insert into public.api_usage (usage_key, date, call_count)
+    values (v_usage_key, current_date, 1)
+    on conflict (usage_key, date) do update
+      set call_count = public.api_usage.call_count + 1,
+          updated_at = now()
+      where public.api_usage.call_count < v_daily_limit
+    returning call_count
+  )
+  select count(*)::int into v_call_count from upserted;
+
+  return v_call_count > 0;
+exception
+  when no_data_found then
+    return false;
+end;
 $$;
 
 -- ===========================================================
@@ -552,6 +592,89 @@ as $$
   order by f.created_at desc;
 $$;
 
+create or replace function public.get_friend_completed_rounds(p_friend_id uuid)
+ returns table (
+   id uuid,
+   code text,
+   course_name text,
+   ended_at timestamptz,
+   status text,
+   participant_user_ids uuid[],
+   round_snapshot jsonb,
+   players_snapshot jsonb,
+   scores_snapshot jsonb
+ )
+ language sql
+ security definer
+ set search_path to 'public'
+as $$
+  with allowed_rounds as (
+    select cr.*
+    from public.completed_rounds cr
+    where exists (
+      select 1 from public.friendships f
+      where f.status = 'accepted'
+        and ((f.requester_id = auth.uid() and f.addressee_id = p_friend_id)
+          or (f.requester_id = p_friend_id and f.addressee_id = auth.uid()))
+    )
+      and p_friend_id = any(cr.participant_user_ids)
+  )
+  select
+    cr.id,
+    cr.code,
+    cr.course_name,
+    cr.ended_at,
+    cr.status,
+    array(
+      select u
+      from unnest(cr.participant_user_ids) as u
+      where u = auth.uid() or u = p_friend_id
+    ) as participant_user_ids,
+    jsonb_build_object(
+      'course_name', cr.course_name,
+      'hole_count', coalesce((cr.round_snapshot->>'hole_count')::int, 18),
+      'hole_offset', coalesce((cr.round_snapshot->>'hole_offset')::int, 0),
+      'pars', coalesce(cr.round_snapshot->'pars', '[]'::jsonb),
+      'stroke_index', cr.round_snapshot->'stroke_index',
+      'modes', coalesce(cr.round_snapshot->'modes', '["gross"]'::jsonb)
+    ) as round_snapshot,
+    coalesce(
+      (
+        select jsonb_agg(
+          jsonb_build_object(
+            'id', player->>'id',
+            'name', player->>'name',
+            'handicap', (player->>'handicap')::numeric,
+            'user_id', (player->>'user_id')::uuid,
+            'team', (player->>'team')::smallint,
+            'is_captain', (player->>'is_captain')::boolean
+          )
+        )
+        from jsonb_array_elements(cr.players_snapshot) as player
+        where (player->>'user_id')::uuid = p_friend_id
+      ),
+      '[]'::jsonb
+    ) as players_snapshot,
+    coalesce(
+      (
+        select jsonb_agg(
+          jsonb_build_object(
+            'id', score->>'id',
+            'player_id', (score->>'player_id')::uuid,
+            'hole', (score->>'hole')::int,
+            'strokes', (score->>'strokes')::int,
+            'putts', (score->>'putts')::int
+          )
+        )
+        from jsonb_array_elements(cr.scores_snapshot) as score
+        where (score->>'player_id')::uuid = p_friend_id
+      ),
+      '[]'::jsonb
+    ) as scores_snapshot
+  from allowed_rounds cr
+  order by cr.ended_at desc;
+$$;
+
 create or replace function public.get_my_friends()
  returns table(id uuid, username text, display_name text, city text, state text, default_handicap numeric)
  language sql security definer set search_path to 'public'
@@ -672,11 +795,13 @@ revoke execute on function public.claim_player(uuid, text) from anon;
 revoke execute on function public.find_round_by_code(text) from anon;
 revoke execute on function public.round_was_archived(text) from anon;
 revoke execute on function public.join_round(text, text, numeric) from anon;
+revoke execute on function public.consume_course_api_quota(text, integer) from anon;
 grant execute on function public.get_round_state(text) to authenticated;
 grant execute on function public.claim_player(uuid, text) to authenticated;
 grant execute on function public.find_round_by_code(text) to authenticated;
 grant execute on function public.round_was_archived(text) to authenticated;
 grant execute on function public.join_round(text, text, numeric) to authenticated;
+grant execute on function public.consume_course_api_quota(text, integer) to authenticated;
 grant execute on function public.revoke_round_invite(uuid) to authenticated;
 
 -- ===========================================================
