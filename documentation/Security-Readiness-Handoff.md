@@ -93,6 +93,22 @@ Changes:
 - Restricted direct table access to `api_usage` and enforced server-only usage tracking.
 - Added regression tests covering auth rejection, CORS handling, and request validation paths.
 
+### Commit 4: Friend history projection and session resume validation
+
+Files:
+
+- `sql-scripts/get-friend-completed-rounds.sql`
+- `supabase_schema.sql`
+- `assets/core.js`
+- `assets/lobby.js`
+
+Changes:
+
+- Fixed the friend-history RPC so it no longer compares score rows to the auth user id instead of the friend’s player row id.
+- Reduced returned friend-history payloads to a minimal, permissioned projection of the friend’s own player and score data instead of broad completed-round snapshots.
+- Added a stored-session validation step so resume logic confirms the current authenticated user still owns the saved player row and round before trusting it.
+- Cleared stale resume state when the saved round/member link no longer matches the live user context.
+
 ## Current Security Model
 
 ### Roles and actors

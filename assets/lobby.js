@@ -263,14 +263,22 @@ function goHome() {
 // ---------------------------------------------------------
 async function resumeSession(session) {
   try {
+    const validated = await validateStoredSession(session);
+    if (!validated) {
+      clearSession();
+      resetSetupScreen();
+      showScreen('screen-home');
+      return;
+    }
+
     const { data: roundRow, error } = await supabaseClient
       .from('rounds')
       .select('*')
-      .eq('code', session.roundCode)
+      .eq('code', validated.roundCode)
       .single();
 
     if (error || !roundRow) {
-      const { data: archived } = await supabaseClient.rpc('round_was_archived', { p_code: session.roundCode });
+      const { data: archived } = await supabaseClient.rpc('round_was_archived', { p_code: validated.roundCode });
       if (archived) showToast('This round has ended');
       clearSession();
       resetSetupScreen();
@@ -279,8 +287,8 @@ async function resumeSession(session) {
     }
 
     state.roundId = roundRow.id;
-    state.roundCode = session.roundCode;
-    state.myPlayerId = session.myPlayerId;
+    state.roundCode = validated.roundCode;
+    state.myPlayerId = validated.myPlayerId;
     await loadRound(roundRow.id);
     subscribeToRound(roundRow.id);
 
