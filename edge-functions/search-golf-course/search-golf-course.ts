@@ -51,20 +51,35 @@ export function getAllowedOrigins(): string[] {
 
 export function buildCorsHeaders(requestOrigin?: string | null): Record<string, string> {
   const allowed = getAllowedOrigins();
-  const origin = requestOrigin && allowed.includes(requestOrigin) ? requestOrigin : allowed[0] ?? "";
-
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin"
   };
 
-  if (!origin) {
+  if (!requestOrigin || !allowed.includes(requestOrigin)) {
     return headers;
   }
 
-  headers["Access-Control-Allow-Origin"] = origin;
+  headers["Access-Control-Allow-Origin"] = requestOrigin;
   return headers;
+}
+
+export function validateCourseId(value: unknown) {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0 || value > 9999999999) return null;
+    return Math.trunc(value);
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!/^\d{1,10}$/.test(trimmed)) return null;
+    const num = Number(trimmed);
+    if (!Number.isFinite(num) || num <= 0 || num > 9999999999) return null;
+    return num;
+  }
+
+  return null;
 }
 
 export function validateSearchQuery(value: unknown) {

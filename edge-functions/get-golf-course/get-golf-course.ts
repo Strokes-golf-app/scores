@@ -51,19 +51,17 @@ export function getAllowedOrigins(): string[] {
 
 export function buildCorsHeaders(requestOrigin?: string | null): Record<string, string> {
   const allowed = getAllowedOrigins();
-  const origin = requestOrigin && allowed.includes(requestOrigin) ? requestOrigin : allowed[0] ?? "";
-
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin"
   };
 
-  if (!origin) {
+  if (!requestOrigin || !allowed.includes(requestOrigin)) {
     return headers;
   }
 
-  headers["Access-Control-Allow-Origin"] = origin;
+  headers["Access-Control-Allow-Origin"] = requestOrigin;
   return headers;
 }
 
