@@ -75,6 +75,8 @@ The Supabase SQL file was successfully run in the Supabase SQL console after the
 
 ### Commit 3: Secure course API proxy functions
 
+Commit: `21df0f5 fix: secure course api proxy access`
+
 Files:
 
 - `edge-functions/search-golf-course/search-golf-course.ts`
@@ -94,6 +96,8 @@ Changes:
 - Added regression tests covering auth rejection, CORS handling, and request validation paths.
 
 ### Commit 4: Friend history projection and session resume validation
+
+Commit: `0febc20 fix: harden friend history and session resume`
 
 Files:
 
@@ -178,36 +182,24 @@ having count(*) > 1;
 
 ### 2. Secure the course API Edge Functions
 
+Status: Completed in Commit 3 (`21df0f5`), with a follow-up adjustment in `1752345`. See "Work Already Completed → Commit 3" above. The items below are recorded for context; only the residual sub-items at the end remain open.
+
 Files:
 
 - `edge-functions/search-golf-course/search-golf-course.ts`
 - `edge-functions/get-golf-course/get-golf-course.ts`
 
-Current risks to fix:
+Risks that have been resolved:
 
-- Both functions currently behave as public proxies and do not validate the caller's JWT.
-- CORS currently allows `*`.
-- The service-role key is used server-side, but requests are not tied to an authenticated user.
-- API usage tracking is observability-only and the read/increment sequence is race-prone.
-- Upstream error details and exception messages are returned to clients.
+- Both functions previously behaved as public proxies with no JWT validation. They now validate the Supabase access token against the auth `/user` endpoint and reject missing, malformed, expired, or invalid tokens before any lookup.
+- CORS previously allowed `*`. It is now restricted to a deployment-configured allowlist (env-derived plus a safe default set for local Vercel/dev origins), with OPTIONS still handled.
+- The service-role key is used server-side and requests are now tied to an authenticated caller.
+- API usage tracking was observability-only and race-prone. It is now gated by the atomic `public.consume_course_api_quota` RPC, and direct client access to `api_usage` is revoked.
+- Upstream error details and exception messages are no longer returned to clients; generic client-safe messages are returned instead.
+- `searchQuery` and `courseId` are validated (type, trimming, bounded length) before upstream requests.
+- Upstream fetches are guarded with `AbortSignal.timeout`.
 
-Required implementation:
-
-- Validate the Supabase access token using the Supabase auth endpoint or a supported server-side JWT verification approach.
-- Reject missing, malformed, expired, or invalid tokens.
-- Derive the user ID from verified claims, never from a request body field.
-- Restrict CORS to the real production web origin(s). Keep OPTIONS handling, but do not use `*` in production.
-- Validate `searchQuery` type and length. Trim it and impose a reasonable maximum.
-- Validate `courseId` as an allowed scalar type and reasonable length/range.
-- Add fetch timeouts using `AbortController`.
-- Bound upstream response size and normalize only expected fields.
-- Return generic client-facing errors. Log detailed upstream errors only in controlled server logs, without secrets or tokens.
-- Replace the current best-effort quota logic with an atomic database RPC or another concurrency-safe limiter.
-- Add per-user throttling and, where supported by the platform, IP/device abuse controls.
-- Cache course lookup results when practical to reduce third-party calls.
-- Confirm the service-role key exists only in Edge Function secrets and never in browser code or an eventual iOS bundle.
-
-Suggested atomic quota shape:
+Implemented atomic quota:
 
 ```sql
 create or replace function public.consume_course_api_quota(
@@ -219,7 +211,14 @@ set search_path to 'public'
 ...
 ```
 
-The function should lock or atomically upsert the current date row, increment only when under the limit, and return whether the caller may proceed. Do not implement this as an unlocked read followed by a separate update.
+This is live in `supabase_schema.sql`. It atomically upserts the current date row, increments only when under the limit, and returns whether the caller may proceed — not an unlocked read followed by a separate update.
+
+Residual sub-items still open:
+
+- Per-user course-API throttling. The current limiter is an app-wide daily quota; `round_lookup_attempts` throttles round lookups, not the course proxy, so an authenticated user is not individually rate-limited on course calls.
+- IP/device abuse controls, where supported by the platform.
+
+Note: result caching already exists — imported courses are cached in the `courses` table (`source = 'api'`) and re-searches reuse the cached copy, so no additional caching work is required here.
 
 ### 3. Minimize history and friend data
 
@@ -378,9 +377,9 @@ Use at least two registered accounts, one guest account, two separate browsers/d
 
 ## Recommended Next Task
 
-Implement Edge Function authentication and error redaction as the next isolated slice, because both course proxy functions are currently externally callable and can consume third-party API quota. Add a shared validation pattern or carefully duplicated inline logic consistent with the repository's single-file Edge Function deployment model. Then add integration tests for missing/invalid JWT, CORS, input limits, and upstream error redaction.
+Edge Function authentication and error redaction (Remaining Work #2) are done and merged, so the next isolated slice is **history and friend data minimization plus privacy controls** (Remaining Work #3). Commit 4 already fixed the friend-history RPC comparison and reduced its payload, but the broader decisions remain open: define whether completed rounds are private to participants, friend-visible, or governed by a round-level sharing setting; treat stakes as sensitive by default; return explicit projections instead of full snapshots; and add tests proving a friend cannot read arbitrary completed rounds or hidden participant data.
 
-After that, implement history/friend projection and privacy controls, then local session hardening, deployment headers, account deletion, and the complete security suite.
+After that, proceed in order: local session and storage hardening (#4), then the remaining database authorization review (#1), web deployment security headers (#6), in-app account deletion and data lifecycle (#7), and the complete security test suite (#8).
 
 ## Completion Criteria
 
