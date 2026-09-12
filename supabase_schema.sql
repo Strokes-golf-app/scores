@@ -928,3 +928,24 @@ create policy "delete own friendships" on friendships
 -- get-golf-course Edge Functions touch this table, using the
 -- service_role key, which bypasses RLS. Enabled here only so it's
 -- never accidentally left open if a policy is added later.
+-- Fix for RLS circular dependency: allows host to insert first player
+-- without needing to already exist as a player to read the round.
+create or replace function public.is_round_host(p_round_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from rounds where id = p_round_id and host_user_id = auth.uid()
+  );
+$$;
+
+drop policy if exists "host can pre-add players" on players;
+
+create policy "host can pre-add players" on players
+  for insert
+  with check (
+    public.is_round_host(round_id)
+  );
+
