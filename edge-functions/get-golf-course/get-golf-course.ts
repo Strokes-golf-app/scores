@@ -28,8 +28,14 @@ const API_USAGE_SCOPE_KEY = "app-wide";
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://app.example.com",
   "https://strokes-golf.vercel.app",
+  "https://strokes-golf.app",
+  "https://www.strokes-golf.app",
   "http://localhost:3000",
-  "http://localhost:8000"
+  "http://localhost:8000",
+  // Capacitor's WKWebView (iOS) serves the app from this fixed origin.
+  // Capacitor Android's equivalent is "https://localhost" — add it here too
+  // if/when an Android build ships.
+  "capacitor://localhost"
 ];
 
 function getDenoEnv() {
