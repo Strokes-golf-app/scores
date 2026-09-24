@@ -55,7 +55,9 @@
       <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-google-auth">
         <span class="btn-label">Continue with Google</span>
       </button>
-      <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-apple-auth">
+      <!-- Hidden until Apple Developer Program setup (Services ID, Xcode
+           capability) is done — remove `hidden` once that's wired up. -->
+      <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-apple-auth" hidden>
         <span class="btn-label">Continue with Apple</span>
       </button>
       <div class="divider"><span>or</span></div>
@@ -123,7 +125,9 @@
       <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-google">
         <span class="btn-label">Continue with Google</span>
       </button>
-      <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-apple">
+      <!-- Hidden until Apple Developer Program setup is done — see the
+           matching comment on #btn-apple-auth. -->
+      <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-apple" hidden>
         <span class="btn-label">Continue with Apple</span>
       </button>
       <div class="divider"><span>or</span></div>
