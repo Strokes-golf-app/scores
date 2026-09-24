@@ -16,6 +16,24 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
+	<!-- Google Sign-In: replace both placeholders below once the iOS OAuth
+	     client ID exists in Google Cloud Console (Credentials -> OAuth 2.0
+	     Client IDs -> type "iOS", bundle ID com.strokesgolf.app).
+	     GIDClientID takes the client ID as-is; the URL scheme takes the
+	     REVERSED form Google shows you on the same credential page
+	     (e.g. client ID "123-abc.apps.googleusercontent.com" reverses to
+	     "com.googleusercontent.apps.123-abc"). -->
+	<key>GIDClientID</key>
+	<string>584419088693-0g8mu05c1mb7a7l0685jdf2mcpbpfs7r.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.584419088693-0g8mu05c1mb7a7l0685jdf2mcpbpfs7r</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

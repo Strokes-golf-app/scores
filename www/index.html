@@ -52,6 +52,14 @@
         <button class="auth-tab" id="auth-tab-signup" type="button">Sign up</button>
       </div>
 
+      <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-google-auth">
+        <span class="btn-label">Continue with Google</span>
+      </button>
+      <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-apple-auth">
+        <span class="btn-label">Continue with Apple</span>
+      </button>
+      <div class="divider"><span>or</span></div>
+
       <form id="form-auth" class="auth-form">
         <div class="field">
           <label class="field-label" for="auth-name-field">Your name</label>
@@ -111,6 +119,12 @@
       <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-login">
         <span class="btn-label">Log in</span>
         <span class="btn-sub">Already have an account</span>
+      </button>
+      <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-google">
+        <span class="btn-label">Continue with Google</span>
+      </button>
+      <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-apple">
+        <span class="btn-label">Continue with Apple</span>
       </button>
       <div class="divider"><span>or</span></div>
       <button type="button" class="link-btn link-btn-center" id="btn-join-guest">Continue as guest</button>
@@ -946,6 +960,11 @@
 
   <!-- Supabase client library (loaded from their CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- Google/Apple sign-in JS SDKs (web only — the native iOS app uses
+       Capacitor plugins instead, see assets/auth.js). Harmless to also
+       load inside the native app; just never invoked there. -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" async></script>
   <script src="assets/supabase-config.js"></script>
   <script src="assets/golf.js"></script>
   <script src="assets/core.js"></script>

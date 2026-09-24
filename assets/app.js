@@ -278,6 +278,8 @@ function init() {
   document.getElementById('auth-tab-login').addEventListener('click', () => setAuthMode('login'));
   document.getElementById('auth-tab-signup').addEventListener('click', () => setAuthMode('signup'));
   document.getElementById('form-auth').addEventListener('submit', handleAuthSubmit);
+  document.getElementById('btn-google-auth').addEventListener('click', signInWithGoogle);
+  document.getElementById('btn-apple-auth').addEventListener('click', signInWithApple);
   document.getElementById('btn-logout').addEventListener('click', handleLogout);
 
   // ----- Feedback -----
@@ -328,6 +330,8 @@ function init() {
     setAuthMode('login');
     showScreen('screen-auth');
   });
+  document.getElementById('btn-join-google').addEventListener('click', signInWithGoogle);
+  document.getElementById('btn-join-apple').addEventListener('click', signInWithApple);
   document.getElementById('btn-join-guest').addEventListener('click', playAsGuest);
 
   document.getElementById('form-reset-password').addEventListener('submit', handleResetPasswordSubmit);
