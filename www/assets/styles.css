@@ -673,6 +673,21 @@ h3 {
   opacity: 0.85;
 }
 
+/* Social sign-in buttons (Google/Apple): icon + label side by side,
+   rather than .btn-lg's default stacked label/sub layout. */
+.btn-social.btn-lg {
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.btn-social .btn-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
 .link-btn {
   background: none;
   border: none;
