@@ -1,7 +1,7 @@
 // Supabase Edge Function: get-golf-course
 // Deploy this as a Supabase Edge Function named `get-golf-course`.
 // It expects a JSON body containing:
-//   { "courseId": 123 }
+//   { "courseId": "pmyjyz8s" }
 //
 // It uses the secret:
 //   GOLF_COURSE_API_KEY
@@ -73,16 +73,15 @@ export function buildCorsHeaders(requestOrigin?: string | null): Record<string, 
 
 export function validateCourseId(value: unknown) {
   if (typeof value === "number") {
-    if (!Number.isFinite(value) || value <= 0 || value > 9999999999) return null;
-    return Math.trunc(value);
+    if (!Number.isSafeInteger(value) || value <= 0) return null;
+    return value;
   }
 
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (!/^\d{1,10}$/.test(trimmed)) return null;
-    const num = Number(trimmed);
-    if (!Number.isFinite(num) || num <= 0 || num > 9999999999) return null;
-    return num;
+    // API IDs are opaque; preserve their string form for URL paths and storage.
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(trimmed)) return null;
+    return trimmed;
   }
 
   return null;
@@ -140,7 +139,7 @@ if (denoRuntime && typeof denoRuntime.serve === "function") {
 
     try {
       const apiKey = getDenoEnv()?.get("GOLF_COURSE_API_KEY");
-      const apiBaseUrl = getDenoEnv()?.get("GOLF_COURSE_API_BASE_URL") ?? "https://golf-api.com";
+      const apiBaseUrl = (getDenoEnv()?.get("GOLF_COURSE_API_BASE_URL") || "https://api.golfcourseapi.com").replace(/\/+$/, "");
       const supabaseUrl = getDenoEnv()?.get("SUPABASE_URL");
       const anonKey = getDenoEnv()?.get("SUPABASE_ANON_KEY") ?? getDenoEnv()?.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
       const serviceRoleKey = getDenoEnv()?.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -207,35 +206,16 @@ if (denoRuntime && typeof denoRuntime.serve === "function") {
       }
 
       const remoteData = await remoteResponse.json();
+      const normalizedCourse = normalizeCourseDetails(remoteData, courseId);
 
-      const course = (remoteData && typeof remoteData === "object" && remoteData.course && typeof remoteData.course === "object")
-        ? remoteData.course as Record<string, unknown>
-        : (remoteData ?? {}) as Record<string, unknown>;
-
-      const holeData = extractHoles(course.tees);
-
-      if (holeData.length === 0) {
+      if (!normalizedCourse) {
         return jsonResponse({
           error: "No hole data was returned by the Golf Course API",
           results: null
         }, 422, headers);
       }
 
-      const holes = holeData.map((hole, index) => ({
-        hole_number: index + 1,
-        par: Number(hole.par ?? 0),
-        handicap: Number(hole.handicap ?? hole.stroke_index ?? 0)
-      }));
-
-      return jsonResponse({
-        id: course.id ?? remoteData.id ?? courseId,
-        club_name: course.club_name ?? course.clubName ?? null,
-        course_name: course.course_name ?? course.name ?? null,
-        location: course.location ?? null,
-        hole_count: holes.length,
-        holes,
-        limited: false
-      }, 200, headers);
+      return jsonResponse(normalizedCourse, 200, headers);
     } catch {
       return jsonResponse({
         error: "Unexpected server error",
@@ -251,7 +231,7 @@ if (denoRuntime && typeof denoRuntime.serve === "function") {
 // tee sets) and returns the holes array from the first tee set that has one.
 // We don't care which tee/gender it comes from -- just need hole number,
 // par, and handicap, which are consistent across tee sets.
-function extractHoles(tees: unknown): Array<Record<string, unknown>> {
+export function extractHoles(tees: unknown): Array<Record<string, unknown>> {
   let found: Array<Record<string, unknown>> = [];
 
   const visit = (val: unknown) => {
@@ -264,14 +244,45 @@ function extractHoles(tees: unknown): Array<Record<string, unknown>> {
     }
     const obj = val as Record<string, unknown>;
     if (Array.isArray(obj.holes) && obj.holes.length > 0) {
-      found = obj.holes as Array<Record<string, unknown>>;
-      return;
+      found = obj.holes.filter((hole): hole is Record<string, unknown> =>
+        !!hole && typeof hole === "object" && !Array.isArray(hole)
+      );
+      if (found.length > 0) return;
     }
     for (const nested of Object.values(obj)) visit(nested);
   };
 
   visit(tees);
   return found;
+}
+
+// Deliberately project only fields the app consumes. New optional API fields
+// (such as coordinates or hole meters) are ignored unless explicitly adopted.
+export function normalizeCourseDetails(remoteData: unknown, fallbackCourseId: number | string) {
+  const root = remoteData && typeof remoteData === "object"
+    ? remoteData as Record<string, unknown>
+    : {};
+  const course = root.course && typeof root.course === "object"
+    ? root.course as Record<string, unknown>
+    : root;
+  const holesData = extractHoles(course.tees);
+  if (holesData.length === 0) return null;
+
+  const holes = holesData.map((hole, index) => ({
+    hole_number: index + 1,
+    par: Number(hole.par ?? 0),
+    handicap: Number(hole.handicap ?? hole.stroke_index ?? 0)
+  }));
+
+  return {
+    id: course.id ?? root.id ?? fallbackCourseId,
+    club_name: course.club_name ?? course.clubName ?? null,
+    course_name: course.course_name ?? course.name ?? null,
+    location: course.location ?? null,
+    hole_count: holes.length,
+    holes,
+    limited: false
+  };
 }
 
 async function consumeCourseApiQuota(supabaseUrl: string, serviceRoleKey: string, usageKey: string, dailyLimit: number) {
