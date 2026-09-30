@@ -93,7 +93,7 @@ create table if not exists public.courses (
   pars int[],
   stroke_index int[],
   source text not null default 'manual' check (source in ('manual', 'api')),
-  external_id int unique,
+  external_id text unique,
   api_club_name text,
   api_location jsonb,
   created_at timestamptz not null default now()

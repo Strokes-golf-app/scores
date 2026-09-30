@@ -69,7 +69,7 @@ Add columns to track the source of the course (manual vs. API imported):
 
 ```sql
 ALTER TABLE courses ADD COLUMN source TEXT DEFAULT 'manual' CHECK (source IN ('manual', 'api'));
-ALTER TABLE courses ADD COLUMN external_id INT UNIQUE; -- Golf Course API ID
+ALTER TABLE courses ADD COLUMN external_id TEXT UNIQUE; -- Golf Course API ID (opaque string)
 ALTER TABLE courses ADD COLUMN api_club_name TEXT;
 ALTER TABLE courses ADD COLUMN api_location JSONB; -- Full location data from API
 ```
@@ -112,7 +112,7 @@ export default async (req: Request) => {
   
   // Call Golf Course API
   const apiKey = Deno.env.get('GOLF_COURSE_API_KEY');
-  const response = await fetch(`https://golf-api.com/v1/search?search_query=${searchQuery}`, {
+  const response = await fetch(`https://api.golfcourseapi.com/v1/search?search_query=${searchQuery}`, {
     headers: { 'Authorization': `Key ${apiKey}` }
   });
   
@@ -171,7 +171,7 @@ export default async (req: Request) => {
   
   // Call Golf Course API
   const apiKey = Deno.env.get('GOLF_COURSE_API_KEY');
-  const response = await fetch(`https://golf-api.com/v1/courses/${courseId}`, {
+  const response = await fetch(`https://api.golfcourseapi.com/v1/courses/${courseId}`, {
     headers: { 'Authorization': `Key ${apiKey}` }
   });
   

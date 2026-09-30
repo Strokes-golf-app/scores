@@ -73,16 +73,15 @@ export function buildCorsHeaders(requestOrigin?: string | null): Record<string, 
 
 export function validateCourseId(value: unknown) {
   if (typeof value === "number") {
-    if (!Number.isFinite(value) || value <= 0 || value > 9999999999) return null;
-    return Math.trunc(value);
+    if (!Number.isSafeInteger(value) || value <= 0) return null;
+    return value;
   }
 
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (!/^\d{1,10}$/.test(trimmed)) return null;
-    const num = Number(trimmed);
-    if (!Number.isFinite(num) || num <= 0 || num > 9999999999) return null;
-    return num;
+    // API IDs are opaque; preserve their string form for URL paths and storage.
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(trimmed)) return null;
+    return trimmed;
   }
 
   return null;
@@ -147,7 +146,7 @@ if (denoRuntime && typeof denoRuntime.serve === "function") {
 
     try {
       const apiKey = getDenoEnv()?.get("GOLF_COURSE_API_KEY");
-      const apiBaseUrl = getDenoEnv()?.get("GOLF_COURSE_API_BASE_URL") ?? "https://golf-api.com";
+      const apiBaseUrl = (getDenoEnv()?.get("GOLF_COURSE_API_BASE_URL") || "https://api.golfcourseapi.com").replace(/\/+$/, "");
       const supabaseUrl = getDenoEnv()?.get("SUPABASE_URL");
       const anonKey = getDenoEnv()?.get("SUPABASE_ANON_KEY") ?? getDenoEnv()?.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
       const serviceRoleKey = getDenoEnv()?.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -220,13 +219,18 @@ if (denoRuntime && typeof denoRuntime.serve === "function") {
           ? remoteData.results
           : [];
 
-      const normalizedResults = rawResults.map((course: Record<string, unknown>) => ({
-        id: course.id ?? course.course_id ?? course.uuid ?? null,
-        club_name: course.club_name ?? course.clubName ?? null,
-        course_name: course.course_name ?? course.name ?? null,
-        location: course.location ?? null,
-        location_text: formatLocation(course.location)
-      }));
+      const normalizedResults = rawResults.flatMap((course: Record<string, unknown>) => {
+        const id = validateCourseId(course.id ?? course.course_id);
+        if (!id) return [];
+
+        return [{
+          id,
+          club_name: course.club_name ?? course.clubName ?? null,
+          course_name: course.course_name ?? course.name ?? null,
+          location: course.location ?? null,
+          location_text: formatLocation(course.location)
+        }];
+      });
 
       return jsonResponse({
         results: normalizedResults,

@@ -24,9 +24,11 @@ describe('course edge function security', () => {
 
   it('rejects invalid course ids', () => {
     expect(validateCourseId('')).toBeNull();
-    expect(validateCourseId('abc')).toBeNull();
-    expect(validateCourseId('123')).toBe(123);
+    expect(validateCourseId('pmyjyz8s')).toBe('pmyjyz8s');
+    expect(validateCourseId('abc/def')).toBeNull();
+    expect(validateCourseId('123')).toBe('123');
     expect(validateCourseId(456)).toBe(456);
+    expect(validateCourseId('12345678901')).toBe('12345678901');
   });
 
   it('rejects missing or invalid bearer tokens', async () => {
