@@ -74,7 +74,7 @@ function mapRoundRow(row, players) {
     betsEnabled: row.bets_enabled === true, stakes: row.stakes || {},
     inviteExpiresAt: row.invite_expires_at, inviteRevoked: row.invite_revoked === true,
     isTournament: row.is_tournament === true,
-    teamSize: row.team_size != null ? Number(row.team_size) : null,
+    teamCount: row.team_count != null ? Number(row.team_count) : null,
     tournamentMatches: row.tournament_matches || null,
     players,
   };
