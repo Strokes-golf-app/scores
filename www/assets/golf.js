@@ -217,28 +217,24 @@ const Golf = (() => {
     return Math.min(...values);
   }
 
-  // Auto-assign players to teams of `teamSize` (2 or 4) so team average
-  // handicaps come out close. Creates ceil(count / teamSize) teams — so an
-  // uneven count still assigns everyone, with team sizes differing by at most
-  // one. Greedy: hardest players first, each dealt to the eligible team with
-  // the fewest members (ties → lowest handicap sum), which keeps sizes even and
-  // pushes the averages together. Returns { assignments: { id: teamNo }, teams }
-  // (teams: 0 when fewer than two teams are possible — the caller can't proceed).
-  function balanceTeamsByHandicap(players, teamSize) {
-    const size = teamSize === 4 ? 4 : 2;
+  // Auto-assign players into exactly `numTeams` teams so team average handicaps
+  // come out close, sizes differing by at most one. Greedy: hardest players
+  // first, each dealt to the team with the fewest members so far (ties → lowest
+  // handicap sum) — this self-balances sizes with no explicit per-team cap.
+  // Returns { assignments: { id: teamNo }, teams } (teams: 0 when unsatisfiable:
+  // fewer than two players, fewer than two teams requested, or more teams
+  // requested than there are players to fill them).
+  function balanceTeamsByHandicap(players, numTeams) {
     const list = (players || []).map(p => ({ id: p.id, h: Number(p.handicap) || 0 }));
     const count = list.length;
-    const numTeams = Math.ceil(count / size);
-    if (count < 2 || numTeams < 2) return { assignments: {}, teams: 0 };
+    if (count < 2 || numTeams < 2 || count < numTeams) return { assignments: {}, teams: 0 };
 
     list.sort((a, b) => b.h - a.h || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
     const teams = Array.from({ length: numTeams }, () => ({ members: [], sum: 0 }));
     list.forEach(pl => {
-      let best = -1;
-      for (let i = 0; i < numTeams; i++) {
-        if (teams[i].members.length >= size) continue;
-        if (best === -1) { best = i; continue; }
+      let best = 0;
+      for (let i = 1; i < numTeams; i++) {
         const b = teams[best], t = teams[i];
         if (t.members.length < b.members.length ||
             (t.members.length === b.members.length && t.sum < b.sum)) best = i;

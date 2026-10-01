@@ -758,16 +758,14 @@
 
       <div class="field tournament-only" id="tournament-teams-field" hidden>
         <label class="field-label">Teams</label>
-        <p class="field-hint">Pick a team size, then put every player on a team. Mark one person per team as captain — captains can enter scores for their whole team.</p>
-        <div class="segmented" id="team-size">
-          <label class="segmented-option">
-            <input type="radio" name="team-size" value="2" checked>
-            <span>Teams of 2</span>
-          </label>
-          <label class="segmented-option">
-            <input type="radio" name="team-size" value="4">
-            <span>Teams of 4</span>
-          </label>
+        <p class="field-hint">Choose how many teams to split the field into, then put every player on a team. Mark one person per team as captain — captains can enter scores for their whole team.</p>
+        <div class="team-count-row">
+          <span class="team-count-label">Number of teams</span>
+          <div class="team-count-entry">
+            <button type="button" class="team-count-btn team-count-minus" aria-label="Decrease number of teams">−</button>
+            <span class="team-count-number" id="team-count-number">2</span>
+            <button type="button" class="team-count-btn team-count-plus" aria-label="Increase number of teams">+</button>
+          </div>
         </div>
         <label class="match-handicap-toggle">
           <input type="checkbox" id="auto-assign-teams">
