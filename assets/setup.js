@@ -257,15 +257,31 @@ function collectSixesPlayers() {
 // ---------------------------------------------------------
 // Tournament setup — team assignment and manual match pairings.
 // A tournament reuses the whole setup screen; these helpers drive the
-// tournament-only fields. Up to 16 players on teams of 2 (max 8 teams) or
-// 4 (max 4 teams); every player must be on a team.
+// tournament-only fields. Up to 16 players, split across a host-chosen
+// number of teams (2-16); every player must be on a team.
 // ---------------------------------------------------------
-function tournamentTeamSize() {
-  const checked = document.querySelector('#team-size input:checked');
-  return checked && checked.value === '4' ? 4 : 2;
-}
 function tournamentTeamCount() {
-  return tournamentTeamSize() === 4 ? 4 : 8;
+  return state.setupTeamCount || 2;
+}
+
+const TEAM_COUNT_MIN = 2;
+const TEAM_COUNT_MAX = 16;
+
+// Clamps and applies a +/-1 change from the team-count stepper, then
+// re-scopes the team/pairing selects and re-balances if auto-assign is on.
+function setTeamCount(delta) {
+  state.setupTeamCount = Math.max(TEAM_COUNT_MIN, Math.min(TEAM_COUNT_MAX, (state.setupTeamCount || 2) + delta));
+  renderTeamCountStepper();
+  renderTeamAssignList();
+  renderTournamentMatchList();
+  applyAutoAssign();
+}
+
+function renderTeamCountStepper() {
+  const el = document.getElementById('team-count-number');
+  if (el) el.textContent = String(state.setupTeamCount || 2);
+  document.querySelector('.team-count-minus')?.toggleAttribute('disabled', (state.setupTeamCount || 2) <= TEAM_COUNT_MIN);
+  document.querySelector('.team-count-plus')?.toggleAttribute('disabled', (state.setupTeamCount || 2) >= TEAM_COUNT_MAX);
 }
 
 function isAutoAssign() {
@@ -274,18 +290,18 @@ function isAutoAssign() {
 
 // Fills the team selects with a handicap-balanced auto-assignment (leaving them
 // editable so the organizer can tweak). Runs only when the toggle is switched
-// on or the team size changes while it's on — never on a plain re-render — so
+// on or the team count changes while it's on — never on a plain re-render — so
 // manual edits and typed handicaps aren't clobbered. Shows a hint instead when
-// there aren't enough players to form two teams.
+// there aren't enough players to fill every team.
 function applyAutoAssign() {
   const hint = document.getElementById('auto-assign-hint');
   if (!isAutoAssign()) { if (hint) hint.hidden = true; return; }
 
   const named = state.setupPlayers.filter(p => p.name.trim());
-  const { assignments, teams } = Golf.balanceTeamsByHandicap(named, tournamentTeamSize());
+  const { assignments, teams } = Golf.balanceTeamsByHandicap(named, tournamentTeamCount());
   if (!teams) {
     if (hint) {
-      hint.textContent = `Add at least ${tournamentTeamSize() * 2} players to auto-assign into teams of ${tournamentTeamSize()}.`;
+      hint.textContent = `Add at least ${tournamentTeamCount()} players to auto-assign into ${tournamentTeamCount()} teams.`;
       hint.hidden = false;
     }
     return;
@@ -327,7 +343,7 @@ function syncTournamentUI() {
 
 // Team-assignment list: each player gets a team select (1..N) and a captain
 // checkbox. Preserves picks across re-renders by player id; a team pick above
-// the current max (after shrinking team size) is dropped.
+// the current max (after lowering the team count) is dropped.
 function renderTeamAssignList() {
   const wrap = document.getElementById('team-assign-list');
   if (!wrap) return;
@@ -369,12 +385,12 @@ function renderTeamAssignList() {
 }
 
 // Reads team assignments into { assignments: {id: {team, captain}}, error }.
-// Enforces: ≤16 players, every named player on a team, ≥2 teams, and no team
-// larger than the chosen size (teams may be smaller — an odd player count
-// leaves one team short). Captains are optional (a team with none simply has no
-// one who can enter teammates' scores).
+// Enforces: ≤16 players, every named player on a team, and ≥2 teams used.
+// Team sizes are not capped — the host's chosen team count determines how
+// many teams exist; auto-assign (and manual picks) may leave teams uneven
+// by design. Captains are optional (a team with none simply has no one who
+// can enter teammates' scores).
 function collectTeams() {
-  const size = tournamentTeamSize();
   const players = state.setupPlayers.filter(p => p.name.trim());
   if (players.length > 16) return { assignments: {}, error: 'A tournament can have at most 16 players' };
   const validIds = new Set(players.map(p => p.id));
@@ -394,11 +410,6 @@ function collectTeams() {
   if (unassigned > 0) return { assignments: {}, error: 'Every player must be assigned to a team' };
   const teamNos = Object.keys(byTeam);
   if (teamNos.length < 2) return { assignments: {}, error: 'A tournament needs at least two teams' };
-  for (const t of teamNos) {
-    if (byTeam[t].length > size) {
-      return { assignments: {}, error: `Teams of ${size} can't have more than ${size} players — Team ${t} has ${byTeam[t].length}` };
-    }
-  }
   return { assignments, error: '' };
 }
 
@@ -496,8 +507,8 @@ function syncModeConfigFields() {
 async function resetSetupScreen(isTournament = false) {
   state.setupIsTournament = !!isTournament;
   state.tournamentPairings = [];
-  const teamSize2 = document.querySelector('#team-size input[value="2"]');
-  if (teamSize2) teamSize2.checked = true;
+  state.setupTeamCount = 2;
+  renderTeamCountStepper();
   const autoAssign = document.getElementById('auto-assign-teams');
   if (autoAssign) autoAssign.checked = false;
   document.getElementById('auto-assign-hint').hidden = true;
@@ -667,8 +678,8 @@ async function openRoundEditor() {
   }
 
   if (state.setupIsTournament) {
-    const sizeRadio = document.querySelector(`#team-size input[value="${r.teamSize === 4 ? '4' : '2'}"]`);
-    if (sizeRadio) sizeRadio.checked = true;
+    state.setupTeamCount = r.teamCount || 2;
+    renderTeamCountStepper();
     const autoAssign = document.getElementById('auto-assign-teams');
     if (autoAssign) autoAssign.checked = false;
     document.getElementById('auto-assign-hint').hidden = true;
@@ -809,7 +820,7 @@ async function saveRoundEdits() {
 async function saveTournamentRoundEdits(roundId, courseName, modes, betsEnabled, stakes) {
   const teamRes = collectTeams();
   if (teamRes.error) { showToast(teamRes.error); return; }
-  const teamSize = tournamentTeamSize();
+  const teamCount = tournamentTeamCount();
   const usedTeams = new Set(Object.values(teamRes.assignments).map(a => a.team));
   const matchRes = collectTournamentMatches(usedTeams);
   if (matchRes.error) { showToast(matchRes.error); return; }
@@ -854,7 +865,7 @@ async function saveTournamentRoundEdits(roundId, courseName, modes, betsEnabled,
         modes,
         stakes,
         bets_enabled: betsEnabled,
-        team_size: teamSize,
+        team_count: teamCount,
         tournament_matches: matchRes.matches,
         match_use_handicap: matchUseHandicap,
       })
@@ -1518,12 +1529,12 @@ async function createRound() {
   // Tournament: teams (assigned by temp id) and optional manual match pairings
   // (by team number). These replace the single-round team assignments below.
   const isTournament = !!state.setupIsTournament;
-  let teamAssignments = {}, teamSize = null, tournamentMatches = [], tournamentMatchUseHandicap = true;
+  let teamAssignments = {}, teamCount = null, tournamentMatches = [], tournamentMatchUseHandicap = true;
   if (isTournament) {
     const t = collectTeams();
     if (t.error) { showToast(t.error); return; }
     teamAssignments = t.assignments;
-    teamSize = tournamentTeamSize();
+    teamCount = tournamentTeamCount();
     const usedTeams = new Set(Object.values(teamAssignments).map(a => a.team));
     const m = collectTournamentMatches(usedTeams);
     if (m.error) { showToast(m.error); return; }
@@ -1606,7 +1617,7 @@ async function createRound() {
         bets_enabled: state.setupBetsEnabled === true,
         stakes: state.setupBetsEnabled ? (state.setupStakes || {}) : {},
         is_tournament: isTournament,
-        team_size: teamSize,
+        team_count: teamCount,
       });
 
     if (roundErr) throw roundErr;

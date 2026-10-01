@@ -21,6 +21,7 @@ const state = {
   activeViewRoundsTab: 'completed', // 'completed' or 'inprogress' — which tab is showing on the View Rounds screen
   setupPlayers: [],
   setupIsTournament: false,         // whether the setup screen is building a tournament (teams, up to 16 players)
+  setupTeamCount: 2,                 // number of teams chosen on the tournament setup screen's team-count stepper
   setupBetsEnabled: false,          // whether the setup screen's Bets toggle is on
   setupStakes: {},                  // { mode: dollars } entered on the stakes screen before a round exists
   stakesContext: 'setup',           // 'setup' or 'lobby' — where the stakes screen was opened from

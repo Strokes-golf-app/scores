@@ -46,7 +46,7 @@ create table if not exists public.rounds (
   sixes_format text,
   sixes_use_handicap boolean,
   is_tournament boolean not null default false,
-  team_size smallint,
+  team_count smallint,
   tournament_matches jsonb
 );
 

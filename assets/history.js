@@ -210,7 +210,7 @@ function reconstructRound(row) {
     betsEnabled: snap.bets_enabled === true,
     stakes: snap.stakes || {},
     isTournament: snap.is_tournament === true,
-    teamSize: snap.team_size != null ? Number(snap.team_size) : null,
+    teamCount: snap.team_count != null ? Number(snap.team_count) : null,
     tournamentMatches: snap.tournament_matches || null,
     status: row.status || 'completed',
     players,

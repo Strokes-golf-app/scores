@@ -2487,6 +2487,64 @@ input::placeholder {
   text-align: center;
 }
 
+/* ---------- Team-count stepper ---------- */
+.team-count-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0 1rem;
+}
+
+.team-count-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.team-count-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.team-count-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  font-size: 30px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink-faint);
+}
+
+.team-count-btn:active {
+  transform: scale(0.94);
+}
+
+.team-count-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.team-count-number {
+  font-family: var(--font-mono);
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  min-width: 56px;
+  text-align: center;
+}
+
 .end-round-wrap {
   padding: 0.25rem 0 0.5rem;
 }
