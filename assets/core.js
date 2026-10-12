@@ -213,3 +213,13 @@ function parseHandicap(val) {
 function isHost() {
   return !!(state.round && state.myPlayerId && state.myPlayerId === state.round.hostId);
 }
+
+// True inside the native iOS app (Capacitor's WKWebView), false on the
+// plain web build. Capacitor's bridge auto-injects window.Capacitor (and
+// window.Capacitor.Plugins) directly into the WKWebView regardless of
+// this app having no bundler — every native-vs-web branch in this
+// codebase (sign-in, GPS, offline storage) checks this upfront rather
+// than trying a native plugin and catching a failure.
+function isNativeApp() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}

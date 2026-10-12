@@ -18,6 +18,8 @@ function init() {
     initializeSetupCourseSearch();
   }
 
+  initGpsFeature();
+
   document.getElementById('btn-new-round').addEventListener('click', async () => {
     state.pendingNewIsTournament = false;
     const inProgressRounds = await getInProgressRounds('round');

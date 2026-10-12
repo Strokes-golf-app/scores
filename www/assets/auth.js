@@ -160,15 +160,12 @@ async function playAsGuest() {
 // (and window.Capacitor.Plugins) directly into the WKWebView regardless of
 // this app having no bundler — that part works identically to every other
 // Capacitor plugin call in this codebase. On the plain web build nothing
-// injects it, so isNativeApp() is false there and we talk to Google's/
-// Apple's own web JS SDKs directly instead of going through the plugins'
-// web fallbacks (Google's redirects the whole page and never resolves;
-// Apple's works but ships as an ES module, which this no-bundler app can't
-// import — so we mirror what it does internally by hand below).
-
-function isNativeApp() {
-  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-}
+// injects it, so isNativeApp() (core.js) is false there and we talk to
+// Google's/Apple's own web JS SDKs directly instead of going through the
+// plugins' web fallbacks (Google's redirects the whole page and never
+// resolves; Apple's works but ships as an ES module, which this
+// no-bundler app can't import — so we mirror what it does internally by
+// hand below).
 
 // SHA-256 hex digest, used only for Apple's nonce (see signInWithApple).
 async function sha256Hex(value) {
