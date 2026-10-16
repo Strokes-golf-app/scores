@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
-    "sync:ios": "rm -rf www/assets www/fonts www/scripts && cp -R assets fonts scripts index.html strokes_golf_logo_only.png Strokes_Golf_Logo_Transparent.png www/ && npx cap copy ios"
+    "sync:ios": "rm -rf www/assets www/fonts www/scripts && cp -R assets fonts scripts index.html privacy.html strokes_golf_logo_only.png Strokes_Golf_Logo_Transparent.png www/ && npx cap copy ios"
   },
   "devDependencies": {
     "vitest": "^2.1.8"
