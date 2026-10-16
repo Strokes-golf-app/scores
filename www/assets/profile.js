@@ -143,6 +143,53 @@ async function saveProfile(e) {
   showScreen('screen-home');
 }
 
+async function deleteAccount() {
+  const button = document.getElementById('btn-delete-account');
+  const errorEl = document.getElementById('delete-account-error');
+  errorEl.hidden = true;
+
+  if (!window.confirm(
+    'Permanently delete your account? This cannot be undone. Your hosted active rounds, profile, friendships, and your scorelines in other rounds will be deleted.'
+  )) {
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Deleting account…';
+
+  try {
+    const { error } = await supabaseClient.functions.invoke('delete-account', { body: {} });
+    if (error) {
+      errorEl.textContent = 'Account deletion did not finish. Your account may still be active; you can safely retry. If the problem continues, contact support.';
+      errorEl.hidden = false;
+      return;
+    }
+
+    const { error: signOutError } = await supabaseClient.auth.signOut({ scope: 'local' });
+    if (signOutError) console.error('Local sign-out failed after account deletion');
+
+    clearPendingJoin();
+    clearPendingProfileSetup();
+    state.pendingJoinCode = null;
+    state.pendingSignupName = null;
+    state.pendingVerifyEmail = null;
+    document.getElementById('form-profile').reset();
+    document.getElementById('auth-user-email').textContent = '';
+    document.getElementById('drawer-user-name').textContent = '';
+    document.getElementById('drawer-user-handle').textContent = '';
+    document.getElementById('drawer-user-hcp').textContent = '';
+    goHome();
+    showScreen('screen-auth');
+    showToast('Account deleted');
+  } catch {
+    errorEl.textContent = 'Could not complete account deletion. Your account may still be active; you can safely retry. If the problem continues, contact support.';
+    errorEl.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Delete my account';
+  }
+}
+
 // Updates the identity block at the top of the home drawer (above the
 // separator) to the signed-in user's display_name, with @username and
 // handicap on their own lines below. All hidden for guests or before a
