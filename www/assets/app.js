@@ -58,6 +58,7 @@ function init() {
   document.getElementById('btn-manage-profile').addEventListener('click', openProfileScreen);
   document.getElementById('btn-profile-back').addEventListener('click', () => showScreen('screen-home'));
   document.getElementById('form-profile').addEventListener('submit', saveProfile);
+  document.getElementById('btn-delete-account').addEventListener('click', deleteAccount);
 
   document.getElementById('btn-friends').addEventListener('click', openFriendsScreen);
   document.getElementById('btn-friends-back').addEventListener('click', () => showScreen('screen-home'));

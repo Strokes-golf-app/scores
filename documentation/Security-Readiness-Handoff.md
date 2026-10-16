@@ -4,7 +4,7 @@
 
 This document is a standalone handoff for continuing the security work on the Strokes Golf application. It is written so another coding agent or chat can resume implementation without needing the prior conversation.
 
-The application is currently a static HTML/CSS/JavaScript app backed by Supabase. It is not yet an iOS project. The eventual App Store packaging decision is still open: Capacitor/WebView versus a native Swift/SwiftUI client.
+The application is a static HTML/CSS/JavaScript app backed by Supabase and packaged for iOS with Capacitor. The repository includes an Xcode project; its release behavior and App Store readiness still require device testing.
 
 ## Repository Context
 
@@ -309,14 +309,27 @@ Decide where headers live for the deployed static host, such as Vercel configura
 
 ### 7. Implement account deletion and data lifecycle
 
-Required product/backend work:
+The account deletion flow is implemented in the app, `sql-scripts/account-deletion.sql`,
+`supabase_schema.sql`, and the `delete-account` Edge Function. It must be deployed and
+verified against staging before it is treated as production-ready.
 
-- Add an authenticated account deletion operation or documented secure server workflow.
-- Delete or anonymize `user_profiles`, owned courses, player membership records, friendships, and historical records according to the retention policy.
-- Decide what happens to rounds hosted by a deleted account.
-- Decide whether anonymous guest users' live round data is retained, deleted at archive, or anonymized.
-- Ensure foreign keys and archive snapshots do not preserve more personal data than intended.
-- Provide in-app account deletion, not merely an email request, for App Store readiness.
+Implemented deletion behavior:
+
+- Hosted active rounds, players, and scores are deleted.
+- A non-host's active-round player and scores are removed, along with their team,
+  match, and tournament references.
+- Completed rounds remain, but the user's participant ID, player snapshot, scoreline,
+  and identity references are removed.
+- The profile and friendships are deleted; contributed courses remain with a null owner.
+- The Edge Function verifies the caller, then performs server-only account-data
+  cleanup before deleting the Supabase Auth user.
+
+Required rollout and policy work:
+
+- Apply and verify the migration and deploy the Edge Function on staging, then production.
+- Confirm anonymous guest accounts are not offered this deletion flow.
+- Check foreign keys, archived snapshots, and tournament configuration for remaining identity references.
+- Publish privacy and support information that matches the actual behavior and backup practices.
 - Document data export and support procedures if required by the final jurisdictions and product policy.
 
 ### 8. Add a real security test suite
@@ -377,7 +390,7 @@ Use at least two registered accounts, one guest account, two separate browsers/d
 
 ## Recommended Next Task
 
-Edge Function authentication and error redaction (Remaining Work #2) are done and merged, so the next isolated slice is **history and friend data minimization plus privacy controls** (Remaining Work #3). Commit 4 already fixed the friend-history RPC comparison and reduced its payload, but the broader decisions remain open: define whether completed rounds are private to participants, friend-visible, or governed by a round-level sharing setting; treat stakes as sensitive by default; return explicit projections instead of full snapshots; and add tests proving a friend cannot read arbitrary completed rounds or hidden participant data.
+Edge Function authentication and error redaction (Remaining Work #2) are done and merged. Account deletion is implemented but still needs staging verification and deployment. The next isolated slice is **history and friend data minimization plus privacy controls** (Remaining Work #3). Commit 4 already fixed the friend-history RPC comparison and reduced its payload, but the broader decisions remain open: define whether completed rounds are private to participants, friend-visible, or governed by a round-level sharing setting; treat stakes as sensitive by default; return explicit projections instead of full snapshots; and add tests proving a friend cannot read arbitrary completed rounds or hidden participant data.
 
 After that, proceed in order: local session and storage hardening (#4), then the remaining database authorization review (#1), web deployment security headers (#6), in-app account deletion and data lifecycle (#7), and the complete security test suite (#8).
 
