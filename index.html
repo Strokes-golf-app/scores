@@ -4,6 +4,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <!-- Minimal allowlist, net-new as of the GPS/course-map feature — no
+       CSP existed before this. OpenGolfAPI is deliberately absent from
+       connect-src: the browser never talks to it directly, only through
+       our own Edge Functions. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com https://appleid.cdn-apple.com https://cdn.apple-mapkit.com;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https://cdn.apple-mapkit.com https://*.mzstatic.com https://*.apple.com;
+    connect-src 'self' https://*.supabase.co https://cdn.apple-mapkit.com https://*.apple-mapkit.com https://accounts.google.com https://appleid.apple.com;
+    frame-src https://appleid.apple.com https://accounts.google.com;
+    font-src 'self' data:;
+  ">
   <title>STROKES GOLF — round tracker</title>
   <link rel="preload" href="fonts/cormorant-garamond-v21-latin-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/styles.css">
@@ -256,6 +269,9 @@
         </button>
         <button class="drawer-item" id="btn-feedback" type="button">
           <span class="drawer-item-icon">💬</span> Send Feedback
+        </button>
+        <button class="drawer-item" id="btn-about-credits" type="button">
+          <span class="drawer-item-icon">ℹ️</span> About &amp; Credits
         </button>
       </nav>
       <div class="drawer-footer">
@@ -974,12 +990,110 @@
           <span class="round-footer-icon">📋</span>
           <span class="round-footer-label">Share round</span>
         </button>
+        <button class="round-footer-btn" id="btn-round-gps" type="button" aria-label="GPS yardages and course layout">
+          <span class="round-footer-icon">📍</span>
+          <span class="round-footer-label">GPS</span>
+        </button>
         <button class="round-footer-btn round-footer-btn-danger" id="btn-cancel-round" type="button" aria-label="Cancel round" hidden>
           <span class="round-footer-icon">🚫</span>
           <span class="round-footer-label">Cancel</span>
         </button>
       </div>
     </footer>
+  </section>
+
+  <!-- ============ SCREEN: GPS COURSE SEARCH ============ -->
+  <section id="screen-gps-search" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-gps-search-back" aria-label="Back">←</button>
+      <h2 class="topbar-title">Find your course</h2>
+      <span class="topbar-spacer"></span>
+    </header>
+
+    <div class="screen-body">
+      <div class="field">
+        <label class="field-label" for="gps-search-input">Search by name</label>
+        <input type="text" id="gps-search-input" placeholder="e.g. Pebble Beach Golf Links" autocomplete="off">
+      </div>
+      <button class="btn btn-secondary btn-block" id="btn-gps-search-submit" type="button">Search</button>
+      <button class="btn btn-secondary btn-block" id="btn-gps-search-location" type="button">📍 Search near my location</button>
+      <p class="field-hint" id="gps-search-hint" hidden></p>
+      <div id="gps-search-results" class="gps-search-results"></div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN: GPS YARDAGES / COURSE LAYOUT ============ -->
+  <section id="screen-course-map" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-course-map-back" aria-label="Back">←</button>
+      <div class="topbar-title-wrap">
+        <h2 class="topbar-title" id="course-map-name">Course</h2>
+        <p class="topbar-sub" id="course-map-sub">Choose a course to begin</p>
+      </div>
+      <span class="topbar-spacer"></span>
+    </header>
+
+    <div class="screen-body">
+      <div class="gps-status-row">
+        <span class="gps-status-chip" id="gps-status-chip">GPS off</span>
+        <button class="link-btn" id="btn-gps-practice-toggle" type="button">Practice mode</button>
+      </div>
+
+      <div class="hole-nav">
+        <button class="icon-btn" id="btn-gps-hole-prev" aria-label="Previous hole">←</button>
+        <div class="hole-nav-center">
+          <p class="hole-nav-label">Hole</p>
+          <p class="hole-nav-number" id="gps-hole-number">1</p>
+        </div>
+        <button class="icon-btn" id="btn-gps-hole-next" aria-label="Next hole">→</button>
+      </div>
+
+      <div class="gps-yardage-row">
+        <div class="gps-yardage-cell">
+          <span class="gps-yardage-label">Front</span>
+          <span class="gps-yardage-number" id="gps-yardage-front">—</span>
+        </div>
+        <div class="gps-yardage-cell gps-yardage-cell-center">
+          <span class="gps-yardage-label">Center</span>
+          <span class="gps-yardage-number" id="gps-yardage-center">—</span>
+        </div>
+        <div class="gps-yardage-cell">
+          <span class="gps-yardage-label">Back</span>
+          <span class="gps-yardage-number" id="gps-yardage-back">—</span>
+        </div>
+      </div>
+      <p class="gps-hazard-line" id="gps-hazard-line" hidden></p>
+
+      <div class="course-map-wrap">
+        <div id="course-map-mapkit" class="course-map-mapkit" hidden></div>
+        <canvas id="course-map-canvas" class="course-map-canvas" width="600" height="400"></canvas>
+        <p class="field-hint" id="course-map-fallback-note" hidden>Showing an offline schematic — connect to see satellite imagery.</p>
+      </div>
+
+      <button class="btn btn-secondary btn-block" id="btn-gps-change-course" type="button">Change course</button>
+
+      <p class="course-map-attribution" id="course-map-attribution">© OpenStreetMap contributors (ODbL 1.0)</p>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN: ABOUT / CREDITS ============ -->
+  <section id="screen-about-credits" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-about-credits-back" aria-label="Back">←</button>
+      <h2 class="topbar-title">About &amp; Credits</h2>
+      <span class="topbar-spacer"></span>
+    </header>
+
+    <div class="screen-body">
+      <p class="field-label">Course data</p>
+      <p class="field-hint">© OpenStreetMap contributors (ODbL 1.0) — openstreetmap.org/copyright, via OpenGolfAPI.</p>
+      <p class="field-label">Weather &amp; climate</p>
+      <p class="field-hint">Open-Meteo.com (CC BY 4.0)</p>
+      <p class="field-label">Descriptions</p>
+      <p class="field-hint">Wikipedia (CC BY-SA 4.0)</p>
+      <p class="field-label">Contact &amp; social</p>
+      <p class="field-hint">Foursquare / Overture (Apache 2.0)</p>
+    </div>
   </section>
 
   <!-- Supabase client library (loaded from their CDN) -->
@@ -989,10 +1103,18 @@
        load inside the native app; just never invoked there. -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" async></script>
+  <!-- Exact-pinned (verified live, not the floating 5.x.x resolver) so an
+       Apple-side update can't silently change the API surface
+       course-map.js codes against. Bump deliberately, not automatically. -->
+  <script src="https://cdn.apple-mapkit.com/mk/5.81.65/mapkit.js" crossorigin async></script>
   <script src="assets/supabase-config.js"></script>
   <script src="assets/golf.js"></script>
+  <script src="assets/gps-geometry.js"></script>
   <script src="assets/core.js"></script>
   <script src="assets/courses.js"></script>
+  <script src="assets/course-cache.js"></script>
+  <script src="assets/course-map.js"></script>
+  <script src="assets/gps-round.js"></script>
   <script src="assets/auth.js"></script>
   <script src="assets/setup.js"></script>
   <script src="assets/lobby.js"></script>
