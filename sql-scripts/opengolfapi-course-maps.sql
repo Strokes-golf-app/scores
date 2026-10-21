@@ -121,7 +121,12 @@ begin
 end;
 $$;
 
-revoke execute on function public.replace_golf_course_features(uuid, jsonb) from anon, authenticated;
+-- Revoking from anon/authenticated alone leaves Postgres's default
+-- PUBLIC execute grant in place, so unauthenticated callers could still
+-- invoke this SECURITY DEFINER function via PostgREST. Revoke from
+-- PUBLIC explicitly and grant only to service_role.
+revoke all on function public.replace_golf_course_features(uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.replace_golf_course_features(uuid, jsonb) to service_role;
 
 -- ===========================================================
 -- Row-level security

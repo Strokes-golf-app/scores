@@ -2645,6 +2645,12 @@ input::placeholder {
   margin-top: 0.75rem;
 }
 
+.gps-downloaded-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
 .gps-search-result {
   display: flex;
   flex-direction: column;

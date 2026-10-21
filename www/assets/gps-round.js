@@ -185,6 +185,59 @@ async function openGpsSearchScreen() {
   if (results) results.innerHTML = '';
   if (input) input.value = '';
   showScreen('screen-gps-search');
+  renderDownloadedCoursesList();
+}
+
+// Lets a previously-downloaded course be reopened with no network call
+// at all — the offline counterpart to the online search above. Reads
+// each cached payload just for display (name/city/state); the actual
+// course+features are reloaded properly by openCachedGpsCourse on tap.
+async function renderDownloadedCoursesList() {
+  const section = document.getElementById('gps-downloaded-section');
+  const listEl = document.getElementById('gps-downloaded-list');
+  if (!section || !listEl) return;
+
+  const ids = await CourseCache.listCachedCourses();
+  if (!ids.length) {
+    section.hidden = true;
+    listEl.innerHTML = '';
+    return;
+  }
+
+  const entries = await Promise.all(ids.map(async (id) => ({ id, cached: await CourseCache.readCachedCourse(id) })));
+  const usable = entries.filter((e) => e.cached && e.cached.course);
+
+  if (!usable.length) {
+    section.hidden = true;
+    listEl.innerHTML = '';
+    return;
+  }
+
+  section.hidden = false;
+  listEl.innerHTML = usable.map(({ id, cached }) => `
+    <button class="gps-search-result" type="button" data-cached-external-id="${escapeAttr(id)}">
+      <span class="gps-search-result-name">${escapeHtml(cached.course.courseName || 'Unnamed course')}</span>
+      <span class="gps-search-result-meta">${escapeHtml([cached.course.city, cached.course.state].filter(Boolean).join(', '))}</span>
+    </button>
+  `).join('');
+
+  listEl.querySelectorAll('.gps-search-result').forEach((btn) => {
+    btn.addEventListener('click', () => openCachedGpsCourse(btn.dataset.cachedExternalId));
+  });
+}
+
+// Opens a course entirely from the offline cache — no search-course or
+// import-course call, so this works with no connection at all.
+async function openCachedGpsCourse(externalId) {
+  const loaded = await loadGpsCourseFromCache(externalId);
+  if (!loaded) {
+    showToast('That downloaded course could not be opened — try searching again.');
+    return;
+  }
+  practicePosition = null;
+  showScreen('screen-course-map');
+  await refreshCourseMapScreen();
+  if (!isPracticeMode) startGpsWatch();
 }
 
 async function runGpsCourseSearch(query, lat, lng) {
