@@ -1,5 +1,5 @@
 /* ===========================================================
-   course-map.js — MapKit JS satellite view with polygon overlays,
+   course-map.js — MapKit JS satellite view with course-feature overlays,
    falling back to a canvas schematic when MapKit is unavailable
    (offline, no token, or the SDK failed to load/init).
    Depends on: core.js (isNativeApp), gps-geometry.js (GpsGeometry),
@@ -77,6 +77,7 @@ function renderMapKitOverlays(map, features) {
   (features || []).forEach((f) => {
     const color = featureColor(f.feature_type);
     const rings = GpsGeometry.polygonRings(f.geometry);
+    const lines = GpsGeometry.lineStrings(f.geometry);
     if (rings.length > 0) {
       rings.forEach((ring) => {
         const coords = ring.map((p) => new window.mapkit.Coordinate(p.lat, p.lng));
@@ -85,8 +86,14 @@ function renderMapKitOverlays(map, features) {
         });
         map.addOverlay(polygon);
       });
-      return;
     }
+    lines.forEach((line) => {
+      const coords = line.map((p) => new window.mapkit.Coordinate(p.lat, p.lng));
+      map.addOverlay(new window.mapkit.PolylineOverlay(coords, {
+        style: new window.mapkit.Style({ strokeColor: color, lineWidth: 2 }),
+      }));
+    });
+    if (rings.length > 0 || lines.length > 0) return;
     if (f.geometry && f.geometry.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
       const [lng, lat] = f.geometry.coordinates;
       const annotation = new window.mapkit.MarkerAnnotation(new window.mapkit.Coordinate(lat, lng), {
@@ -111,9 +118,11 @@ function renderCanvasFallback(canvasEl, features, playerPos) {
   ctx.fillStyle = style.getPropertyValue('--cream').trim() || '#F6F1E4';
   ctx.fillRect(0, 0, w, h);
 
+  lastCanvasBounds = null;
   const allPoints = [];
   (features || []).forEach((f) => {
     GpsGeometry.polygonRings(f.geometry).forEach((ring) => allPoints.push(...ring));
+    GpsGeometry.lineStrings(f.geometry).forEach((line) => allPoints.push(...line));
     if (f.geometry && f.geometry.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
       allPoints.push({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] });
     }
@@ -143,6 +152,7 @@ function renderCanvasFallback(canvasEl, features, playerPos) {
   (features || []).forEach((f) => {
     const color = featureColor(f.feature_type);
     const rings = GpsGeometry.polygonRings(f.geometry);
+    const lines = GpsGeometry.lineStrings(f.geometry);
     rings.forEach((ring) => {
       ctx.beginPath();
       ring.forEach((p, i) => {
@@ -159,7 +169,18 @@ function renderCanvasFallback(canvasEl, features, playerPos) {
       ctx.lineWidth = 1;
       ctx.stroke();
     });
-    if (rings.length === 0 && f.geometry && f.geometry.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
+    lines.forEach((line) => {
+      ctx.beginPath();
+      line.forEach((p, i) => {
+        const { x, y } = project(p);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+    if (rings.length === 0 && lines.length === 0 && f.geometry && f.geometry.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
       const { x, y } = project({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] });
       ctx.beginPath();
       ctx.arc(x, y, 4, 0, Math.PI * 2);
@@ -185,6 +206,28 @@ function destroyCourseMap() {
     try { activeMapHandle.map.destroy(); } catch { /* already gone */ }
   }
   activeMapHandle = null;
+}
+
+function updateCourseMapPlayerPosition(playerPos) {
+  if (!activeMapHandle) return;
+  if (activeMapHandle.type === 'canvas') {
+    renderCanvasFallback(activeMapHandle.canvasEl, activeMapHandle.features, playerPos);
+    return;
+  }
+
+  const { map } = activeMapHandle;
+  if (activeMapHandle.playerAnnotation) {
+    map.removeAnnotation(activeMapHandle.playerAnnotation);
+    activeMapHandle.playerAnnotation = null;
+  }
+  if (playerPos) {
+    const annotation = new window.mapkit.MarkerAnnotation(
+      new window.mapkit.Coordinate(playerPos.lat, playerPos.lng),
+      { color: getComputedStyle(document.documentElement).getPropertyValue('--flag').trim(), title: 'You' }
+    );
+    map.addAnnotation(annotation);
+    activeMapHandle.playerAnnotation = annotation;
+  }
 }
 
 // Tries MapKit JS (satellite/hybrid, needs a token + connectivity);
@@ -218,12 +261,6 @@ async function initCourseMap(mapkitContainerEl, canvasEl, course, features, play
           new window.mapkit.CoordinateSpan(0.01, 0.01)
         );
         renderMapKitOverlays(map, features);
-        if (playerPos) {
-          map.addAnnotation(new window.mapkit.MarkerAnnotation(
-            new window.mapkit.Coordinate(playerPos.lat, playerPos.lng),
-            { color: getComputedStyle(document.documentElement).getPropertyValue('--flag').trim(), title: 'You' }
-          ));
-        }
         if (typeof onTap === 'function') {
           map.element.addEventListener('click', (evt) => {
             const coord = map.convertPointOnPageToCoordinate(new DOMPoint(evt.pageX, evt.pageY));
@@ -231,7 +268,8 @@ async function initCourseMap(mapkitContainerEl, canvasEl, course, features, play
           });
         }
 
-        activeMapHandle = { type: 'mapkit', map };
+        activeMapHandle = { type: 'mapkit', map, playerAnnotation: null };
+        updateCourseMapPlayerPosition(playerPos);
         if (fallbackNote) fallbackNote.hidden = true;
         return activeMapHandle;
       }
@@ -250,7 +288,7 @@ async function initCourseMap(mapkitContainerEl, canvasEl, course, features, play
       if (point) onTap(point);
     };
   }
-  activeMapHandle = { type: 'canvas' };
+  activeMapHandle = { type: 'canvas', canvasEl, features };
   return activeMapHandle;
 }
 

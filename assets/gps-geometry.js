@@ -87,9 +87,8 @@ const GpsGeometry = (() => {
   // rings (each an array of {lat, lng} points, NOT closed -- no repeated
   // first/last point). Interior rings (holes) are ignored -- irrelevant
   // for golf feature shapes. Degenerate rings (fewer than 3 usable
-  // points) are dropped. Any other geometry type (Point, LineString)
-  // returns an empty array -- callers that need those handle them
-  // separately (see nearestFeatureDistanceYards).
+  // points) are dropped. Other geometry types return an empty array;
+  // lineStrings handles LineString and MultiLineString separately.
   function polygonRings(geometry) {
     if (!geometry || typeof geometry !== 'object') return [];
     const coords = geometry.coordinates;
@@ -113,6 +112,20 @@ const GpsGeometry = (() => {
     }
 
     return [];
+  }
+
+  function lineStrings(geometry) {
+    if (!geometry || typeof geometry !== 'object' || !Array.isArray(geometry.coordinates)) return [];
+    const lines = geometry.type === 'LineString'
+      ? [geometry.coordinates]
+      : geometry.type === 'MultiLineString'
+        ? geometry.coordinates
+        : [];
+
+    return lines
+      .filter(Array.isArray)
+      .map((line) => line.map(geoJsonCoordToPoint).filter(Boolean))
+      .filter((line) => line.length >= 2);
   }
 
   function distMeters(p, q) {
@@ -289,6 +302,7 @@ const GpsGeometry = (() => {
     haversineDistanceYards,
     bearingDegrees,
     polygonRings,
+    lineStrings,
     centroid,
     nearestPointOnPolygonBoundary,
     farthestVertexFromPoint,

@@ -61,6 +61,29 @@ describe('centroid', () => {
   });
 });
 
+describe('lineStrings', () => {
+  it('normalizes LineString and MultiLineString coordinates to lat/lng points', () => {
+    expect(GpsGeometry.lineStrings({
+      type: 'LineString',
+      coordinates: [[-121, 36], [-120.999, 36.001]],
+    })).toEqual([[{ lat: 36, lng: -121 }, { lat: 36.001, lng: -120.999 }]]);
+
+    expect(GpsGeometry.lineStrings({
+      type: 'MultiLineString',
+      coordinates: [
+        [[-121, 36], [-120.999, 36.001]],
+        [[-120.998, 36.002], [-120.997, 36.003]],
+      ],
+    })).toHaveLength(2);
+  });
+
+  it('drops malformed and too-short lines', () => {
+    expect(GpsGeometry.lineStrings({ type: 'LineString', coordinates: [[-121, 36]] })).toEqual([]);
+    expect(GpsGeometry.lineStrings({ type: 'Polygon', coordinates: [] })).toEqual([]);
+    expect(GpsGeometry.lineStrings(null)).toEqual([]);
+  });
+});
+
 describe('front/center/back of green — Polygon vs MultiPolygon equivalence', () => {
   // A simple rectangular "green": lng -121.0005..-120.9995, lat 36.000..36.0005.
   const ring = [

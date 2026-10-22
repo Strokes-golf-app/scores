@@ -10,6 +10,8 @@
 
 let gpsWatchHandle = null; // { type: 'native', id } | { type: 'web', id }
 let gpsPositionHistory = []; // accepted fixes, most recent last — see GpsGeometry.smoothPosition
+let gpsSmoothedPosition = null;
+let gpsWatchGeneration = 0;
 let isPracticeMode = false;
 let practicePosition = null;
 let currentGpsCourse = null; // client-facing course JSON from import-course / the local cache
@@ -47,8 +49,10 @@ function handleRawPositionFix(rawCoords) {
   const smoothed = GpsGeometry.smoothPosition(gpsPositionHistory, fix);
   gpsPositionHistory.push({ ...fix });
   if (gpsPositionHistory.length > 10) gpsPositionHistory.shift();
+  gpsSmoothedPosition = smoothed;
   updateGpsStatusIndicator('GPS active');
   if (!isPracticeMode) {
+    updateCourseMapPlayerPosition(smoothed);
     renderLiveYardages(currentGpsHole, currentGpsFeatures, smoothed);
   }
 }
@@ -56,8 +60,10 @@ function handleRawPositionFix(rawCoords) {
 async function startGpsWatch() {
   stopGpsWatch();
   if (isPracticeMode) return;
+  const generation = gpsWatchGeneration;
 
   const granted = await requestLocationPermission();
+  if (generation !== gpsWatchGeneration) return;
   if (!granted) {
     updateGpsStatusIndicator('Location denied');
     showToast('Location access was denied — try Practice mode instead, or enable it in Settings.');
@@ -70,15 +76,20 @@ async function startGpsWatch() {
     const { Geolocation } = window.Capacitor.Plugins;
     try {
       const id = await Geolocation.watchPosition({ enableHighAccuracy: true, timeout: 10000 }, (position, err) => {
+        if (generation !== gpsWatchGeneration) return;
         if (err || !position) {
           updateGpsStatusIndicator('GPS unavailable');
           return;
         }
         handleRawPositionFix(position.coords);
       });
+      if (generation !== gpsWatchGeneration) {
+        Geolocation.clearWatch({ id }).catch(() => {});
+        return;
+      }
       gpsWatchHandle = { type: 'native', id };
     } catch {
-      updateGpsStatusIndicator('GPS unavailable');
+      if (generation === gpsWatchGeneration) updateGpsStatusIndicator('GPS unavailable');
     }
     return;
   }
@@ -88,22 +99,30 @@ async function startGpsWatch() {
     return;
   }
   const id = navigator.geolocation.watchPosition(
-    (position) => handleRawPositionFix(position.coords),
-    (err) => updateGpsStatusIndicator(err.code === 1 ? 'Location denied' : 'GPS unavailable'),
+    (position) => {
+      if (generation === gpsWatchGeneration) handleRawPositionFix(position.coords);
+    },
+    (err) => {
+      if (generation === gpsWatchGeneration) updateGpsStatusIndicator(err.code === 1 ? 'Location denied' : 'GPS unavailable');
+    },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
   );
-  gpsWatchHandle = { type: 'web', id };
+  if (generation === gpsWatchGeneration) gpsWatchHandle = { type: 'web', id };
+  else navigator.geolocation.clearWatch(id);
 }
 
 function stopGpsWatch() {
-  if (!gpsWatchHandle) return;
-  if (gpsWatchHandle.type === 'native' && window.Capacitor && window.Capacitor.Plugins.Geolocation) {
-    window.Capacitor.Plugins.Geolocation.clearWatch({ id: gpsWatchHandle.id }).catch(() => {});
-  } else if (gpsWatchHandle.type === 'web' && navigator.geolocation) {
-    navigator.geolocation.clearWatch(gpsWatchHandle.id);
+  gpsWatchGeneration++;
+  if (gpsWatchHandle) {
+    if (gpsWatchHandle.type === 'native' && window.Capacitor && window.Capacitor.Plugins.Geolocation) {
+      window.Capacitor.Plugins.Geolocation.clearWatch({ id: gpsWatchHandle.id }).catch(() => {});
+    } else if (gpsWatchHandle.type === 'web' && navigator.geolocation) {
+      navigator.geolocation.clearWatch(gpsWatchHandle.id);
+    }
   }
   gpsWatchHandle = null;
   gpsPositionHistory = [];
+  gpsSmoothedPosition = null;
 }
 
 function enterPracticeMode() {
@@ -127,13 +146,13 @@ function exitPracticeMode() {
 
 function setPracticePosition(lat, lng) {
   practicePosition = { lat, lng };
+  updateCourseMapPlayerPosition(practicePosition);
   renderLiveYardages(currentGpsHole, currentGpsFeatures, practicePosition);
 }
 
 function getCurrentEffectivePosition() {
   if (isPracticeMode) return practicePosition;
-  const last = gpsPositionHistory[gpsPositionHistory.length - 1];
-  return last ? { lat: last.lat, lng: last.lng } : null;
+  return gpsSmoothedPosition;
 }
 
 // Renders front/center/back of the current hole's green, plus a
@@ -405,6 +424,7 @@ function initGpsFeature() {
 
   document.getElementById('btn-gps-search-back').addEventListener('click', () => {
     showScreen(currentGpsCourse ? 'screen-course-map' : 'screen-round');
+    if (currentGpsCourse && !isPracticeMode) startGpsWatch();
   });
 
   document.getElementById('btn-gps-search-submit').addEventListener('click', () => {
