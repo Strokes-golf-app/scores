@@ -18,6 +18,10 @@ seconds.
 Do these in order: GitHub first, then Supabase, then Vercel last (Vercel
 needs to know about the other two before it can finish setting up).
 
+Apple sign-in is prepared in the app but intentionally disabled until the
+Apple Developer, Xcode, and Supabase setup is complete. See
+[Apple sign-in setup](./apple-sign-in-setup.md) for the remaining steps.
+
 ---
 
 ## Part 1 — Put the code on GitHub

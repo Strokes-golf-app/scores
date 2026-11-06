@@ -74,8 +74,8 @@
         </svg>
         <span class="btn-label">Continue with Google</span>
       </button>
-      <!-- Hidden until Apple Developer Program setup (Services ID, Xcode
-           capability) is done — remove `hidden` once that's wired up. -->
+      <!-- Visibility is controlled by APPLE_SIGN_IN_ENABLED in auth.js;
+           see documentation/apple-sign-in-setup.md before enabling. -->
       <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-apple-auth" hidden>
         <span class="btn-label">Continue with Apple</span>
       </button>
@@ -151,8 +151,7 @@
         </svg>
         <span class="btn-label">Continue with Google</span>
       </button>
-      <!-- Hidden until Apple Developer Program setup is done — see the
-           matching comment on #btn-apple-auth. -->
+      <!-- Visibility is controlled by APPLE_SIGN_IN_ENABLED in auth.js. -->
       <button type="button" class="btn btn-secondary btn-lg btn-block" id="btn-join-apple" hidden>
         <span class="btn-label">Continue with Apple</span>
       </button>

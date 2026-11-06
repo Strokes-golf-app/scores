@@ -13,6 +13,7 @@
 
 function init() {
   setAuthMode('login');
+  configureAppleSignInButtons();
 
   if (typeof initializeSetupCourseSearch === 'function') {
     initializeSetupCourseSearch();
