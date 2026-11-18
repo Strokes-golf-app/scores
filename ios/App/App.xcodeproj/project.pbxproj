@@ -157,6 +157,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		950A1234567890ABCDEF0001 /* Sync web assets (npm run sync:ios) */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
