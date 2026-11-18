@@ -7,13 +7,19 @@
   <!-- Minimal allowlist, net-new as of the GPS/course-map feature — no
        CSP existed before this. OpenGolfAPI is deliberately absent from
        connect-src: the browser never talks to it directly, only through
-       our own Edge Functions. -->
+       our own Edge Functions.
+       connect-src needs BOTH https: and wss: for Supabase — CSP scheme
+       matching does not treat https: as covering wss:, and the realtime
+       socket URL is built dynamically by the Supabase client (so it
+       never appears literally in our source). Dropping the wss: entry
+       silently breaks realtime, which breaks round creation and live
+       score sync. -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com https://appleid.cdn-apple.com https://cdn.apple-mapkit.com;
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://cdn.apple-mapkit.com https://*.mzstatic.com https://*.apple.com;
-    connect-src 'self' https://*.supabase.co https://cdn.apple-mapkit.com https://*.apple-mapkit.com https://accounts.google.com https://appleid.apple.com;
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.apple-mapkit.com https://*.apple-mapkit.com https://accounts.google.com https://appleid.apple.com;
     frame-src https://appleid.apple.com https://accounts.google.com;
     font-src 'self' data:;
   ">
