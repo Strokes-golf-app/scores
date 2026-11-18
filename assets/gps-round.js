@@ -6,6 +6,14 @@
    (CourseCache), course-map.js (initCourseMap), supabase-config.js
    (supabaseClient). Not unit-tested — DOM/platform glue; the math it
    calls into lives in gps-geometry.js, which is.
+
+   The location watch is intentionally NOT tied to the GPS screen's
+   visibility — once started it keeps running so the Scorecard tab's
+   yardage-to-center chip (#scorecard-yardage-center, rendered by
+   renderScorecardYardage, called from scorecard.js) stays live without
+   the user needing to stay on the GPS screen. teardownGpsSession() is
+   the one real stop point, called from lobby.js's goHome() on leaving
+   the round.
 =========================================================== */
 
 let gpsWatchHandle = null; // { type: 'native', id } | { type: 'web', id }
@@ -55,6 +63,7 @@ function handleRawPositionFix(rawCoords) {
     updateCourseMapPlayerPosition(smoothed);
     renderLiveYardages(currentGpsHole, currentGpsFeatures, smoothed);
   }
+  renderScorecardYardage();
 }
 
 async function startGpsWatch() {
@@ -148,6 +157,7 @@ function setPracticePosition(lat, lng) {
   practicePosition = { lat, lng };
   updateCourseMapPlayerPosition(practicePosition);
   renderLiveYardages(currentGpsHole, currentGpsFeatures, practicePosition);
+  renderScorecardYardage();
 }
 
 function getCurrentEffectivePosition() {
@@ -380,6 +390,7 @@ async function refreshCourseMapScreen() {
   if (nameEl) nameEl.textContent = (currentGpsCourse && currentGpsCourse.courseName) || 'Course';
   if (subEl) subEl.textContent = (currentGpsCourse && [currentGpsCourse.city, currentGpsCourse.state].filter(Boolean).join(', ')) || '';
   if (holeEl) holeEl.textContent = String(currentGpsHole);
+  renderScorecardYardage();
 
   const mapkitEl = document.getElementById('course-map-mapkit');
   const canvasEl = document.getElementById('course-map-canvas');
@@ -399,23 +410,77 @@ function changeGpsHole(delta) {
   refreshCourseMapScreen();
 }
 
+// Leaving the GPS screen back to the scorecard no longer stops tracking —
+// the whole point of the scorecard yardage chip is that GPS keeps running
+// once initiated. Only tears down the map view and exits Practice mode
+// (so the scorecard never shows a stale simulated position); restarts the
+// real watch if it isn't already running (e.g. it was paused for Practice
+// mode).
 function leaveGpsCourseMapScreen() {
-  stopGpsWatch();
   isPracticeMode = false;
   practicePosition = null;
   destroyCourseMap();
+  // Clearing practicePosition above makes the last-rendered scorecard chip
+  // value stale (it was computed from the simulated position, which no
+  // longer applies) — re-render immediately so it drops back to "—"
+  // rather than showing a number that's no longer true, until a real GPS
+  // fix (if the watch is running) updates it again.
+  renderScorecardYardage();
+  if (currentGpsCourse && !gpsWatchHandle) startGpsWatch();
+}
+
+// Keyed off state.currentHole (the Scorecard tab's own hole counter), NOT
+// currentGpsHole (the GPS screen's separately-navigated one) — this is
+// what lets the chip reflect whatever hole is actually being scored.
+// Called on every position update and every scorecard hole change.
+function renderScorecardYardage() {
+  const numEl = document.getElementById('scorecard-yardage-center');
+  if (!numEl) return;
+
+  // state.currentHole is the round's own internal index (1..holeCount);
+  // a back-nine round adds holeOffset to get the real course hole number
+  // (same math the hole-number readout itself uses) — that's what the
+  // imported GPS features are actually keyed by.
+  const roundHole = state.currentHole + ((state.round && state.round.holeOffset) || 0);
+  const playerPos = getCurrentEffectivePosition();
+  const holeFeatures = currentGpsCourse
+    ? currentGpsFeatures.filter((f) => f.hole === roundHole || f.hole == null)
+    : [];
+  const green = holeFeatures.find((f) => f.feature_type === 'green');
+  const center = (playerPos && green) ? GpsGeometry.centerOfGreenYards(green.geometry, playerPos) : null;
+  numEl.textContent = center != null ? String(Math.round(center)) : '—';
+}
+
+// The one real stop point for a GPS session — called when leaving the
+// round entirely (goHome(), in lobby.js), so tracking doesn't keep
+// running unbounded once you're done playing.
+function teardownGpsSession() {
+  stopGpsWatch();
+  isPracticeMode = false;
+  practicePosition = null;
+  currentGpsCourse = null;
+  currentGpsFeatures = [];
+  currentGpsHole = 1;
+  destroyCourseMap();
+  renderScorecardYardage();
+}
+
+// Shared by the round-footer GPS button and the scorecard yardage chip:
+// jump straight to the live map if a course is already loaded, otherwise
+// open search.
+async function openGpsScreenOrSearch() {
+  if (currentGpsCourse) {
+    showScreen('screen-course-map');
+    await refreshCourseMapScreen();
+    if (!isPracticeMode) startGpsWatch();
+  } else {
+    openGpsSearchScreen();
+  }
 }
 
 function initGpsFeature() {
-  document.getElementById('btn-round-gps').addEventListener('click', async () => {
-    if (currentGpsCourse) {
-      showScreen('screen-course-map');
-      await refreshCourseMapScreen();
-      if (!isPracticeMode) startGpsWatch();
-    } else {
-      openGpsSearchScreen();
-    }
-  });
+  document.getElementById('btn-round-gps').addEventListener('click', openGpsScreenOrSearch);
+  document.getElementById('scorecard-yardage-chip').addEventListener('click', openGpsScreenOrSearch);
 
   document.getElementById('btn-gps-change-course').addEventListener('click', () => {
     stopGpsWatch();

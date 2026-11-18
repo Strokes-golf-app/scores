@@ -7,7 +7,10 @@
 
    Split out of round.js. All functions stay global; this file
    loads after round.js. See index.html for load order.
-   Depends on: core.js (state, isHost, showToast), Supabase client.
+   Depends on: core.js (state, isHost, showToast), Supabase client,
+   gps-round.js (renderScorecardYardage — loads earlier, so safe to
+   call unguarded; keeps the live yardage-to-center chip in sync with
+   whichever hole is being scored).
 =========================================================== */
 
 function myPlayer() {
@@ -76,6 +79,8 @@ function renderScorecardTab() {
   renderPuttsRow(player, r, h, gross);
 
   renderMiniHoles(player, r);
+
+  renderScorecardYardage();
 }
 
 function relativeToParLabel(gross, par) {

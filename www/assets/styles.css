@@ -2239,6 +2239,14 @@ input::placeholder {
   flex: 1;
 }
 
+/* Scorecard tab's hole-nav only (the GPS screen's own hole-nav keeps
+   .hole-nav-center, untouched, above) — hole info sits on the left so the
+   yardage-to-center chip can take the right side of the same row. */
+.hole-nav-left {
+  text-align: left;
+  flex: 1;
+}
+
 .hole-nav-label {
   margin: 0;
   font-size: 11px;
@@ -2260,7 +2268,7 @@ input::placeholder {
 .hole-nav-meta {
   margin: 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.35rem 1.1rem;
@@ -2276,6 +2284,36 @@ input::placeholder {
 
 #hole-score {
   color: var(--fairway);
+}
+
+/* Live yardage-to-center chip, right side of the Scorecard tab's
+   hole-nav row. Always present (shows "—" until GPS is initiated and a
+   fix + green data are available) rather than conditionally shown, so
+   the row layout doesn't jump mid-round when GPS starts. Tapping it
+   opens the GPS screen — same destination as the round-footer GPS
+   button. Reuses the same label/number proportions as the GPS screen's
+   own front/center/back readout (.gps-yardage-label/.gps-yardage-number)
+   for visual consistency, scaled to fit this row. */
+.hole-nav-yardage {
+  flex: 1;
+  text-align: right;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.hole-nav-yardage:active {
+  opacity: 0.7;
+}
+
+.hole-nav-yardage-number {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--fairway);
+  line-height: 1;
 }
 
 .par-editor {
