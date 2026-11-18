@@ -84,6 +84,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
 			buildPhases = (
+				950A1234567890ABCDEF0001 /* Sync web assets (npm run sync:ios) */,
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
@@ -152,6 +153,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		950A1234567890ABCDEF0001 /* Sync web assets (npm run sync:ios) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Sync web assets (npm run sync:ios)";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -u\nREPO_ROOT=\"$SRCROOT/../..\"\ncd \"$REPO_ROOT\"\nNPM_BIN=\"\"\nfor candidate in /opt/homebrew/bin/npm /usr/local/bin/npm \"$HOME/.volta/bin/npm\"; do\n  if [ -x \"$candidate\" ]; then\n    NPM_BIN=\"$candidate\"\n    break\n  fi\ndone\nif [ -z \"$NPM_BIN\" ]; then\n  NPM_BIN=\"$(command -v npm || true)\"\nfi\nif [ -z \"$NPM_BIN\" ]; then\n  echo \"warning: npm not found on PATH -- skipping web asset sync. ios/App/App/public may be stale; run 'npm run sync:ios' manually before building.\"\n  exit 0\nfi\necho \"Syncing web assets via $NPM_BIN run sync:ios\"\nset -e\n\"$NPM_BIN\" run sync:ios\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		504EC3001FED79650016851F /* Sources */ = {
