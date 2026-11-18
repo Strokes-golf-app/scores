@@ -704,6 +704,21 @@ h3 {
   align-self: center;
 }
 
+/* Row under the Scorecard tab's hole-nav holding "Edit hole par" (left,
+   host-only — hidden for everyone else) and "Birds-eye View" (right,
+   opens the GPS course-layout map). margin-left: auto on the right-hand
+   button keeps it pinned to the right edge even when "Edit hole par" is
+   hidden, rather than relying on space-between (which would otherwise
+   collapse a lone visible child to the left). */
+.hole-sub-actions {
+  display: flex;
+  align-items: center;
+}
+
+#btn-birds-eye-view {
+  margin-left: auto;
+}
+
 .host-edit-hint {
   margin: 0.2rem 0 0;
   font-size: 12.5px;

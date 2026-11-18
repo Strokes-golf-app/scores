@@ -479,7 +479,7 @@ async function openGpsScreenOrSearch() {
 }
 
 function initGpsFeature() {
-  document.getElementById('btn-round-gps').addEventListener('click', openGpsScreenOrSearch);
+  document.getElementById('btn-birds-eye-view').addEventListener('click', openGpsScreenOrSearch);
   document.getElementById('scorecard-yardage-chip').addEventListener('click', openGpsScreenOrSearch);
 
   document.getElementById('btn-gps-change-course').addEventListener('click', () => {
