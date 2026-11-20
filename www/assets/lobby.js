@@ -5,7 +5,11 @@
    your identity, leaving a round, and resuming a session on
    page reload.
    Depends on: core.js (state, session helpers)
-   Calls into: round.js (loadRound, subscribeToRound, enterRound)
+   Calls into: round.js (loadRound, subscribeToRound, enterRound),
+   gps-round.js (teardownGpsSession — loads earlier, so safe to call
+   unguarded; the one real stop point for a GPS session, since location
+   tracking now keeps running across the Scorecard/GPS screens once
+   initiated instead of stopping when the GPS screen closes)
 =========================================================== */
 
 function renderLobby() {
@@ -254,6 +258,7 @@ function goHome() {
   state.round = null;
   state.myPlayerId = null;
   state.scoringPlayerId = null;
+  teardownGpsSession();
   clearSession();
   showScreen('screen-home');
 }

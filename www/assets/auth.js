@@ -16,10 +16,23 @@
 // Apple: the Services ID from the Apple Developer Portal — used only on
 // web (native iOS doesn't need a client ID; it's inferred from the app's
 // Sign in with Apple entitlement).
-// Replace both once the corresponding dashboards/portals are set up.
+// Sign in with Apple remains disabled until its Developer, Xcode, and
+// Supabase setup is complete. See documentation/apple-sign-in-setup.md.
 const GOOGLE_WEB_CLIENT_ID = '584419088693-vpig28i5d43jtbcfiq6pk10q1d4u9oar.apps.googleusercontent.com';
 const APPLE_SERVICES_ID = 'REPLACE_WITH_APPLE_SERVICES_ID';
+const APPLE_SIGN_IN_ENABLED = false;
 // --------------------------------------------------------------------------
+
+function configureAppleSignInButtons() {
+  const webServicesIdConfigured =
+    APPLE_SERVICES_ID && !APPLE_SERVICES_ID.startsWith('REPLACE_');
+  const enabled = APPLE_SIGN_IN_ENABLED && (isNativeApp() || webServicesIdConfigured);
+
+  ['btn-apple-auth', 'btn-join-apple'].forEach((id) => {
+    const button = document.getElementById(id);
+    if (button) button.hidden = !enabled;
+  });
+}
 
 function setAuthMode(mode) {
   state.authMode = mode;
@@ -160,15 +173,12 @@ async function playAsGuest() {
 // (and window.Capacitor.Plugins) directly into the WKWebView regardless of
 // this app having no bundler — that part works identically to every other
 // Capacitor plugin call in this codebase. On the plain web build nothing
-// injects it, so isNativeApp() is false there and we talk to Google's/
-// Apple's own web JS SDKs directly instead of going through the plugins'
-// web fallbacks (Google's redirects the whole page and never resolves;
-// Apple's works but ships as an ES module, which this no-bundler app can't
-// import — so we mirror what it does internally by hand below).
-
-function isNativeApp() {
-  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-}
+// injects it, so isNativeApp() (core.js) is false there and we talk to
+// Google's/Apple's own web JS SDKs directly instead of going through the
+// plugins' web fallbacks (Google's redirects the whole page and never
+// resolves; Apple's works but ships as an ES module, which this
+// no-bundler app can't import — so we mirror what it does internally by
+// hand below).
 
 // SHA-256 hex digest, used only for Apple's nonce (see signInWithApple).
 async function sha256Hex(value) {
@@ -228,6 +238,13 @@ function getGoogleIdTokenViaGIS() {
 }
 
 async function signInWithApple() {
+  const webServicesIdConfigured =
+    APPLE_SERVICES_ID && !APPLE_SERVICES_ID.startsWith('REPLACE_');
+  if (!APPLE_SIGN_IN_ENABLED || (!isNativeApp() && !webServicesIdConfigured)) {
+    showToast('Apple sign-in is not configured yet');
+    return;
+  }
+
   try {
     // Apple's native/web SDKs both take the nonce as-is and never hash it
     // themselves (confirmed by reading the plugin's own source) — Apple's

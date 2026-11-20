@@ -18,6 +18,10 @@ seconds.
 Do these in order: GitHub first, then Supabase, then Vercel last (Vercel
 needs to know about the other two before it can finish setting up).
 
+Apple sign-in is prepared in the app but intentionally disabled until the
+Apple Developer, Xcode, and Supabase setup is complete. See
+[Apple sign-in setup](./apple-sign-in-setup.md) for the remaining steps.
+
 ---
 
 ## Part 1 — Put the code on GitHub
@@ -91,8 +95,8 @@ and pasting a block of text — you don't need to understand it.
    instead, double check you copied the *entire* file, including the
    very first and very last lines.
 
-This created three tables — `rounds`, `players`, and `scores` — and
-turned on the live-sync behavior the app depends on.
+This creates the app tables and policies, including the GPS course
+cache and its read-only course-feature tables.
 
 ### 2.3 Get your project's API credentials
 The app needs two pieces of information to talk to your Supabase
@@ -120,6 +124,36 @@ project: a URL and a public key.
 The anon public key is *meant* to be public, even in a public repo —
 Supabase's actual security comes from the rules we set up in the SQL
 step, not from hiding this key. So this is safe to leave visible.
+
+### 2.5 Deploy GPS course-map Edge Functions (optional)
+
+GPS course search and import use three Supabase Edge Functions. In the
+Supabase Dashboard, open **Edge Functions** and deploy each function
+from its matching source file in the repository:
+
+- `search-course` — `edge-functions/search-course/search-course.ts`
+- `import-course` — `edge-functions/import-course/import-course.ts`
+- `mapkit-token` — `edge-functions/mapkit-token/mapkit-token.ts`
+
+The first two use OpenGolfAPI's public read endpoints (no OpenGolfAPI
+API key is required). Their default API URL and daily quota are already
+configured in the source. Supabase supplies the project URL and service
+role key to Edge Functions; do not put the service role key in browser
+code.
+
+For satellite maps, add these Edge Function secrets in
+**Project Settings → Edge Functions → Secrets**:
+
+- `MAPKIT_TEAM_ID`
+- `MAPKIT_KEY_ID`
+- `MAPKIT_PRIVATE_KEY` — the `.p8` private key contents, stored as one
+  line with newlines represented by literal `\n` sequences.
+
+If the database was created before the GPS map feature was added, run
+`sql-scripts/opengolfapi-course-maps.sql` in the SQL Editor before
+deploying the functions. GPS yardages and the offline schematic work
+without MapKit credentials; satellite imagery requires the token
+function and an Apple MapKit JS key.
 
 ---
 

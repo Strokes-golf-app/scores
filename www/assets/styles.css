@@ -704,6 +704,21 @@ h3 {
   align-self: center;
 }
 
+/* Row under the Scorecard tab's hole-nav holding "Edit hole par" (left,
+   host-only — hidden for everyone else) and "Birds-eye View" (right,
+   opens the GPS course-layout map). margin-left: auto on the right-hand
+   button keeps it pinned to the right edge even when "Edit hole par" is
+   hidden, rather than relying on space-between (which would otherwise
+   collapse a lone visible child to the left). */
+.hole-sub-actions {
+  display: flex;
+  align-items: center;
+}
+
+#btn-birds-eye-view {
+  margin-left: auto;
+}
+
 .host-edit-hint {
   margin: 0.2rem 0 0;
   font-size: 12.5px;
@@ -2239,6 +2254,14 @@ input::placeholder {
   flex: 1;
 }
 
+/* Scorecard tab's hole-nav only (the GPS screen's own hole-nav keeps
+   .hole-nav-center, untouched, above) — hole info sits on the left so the
+   yardage-to-center chip can take the right side of the same row. */
+.hole-nav-left {
+  text-align: left;
+  flex: 1;
+}
+
 .hole-nav-label {
   margin: 0;
   font-size: 11px;
@@ -2260,7 +2283,7 @@ input::placeholder {
 .hole-nav-meta {
   margin: 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.35rem 1.1rem;
@@ -2276,6 +2299,36 @@ input::placeholder {
 
 #hole-score {
   color: var(--fairway);
+}
+
+/* Live yardage-to-center chip, right side of the Scorecard tab's
+   hole-nav row. Always present (shows "—" until GPS is initiated and a
+   fix + green data are available) rather than conditionally shown, so
+   the row layout doesn't jump mid-round when GPS starts. Tapping it
+   opens the GPS screen — same destination as the round-footer GPS
+   button. Reuses the same label/number proportions as the GPS screen's
+   own front/center/back readout (.gps-yardage-label/.gps-yardage-number)
+   for visual consistency, scaled to fit this row. */
+.hole-nav-yardage {
+  flex: 1;
+  text-align: right;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.hole-nav-yardage:active {
+  opacity: 0.7;
+}
+
+.hole-nav-yardage-number {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--fairway);
+  line-height: 1;
 }
 
 .par-editor {
@@ -2547,6 +2600,135 @@ input::placeholder {
 
 .end-round-wrap {
   padding: 0.25rem 0 0.5rem;
+}
+
+/* ---------- GPS yardages / course map ---------- */
+.gps-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.gps-status-chip {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: var(--sand-light);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.gps-yardage-row {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin: 1rem 0;
+}
+
+.gps-yardage-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.gps-yardage-cell-center .gps-yardage-number {
+  color: var(--fairway);
+  font-size: 44px;
+}
+
+.gps-yardage-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.gps-yardage-number {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.gps-hazard-line {
+  text-align: center;
+  color: var(--flag-dark);
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.course-map-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--cream);
+  margin-bottom: 0.75rem;
+}
+
+.course-map-mapkit,
+.course-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.course-map-attribution {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin: 0.25rem 0 0.75rem;
+}
+
+.gps-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.gps-downloaded-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.gps-search-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--white);
+  cursor: pointer;
+  text-align: left;
+}
+
+.gps-search-result:active {
+  background: var(--sand-light);
+}
+
+.gps-search-result-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.gps-search-result-meta {
+  font-size: 12px;
+  color: var(--ink-soft);
 }
 
 .my-progress {

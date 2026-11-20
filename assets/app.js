@@ -13,10 +13,13 @@
 
 function init() {
   setAuthMode('login');
+  configureAppleSignInButtons();
 
   if (typeof initializeSetupCourseSearch === 'function') {
     initializeSetupCourseSearch();
   }
+
+  initGpsFeature();
 
   document.getElementById('btn-new-round').addEventListener('click', async () => {
     state.pendingNewIsTournament = false;

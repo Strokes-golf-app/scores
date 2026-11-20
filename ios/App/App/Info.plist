@@ -16,6 +16,8 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to show your distance to the green and nearby course features while using GPS yardages.</string>
 	<!-- Google Sign-In: replace both placeholders below once the iOS OAuth
 	     client ID exists in Google Cloud Console (Credentials -> OAuth 2.0
 	     Client IDs -> type "iOS", bundle ID com.strokesgolf.app).
