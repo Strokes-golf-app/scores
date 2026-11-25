@@ -168,7 +168,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -u\nREPO_ROOT=\"$SRCROOT/../..\"\ncd \"$REPO_ROOT\"\nNPM_BIN=\"\"\nfor candidate in /opt/homebrew/bin/npm /usr/local/bin/npm \"$HOME/.volta/bin/npm\"; do\n  if [ -x \"$candidate\" ]; then\n    NPM_BIN=\"$candidate\"\n    break\n  fi\ndone\nif [ -z \"$NPM_BIN\" ]; then\n  NPM_BIN=\"$(command -v npm || true)\"\nfi\nif [ -z \"$NPM_BIN\" ]; then\n  echo \"warning: npm not found on PATH -- skipping web asset sync. ios/App/App/public may be stale; run 'npm run sync:ios' manually before building.\"\n  exit 0\nfi\necho \"Syncing web assets via $NPM_BIN run sync:ios\"\nset -e\n\"$NPM_BIN\" run sync:ios\n";
+			shellScript = "set -u\nREPO_ROOT=\"$SRCROOT/../..\"\ncd \"$REPO_ROOT\"\nNPM_BIN=\"\"\nfor candidate in /opt/homebrew/bin/npm /usr/local/bin/npm \"$HOME/.volta/bin/npm\"; do\n  if [ -x \"$candidate\" ]; then\n    NPM_BIN=\"$candidate\"\n    break\n  fi\ndone\nif [ -z \"$NPM_BIN\" ]; then\n  NPM_BIN=\"$(command -v npm || true)\"\nfi\nif [ -z \"$NPM_BIN\" ]; then\n  echo \"warning: npm not found on PATH -- skipping web asset sync. ios/App/App/public may be stale; run 'npm run sync:ios' manually before building.\"\n  exit 0\nfi\n# Xcode doesn't inherit the shell PATH, so npm's own #!/usr/bin/env node\n# shebang can't find node. Put npm's directory (where node lives too) first.\nexport PATH=\"$(dirname \"$NPM_BIN\"):$PATH\"\necho \"Syncing web assets via $NPM_BIN run sync:ios\"\nset -e\n\"$NPM_BIN\" run sync:ios\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
