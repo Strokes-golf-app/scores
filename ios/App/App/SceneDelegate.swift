@@ -47,6 +47,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     @objc private func injectSafeAreaInsetsNow() {
         guard let bridgeVC = bridgeViewController, let webView = bridgeVC.bridge?.webView else { return }
+        // No rubber-band bounce: pulling past the top would otherwise drag
+        // the sticky header down away from the Dynamic Island.
+        webView.scrollView.bounces = false
         let insets = bridgeVC.view.safeAreaInsets
         let js = """
         document.documentElement.style.setProperty('--native-safe-area-top', '\(insets.top)px');
