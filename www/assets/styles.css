@@ -2386,12 +2386,12 @@ input::placeholder {
    own front/center/back readout (.gps-yardage-label/.gps-yardage-number)
    for visual consistency, scaled to fit this row. */
 .hole-nav-yardage {
-  /* Centered two-thirds of the way across the row, so it balances the
+  /* Centered three-quarters of the way across the row, so it balances the
      hole group on the left instead of hugging the right edge. Taken out
      of the flex flow; the hole group sets the row's height. */
   position: absolute;
   top: 50%;
-  left: 66.667%;
+  left: 75%;
   transform: translate(-50%, -50%);
   text-align: center;
   background: transparent;
