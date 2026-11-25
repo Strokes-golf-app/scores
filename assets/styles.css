@@ -688,6 +688,38 @@ h3 {
   display: block;
 }
 
+/* Google and Apple sign-in sit side by side, each half the width. If the
+   Apple button is hidden, Google stretches to fill the row. Labels may
+   wrap to two lines on narrow phones rather than being shortened, since
+   Apple's guidelines only allow its standard button titles. */
+.social-row {
+  display: flex;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.social-row .btn-social.btn-lg {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.95rem 0.75rem;
+  gap: 0.5rem;
+}
+
+.social-row .btn-social .btn-label {
+  font-size: 15.5px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* Sign in with Apple: Apple's Human Interface Guidelines require their
+   black/white button styles rather than the app's own palette, so these
+   colors are intentionally not theme tokens. */
+.btn-apple {
+  background: #000000;
+  color: #FFFFFF;
+  border: 1.5px solid #000000;
+}
+
 .link-btn {
   background: none;
   border: none;

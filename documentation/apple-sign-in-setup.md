@@ -1,9 +1,17 @@
 # Apple sign-in setup
 
-Apple sign-in's client-side flow and Capacitor plugin are already included,
-but the feature is intentionally disabled. It cannot be fully activated
-until an Apple Developer Program account is available and the provider is
-configured in Apple, Xcode, and Supabase.
+Apple sign-in is enabled for the iOS app only: `APPLE_SIGN_IN_ENABLED` is
+`true` and the App target carries the Sign in with Apple entitlement
+(`ios/App/App/App.entitlements`, wired up via `CODE_SIGN_ENTITLEMENTS`).
+Web sign-in stays hidden while `APPLE_SERVICES_ID` is the placeholder.
+Sign-in only succeeds once `com.strokesgolf.app` is listed as a Client ID
+in Supabase's Apple provider (see below).
+
+The app exchanges Apple's ID token with
+`supabaseClient.auth.signInWithIdToken()`, so Supabase's Apple "Secret Key
+(for OAuth)" is not needed and no Apple private key has to be rotated. If
+web sign-in is added later, it needs a Services ID (steps 4–5 below) added
+to both `APPLE_SERVICES_ID` and Supabase's Client IDs.
 
 ## What is already in the repository
 
