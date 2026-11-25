@@ -939,10 +939,13 @@
       </div>
 
       <div class="hole-nav">
-        <button class="icon-btn" id="btn-hole-prev" aria-label="Previous hole">←</button>
         <div class="hole-nav-left">
           <p class="hole-nav-label">Hole</p>
-          <p class="hole-nav-number" id="hole-number">1</p>
+          <div class="hole-nav-number-row">
+            <button class="icon-btn" id="btn-hole-prev" aria-label="Previous hole">←</button>
+            <p class="hole-nav-number" id="hole-number">1</p>
+            <button class="icon-btn" id="btn-hole-next" aria-label="Next hole">→</button>
+          </div>
           <p class="hole-nav-meta">
             <span class="hole-nav-stat" id="hole-par">Par 4</span>
             <span class="hole-nav-stat" id="hole-handicap" hidden>Hcp 7</span>
@@ -953,7 +956,6 @@
           <p class="hole-nav-label">Center</p>
           <p class="hole-nav-yardage-number" id="scorecard-yardage-center">—</p>
         </button>
-        <button class="icon-btn" id="btn-hole-next" aria-label="Next hole">→</button>
       </div>
 
       <div class="par-editor" id="par-editor" hidden>

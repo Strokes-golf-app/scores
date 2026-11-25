@@ -77,6 +77,13 @@
   box-sizing: border-box;
 }
 
+/* Height of the iOS status bar / Dynamic Island area. SceneDelegate.swift
+   sets --native-safe-area-top in the iOS app; env() covers Safari; 0 on
+   desktop. Sticky headers pin below this instead of at the very top. */
+:root {
+  --safe-top: var(--native-safe-area-top, env(safe-area-inset-top, 0px));
+}
+
 html,
 body {
   margin: 0;
@@ -104,8 +111,23 @@ body {
      --native-safe-area-top/bottom on the document element instead. Falls
      back to env() (0 in a regular browser tab) when nothing has set the
      native custom property, so this is a no-op on the web. */
-  padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
+  padding-top: var(--safe-top);
   padding-bottom: var(--native-safe-area-bottom, env(safe-area-inset-bottom));
+}
+
+/* Solid strip behind the status bar / Dynamic Island so content scrolling
+   up under it is hidden, and sticky headers (pinned at --safe-top) always
+   sit just below the island. Height is 0 where there's no inset. */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--safe-top);
+  background: var(--cream);
+  z-index: 30;
+  pointer-events: none;
 }
 
 button {
@@ -811,7 +833,7 @@ h3 {
   color: var(--fairway);
   border-bottom: 1px solid var(--line);
   position: sticky;
-  top: 0;
+  top: var(--safe-top);
   z-index: 10;
 }
 
@@ -2213,7 +2235,7 @@ input::placeholder {
 
 .round-sticky-header {
   position: sticky;
-  top: 0;
+  top: var(--safe-top);
   z-index: 10;
 }
 
@@ -2288,10 +2310,28 @@ input::placeholder {
 
 /* Scorecard tab's hole-nav only (the GPS screen's own hole-nav keeps
    .hole-nav-center, untouched, above) — hole info sits on the left so the
-   yardage-to-center chip can take the right side of the same row. */
+   yardage-to-center chip can take the right side of the same row. The
+   hole number is centered over par/handicap, with the prev/next arrows
+   flanking just the number. The group hugs the left edge of the row,
+   mirroring the yardage chip on the right. */
 .hole-nav-left {
-  text-align: left;
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: none;
+}
+
+.hole-nav-number-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.hole-nav-number-row .hole-nav-number {
+  min-width: 2ch;
+  text-align: center;
 }
 
 .hole-nav-label {
@@ -2321,6 +2361,10 @@ input::placeholder {
   gap: 0.35rem 1.1rem;
 }
 
+.hole-nav-left .hole-nav-meta {
+  justify-content: center;
+}
+
 .hole-nav-stat {
   margin: 0;
   font-size: 13.5px;
@@ -2342,16 +2386,27 @@ input::placeholder {
    own front/center/back readout (.gps-yardage-label/.gps-yardage-number)
    for visual consistency, scaled to fit this row. */
 .hole-nav-yardage {
-  flex: 1;
-  text-align: right;
+  /* Centered three-quarters of the way across the row, so it balances the
+     hole group on the left instead of hugging the right edge. Taken out
+     of the flex flow; the hole group sets the row's height. */
+  position: absolute;
+  top: 50%;
+  left: 75%;
+  transform: translate(-50%, -50%);
+  text-align: center;
   background: transparent;
   border: none;
   padding: 0;
   cursor: pointer;
 }
 
+#tab-card .hole-nav {
+  position: relative;
+}
+
 .hole-nav-yardage:active {
   opacity: 0.7;
+  transform: translate(-50%, -50%);
 }
 
 .hole-nav-yardage-number {

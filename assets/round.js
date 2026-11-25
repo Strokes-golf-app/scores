@@ -431,6 +431,7 @@ function setTab(tab) {
   document.querySelectorAll('#round-tabbar .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   document.querySelectorAll('#screen-round .tabpanel').forEach(p => p.classList.remove('active'));
   document.getElementById(tab === 'card' ? 'tab-card' : 'tab-board').classList.add('active');
+  window.scrollTo(0, 0);
   if (tab === 'board') renderLeaderboardTab();
 }
 

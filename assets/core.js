@@ -90,8 +90,14 @@ function showToast(msg) {
 }
 
 function showScreen(id) {
+  const next = document.getElementById(id);
+  const changed = !next.classList.contains('active');
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  next.classList.add('active');
+  // Every newly shown screen starts at the top rather than inheriting the
+  // previous screen's scroll position. Re-showing the current screen (a
+  // refresh) leaves the scroll where it is.
+  if (changed) window.scrollTo(0, 0);
 }
 
 function saveSession() {
