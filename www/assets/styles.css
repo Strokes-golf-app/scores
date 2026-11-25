@@ -2312,13 +2312,14 @@ input::placeholder {
    .hole-nav-center, untouched, above) — hole info sits on the left so the
    yardage-to-center chip can take the right side of the same row. The
    hole number is centered over par/handicap, with the prev/next arrows
-   flanking just the number. */
+   flanking just the number. The group hugs the left edge of the row,
+   mirroring the yardage chip on the right. */
 .hole-nav-left {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  flex: 1;
+  flex: none;
 }
 
 .hole-nav-number-row {
