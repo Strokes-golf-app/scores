@@ -16,10 +16,11 @@
 // Apple: the Services ID from the Apple Developer Portal — used only on
 // web (native iOS doesn't need a client ID; it's inferred from the app's
 // Sign in with Apple entitlement).
-// Sign in with Apple remains disabled until its Developer, Xcode, and
-// Supabase setup is complete. See documentation/apple-sign-in-setup.md.
+// The Services ID must exist in the Apple Developer Portal with the web
+// app's domain and return URL registered, and must also be listed in
+// Supabase's Apple provider Client IDs. See documentation/apple-sign-in-setup.md.
 const GOOGLE_WEB_CLIENT_ID = '584419088693-vpig28i5d43jtbcfiq6pk10q1d4u9oar.apps.googleusercontent.com';
-const APPLE_SERVICES_ID = 'REPLACE_WITH_APPLE_SERVICES_ID';
+const APPLE_SERVICES_ID = 'com.strokesgolf.app.web';
 const APPLE_SIGN_IN_ENABLED = true;
 // --------------------------------------------------------------------------
 

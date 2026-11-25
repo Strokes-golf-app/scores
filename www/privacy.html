@@ -14,13 +14,13 @@
   <main class="privacy-page">
     <a class="privacy-back" href="index.html">Back to Strokes Golf</a>
     <h1>Privacy Policy</h1>
-    <p class="privacy-updated">Last updated: October 16, 2026</p>
+    <p class="privacy-updated">Last updated: November 25, 2026</p>
 
     <p>Strokes Golf (“Strokes Golf,” “we,” or “us”) provides a golf scorecard and round-sharing service. This policy explains what information we handle, how we use it, and the choices available to you. It applies to the Strokes Golf website and iOS app in the United States.</p>
 
     <h2>Information we handle</h2>
     <ul>
-      <li><strong>Account and sign-in information:</strong> email address for email sign-in, account identifiers, and information provided by a sign-in provider when you choose Google sign-in. Supabase Auth processes sign-in credentials and sends account-verification and password-reset messages; Strokes Golf does not store your password in its app tables.</li>
+      <li><strong>Account and sign-in information:</strong> email address for email sign-in, account identifiers, and information provided by a sign-in provider when you choose Google or Apple sign-in. If you sign in with Apple, Apple provides an account identifier and, the first time you sign in, the name and email address you choose to share. If you choose Apple’s Hide My Email option, we receive a private relay address that forwards to your personal email, rather than your personal email address itself. Supabase Auth processes sign-in credentials and sends account-verification and password-reset messages; Strokes Golf does not store your password in its app tables.</li>
       <li><strong>Profile information:</strong> display name, username, default handicap, and optional city and state.</li>
       <li><strong>Round information:</strong> course, players, handicaps, scores, putts, game formats, team assignments, stakes if entered, invite and participation identifiers, and completed-round history.</li>
       <li><strong>Friend information:</strong> friend requests, accepted connections, and information needed to find and display profiles and friend-round history.</li>
@@ -47,8 +47,9 @@
       <li><strong>Supabase</strong> provides authentication, database, realtime synchronization, and server-side functions.</li>
       <li><strong>Vercel</strong> hosts the static web app.</li>
       <li><strong>Google</strong> provides the Google sign-in option. If you use it, Google processes your sign-in and returns information permitted by your Google settings.</li>
+      <li><strong>Apple</strong> provides the Sign in with Apple option on the website and iOS app. If you use it, Apple processes your sign-in and returns an account identifier and the name and email address you choose to share. Apple’s handling of that sign-in is governed by Apple’s privacy policy.</li>
       <li><strong>GolfCourseAPI</strong> provides course search and details. When you request a course search or import, our server-side function sends the search phrase or course identifier to that provider. The app does not send your account email or access token to GolfCourseAPI.</li>
-      <li><strong>jsDelivr</strong> delivers the Supabase client library used by the web app. Google and Apple deliver web sign-in libraries; those script requests may expose technical connection information to the providers. Google sign-in is available. Apple sign-in code is present but the Apple sign-in option is currently disabled.</li>
+      <li><strong>jsDelivr</strong> delivers the Supabase client library used by the web app. Google and Apple deliver web sign-in libraries; those script requests may expose technical connection information to the providers.</li>
     </ul>
     <p>We do not sell personal information or use it for cross-context behavioral advertising. We may disclose information when required by law, to protect users or the service, or as part of a business transfer, subject to applicable law.</p>
 

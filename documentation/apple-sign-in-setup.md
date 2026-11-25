@@ -1,11 +1,16 @@
 # Apple sign-in setup
 
-Apple sign-in is enabled for the iOS app: `APPLE_SIGN_IN_ENABLED` is
-`true` and the App target carries the Sign in with Apple entitlement
-(`ios/App/App/App.entitlements`, wired up via `CODE_SIGN_ENTITLEMENTS`).
-Web sign-in stays hidden until a real Services ID replaces the
-placeholder. Sign-in only succeeds once the Apple provider is enabled in
-Supabase (see below).
+Apple sign-in is enabled on both iOS and web: `APPLE_SIGN_IN_ENABLED` is
+`true`, the App target carries the Sign in with Apple entitlement
+(`ios/App/App/App.entitlements`, wired up via `CODE_SIGN_ENTITLEMENTS`), and
+`APPLE_SERVICES_ID` is `com.strokesgolf.app.web`. Sign-in only succeeds
+once that Services ID exists in the Apple Developer Portal and both
+`com.strokesgolf.app` and `com.strokesgolf.app.web` are listed as Client
+IDs in Supabase's Apple provider (see below).
+
+Both platforms exchange Apple's ID token with
+`supabaseClient.auth.signInWithIdToken()`, so Supabase's Apple "Secret Key
+(for OAuth)" is not needed and no Apple private key has to be rotated.
 
 ## What is already in the repository
 
