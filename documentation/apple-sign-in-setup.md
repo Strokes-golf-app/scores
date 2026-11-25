@@ -1,9 +1,11 @@
 # Apple sign-in setup
 
-Apple sign-in's client-side flow and Capacitor plugin are already included,
-but the feature is intentionally disabled. It cannot be fully activated
-until an Apple Developer Program account is available and the provider is
-configured in Apple, Xcode, and Supabase.
+Apple sign-in is enabled for the iOS app: `APPLE_SIGN_IN_ENABLED` is
+`true` and the App target carries the Sign in with Apple entitlement
+(`ios/App/App/App.entitlements`, wired up via `CODE_SIGN_ENTITLEMENTS`).
+Web sign-in stays hidden until a real Services ID replaces the
+placeholder. Sign-in only succeeds once the Apple provider is enabled in
+Supabase (see below).
 
 ## What is already in the repository
 

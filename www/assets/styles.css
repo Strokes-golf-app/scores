@@ -688,6 +688,15 @@ h3 {
   display: block;
 }
 
+/* Sign in with Apple: Apple's Human Interface Guidelines require their
+   black/white button styles rather than the app's own palette, so these
+   colors are intentionally not theme tokens. */
+.btn-apple {
+  background: #000000;
+  color: #FFFFFF;
+  border: 1.5px solid #000000;
+}
+
 .link-btn {
   background: none;
   border: none;

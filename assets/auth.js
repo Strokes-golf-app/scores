@@ -20,7 +20,7 @@
 // Supabase setup is complete. See documentation/apple-sign-in-setup.md.
 const GOOGLE_WEB_CLIENT_ID = '584419088693-vpig28i5d43jtbcfiq6pk10q1d4u9oar.apps.googleusercontent.com';
 const APPLE_SERVICES_ID = 'REPLACE_WITH_APPLE_SERVICES_ID';
-const APPLE_SIGN_IN_ENABLED = false;
+const APPLE_SIGN_IN_ENABLED = true;
 // --------------------------------------------------------------------------
 
 function configureAppleSignInButtons() {
